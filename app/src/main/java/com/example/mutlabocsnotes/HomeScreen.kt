@@ -28,14 +28,12 @@ data class Note(
 
 @Composable
 fun HomeScreen(
+    notes: List<Note>,
     onAddNoteClick: () -> Unit,
     onNoteClick: (Int) -> Unit
 ) {
-    // Пример: список заметок в локальном состоянии
-    // В реальном приложении стоит подключить ViewModel, LiveData/Flow
-    var notes by remember { mutableStateOf(listOf<Note>()) }
 
-    // Scaffold даёт “каркас” с Fab, TopAppBar, Snackbar и т.д.
+
     Scaffold(
         topBar = {
             TopAppBar(

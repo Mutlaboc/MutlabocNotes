@@ -7,7 +7,11 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-
+import androidx.activity.compose.setContent
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 
 class MainActivity : ComponentActivity() {
 
@@ -19,13 +23,14 @@ class MainActivity : ComponentActivity() {
    }
 }
 @Composable
-fun MyApp() {
+fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
     val navController = rememberNavController()
     NavHost(
         navController = navController,
         startDestination = "home") {
         composable("home") {
             HomeScreen(
+                notes = notesViewModel.notes,
                 onAddNoteClick = {
                     navController.navigate("edit")
                 },
@@ -38,7 +43,9 @@ fun MyApp() {
             route = "edit",
         ) {
             EditNoteScreen(
-                onSaveClick = {
+                note = null,
+                onSaveClick = { title, content ->
+                    notesViewModel.addNote(title, content)
                     navController.popBackStack()
                 }
             )

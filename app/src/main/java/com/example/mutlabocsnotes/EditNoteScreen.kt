@@ -22,11 +22,11 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun EditNoteScreen(
-    // Если редактируем существующую заметку, можно передать noteId или модель Note
-    onSaveClick: () -> Unit
+    note: Note?,
+    onSaveClick: (title: String, content:String) -> Unit
 ) {
-    var title by remember { mutableStateOf("") }
-    var content by remember { mutableStateOf("") }
+    var title by remember { mutableStateOf(note?.title ?: "") }
+    var content by remember { mutableStateOf(note?.content ?: "") }
 
     Scaffold(
         topBar = {
@@ -60,8 +60,7 @@ fun EditNoteScreen(
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = {
-                    // Сохранить заметку (через ViewModel или другой механизм)
-                    onSaveClick()
+                    onSaveClick(title, content)
                 },
                 modifier = Modifier.align(Alignment.End)
             ) {
