@@ -10,6 +10,7 @@ import androidx.compose.material.Button
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
+import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -18,6 +19,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -45,17 +48,27 @@ fun EditNoteScreen(
                 value = title,
                 onValueChange = { title = it },
                 label = { Text("Заголовок") },
-                modifier = Modifier.fillMaxWidth()
+                textStyle = TextStyle(color = Color.Black),
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    textColor = Color.Black,
+                    focusedLabelColor = Color.Black,
+                    unfocusedLabelColor = Color.Gray,
+                    cursorColor = Color.Black),
+
+                modifier = Modifier.fillMaxWidth(),
+
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = content,
                 onValueChange = { content = it },
-                label = { Text("Содержимое") },
+                label = { Text("Содержимое", color = Color.Black) },
+                textStyle = TextStyle(color = Color.Black),
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
                 maxLines = Int.MAX_VALUE
+
             )
             Spacer(modifier = Modifier.height(8.dp))
             Button(
