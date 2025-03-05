@@ -21,12 +21,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun EditNoteScreen(
     note: Note?,
     onSaveClick: (title: String, content:String) -> Unit
+    onDeleteClick: (() -> Unit)? = null
 ) {
     var title by remember { mutableStateOf(note?.title ?: "") }
     var content by remember { mutableStateOf(note?.content ?: "") }
@@ -71,6 +73,7 @@ fun EditNoteScreen(
 
             )
             Spacer(modifier = Modifier.height(8.dp))
+
             Button(
                 onClick = {
                     onSaveClick(title, content)
@@ -79,6 +82,27 @@ fun EditNoteScreen(
             ) {
                 Text("Сохранить")
             }
+            onDeleteClick?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = { it() },
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text("Удалить")
+                }
+            }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun EditNoteScreenPreview() {
+    // Для предварительного просмотра редактирования заметки передаём примерную заметку.
+    val sampleNote = Note(id = 1, title = "Пример", content = "Содержимое")
+    EditNoteScreen(
+        note = sampleNote,
+        onSaveClick = { _, _ -> },
+        onDeleteClick = { }
+    )
 }

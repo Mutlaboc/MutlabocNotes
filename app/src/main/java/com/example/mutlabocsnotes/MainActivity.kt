@@ -7,15 +7,10 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.lightColors
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 
 class MainActivity : ComponentActivity() {
 
@@ -45,9 +40,7 @@ fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
                 }
             )
         }
-        composable(
-            route = "edit",
-        ) {
+        composable("edit") {
             EditNoteScreen(
                 note = null,
                 onSaveClick = { title, content ->
@@ -55,6 +48,26 @@ fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
                     navController.popBackStack()
                 }
             )
+        }
+        composable(
+            route = "edit/{noteId}",
+            arguments = listOf(navArgument("noteId") { type = NavType.IntType })
+        ) {backStackEntry ->
+            val noteId = backStackEntry.arguments!!.getInt("noteId")
+            val note = notesViewModel.notes.find { it.id == noteId }
+            EditNoteScreen(
+                note = note,
+                onSaveClick = { title, content ->
+                    if (note != null) {
+                        notesViewModel.updateNote(noteId, title, content)
+                    } else {
+                        notesViewModel.addNote(title, content)
+                    }
+                    navController.popBackStack()
+
+                }
+            )
+
         }
 
     }
