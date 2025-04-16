@@ -1,6 +1,7 @@
 package com.example.mutlabocsnotes
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,7 +28,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun EditNoteScreen(
     note: Note?,
-    onSaveClick: (title: String, content:String) -> Unit
+    onSaveClick: (title: String, content:String) -> Unit,
     onDeleteClick: (() -> Unit)? = null
 ) {
     var title by remember { mutableStateOf(note?.title ?: "") }
@@ -73,24 +74,29 @@ fun EditNoteScreen(
 
             )
             Spacer(modifier = Modifier.height(8.dp))
-
-            Button(
-                onClick = {
-                    onSaveClick(title, content)
-                },
-                modifier = Modifier.align(Alignment.End)
+            Row (
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Сохранить")
-            }
-            onDeleteClick?.let {
-                Spacer(modifier = Modifier.height(8.dp))
+
                 Button(
-                    onClick = { it() },
-                    modifier = Modifier.align(Alignment.End)
+                    onClick = {
+                        onSaveClick(title, content)
+                    },
+
                 ) {
-                    Text("Удалить")
+                    Text("Сохранить")
+                }
+                Spacer(Modifier.weight(1f))
+                onDeleteClick?.let {
+                    Button(
+                        onClick = { it() },
+
+                    ) {
+                        Text("Удалить")
+                    }
                 }
             }
+
         }
     }
 }

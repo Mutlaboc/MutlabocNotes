@@ -60,8 +60,11 @@ fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
                 onSaveClick = { title, content ->
                     if (note != null) {
                         notesViewModel.updateNote(noteId, title, content)
-                    } else {
-                        notesViewModel.addNote(title, content)
+                    }
+                    navController.popBackStack() },
+                onDeleteClick = {
+                    if (note != null) {
+                        notesViewModel.deleteNote(noteId)
                     }
                     navController.popBackStack()
 
