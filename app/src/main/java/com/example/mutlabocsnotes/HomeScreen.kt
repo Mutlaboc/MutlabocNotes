@@ -2,8 +2,11 @@ package com.example.mutlabocsnotes
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.FloatingActionButton
@@ -25,7 +28,8 @@ fun HomeScreen(
     onAddNoteClick: () -> Unit,
     onNoteClick: (Int) -> Unit
 ) {
-
+    // Простейший список категорий, пока статичный
+    val categories = listOf("Все", "Работа", "Личное")
 
     Scaffold(
         topBar = {
@@ -39,13 +43,25 @@ fun HomeScreen(
             }
         }
     ) { paddingValues ->
-        // Содержимое экрана с учетом отступов от Scaffold
-        LazyColumn(contentPadding = paddingValues) {
-            items(notes) { note ->
-                NoteItem(
-                    note = note,
-                    onClick = { onNoteClick(note.id)}
-                )
+        // Размещаем категории слева и список заметок справа
+        Row(modifier = Modifier.padding(paddingValues)) {
+            LazyColumn(modifier = Modifier.width(120.dp)) {
+                items(categories) { category ->
+                    Text(
+                        text = category,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    )
+                }
+            }
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                items(notes) { note ->
+                    NoteItem(
+                        note = note,
+                        onClick = { onNoteClick(note.id)}
+                    )
+                }
             }
         }
     }
