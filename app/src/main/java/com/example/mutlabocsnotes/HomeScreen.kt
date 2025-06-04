@@ -12,19 +12,12 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
 
 
-data class Note(
-    val id: Int,
-    val title: String,
-    val content: String
-)
+
 
 @Composable
 fun HomeScreen(
@@ -51,7 +44,7 @@ fun HomeScreen(
             items(notes) { note ->
                 NoteItem(
                     note = note,
-                    onClick = { onNoteClick(note.id) }
+                    onClick = { onNoteClick(note.id)}
                 )
             }
         }
@@ -70,4 +63,17 @@ fun NoteItem(note: Note, onClick: () -> Unit) {
         Text(text = note.title, style = MaterialTheme.typography.subtitle1)
         Text(text = note.content, style = MaterialTheme.typography.body2)
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun HomeScreenPreview() {
+    val sampleNotes = listOf(
+        Note(id = 1, title = "Заметка 1", content = "Содержание заметки")
+    )
+    HomeScreen(
+        notes = sampleNotes,
+        onAddNoteClick = {},
+        onNoteClick = {}
+    )
 }
