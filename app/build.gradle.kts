@@ -60,6 +60,7 @@ dependencies {
     implementation("androidx.compose.material:material")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    implementation("androidx.compose.material:material-icons-extended")
 
     // Остальные зависимости
     implementation("androidx.core:core-ktx:1.10.1")

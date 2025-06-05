@@ -37,7 +37,8 @@ fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
                 },
                 onNoteClick = { noteId ->
                     navController.navigate("edit/$noteId")
-                }
+                },
+                onOtherCellClick = TODO()
             )
         }
         composable("edit") {
