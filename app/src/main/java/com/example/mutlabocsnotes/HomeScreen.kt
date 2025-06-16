@@ -1,5 +1,6 @@
 package com.example.mutlabocsnotes
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -35,7 +37,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.primarySurface
 import androidx.compose.runtime.setValue
-
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 
 
 @Composable
@@ -51,6 +54,7 @@ fun HomeScreen(
     var search by remember { mutableStateOf("") }
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         bottomBar = {
             BottomRowWithFiveCells(
                 onAddClick = onAddNoteClick,
@@ -59,6 +63,15 @@ fun HomeScreen(
         }
     ) { paddingValues ->
         Column (modifier = Modifier.padding(paddingValues) ) {
+            Image(
+                painter = painterResource(id = R.drawable.main_image),
+                contentDescription = "Home image",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+
+            )
             Row (
                 modifier = Modifier
                     .fillMaxWidth()
