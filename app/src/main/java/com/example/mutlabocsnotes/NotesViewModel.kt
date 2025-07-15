@@ -9,8 +9,7 @@ import kotlinx.coroutines.launch
 
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val noteDao = NoteDatabase.getDatabase(application).noteDao()
-    private val repository = NoteRepository(noteDao)
+    private val repository = FirestoreRepository()
 
     // Локальный кэш заметок, можно сделать LiveData или StateFlow для наблюдения за изменениями
     val notes = mutableStateListOf<Note>()
@@ -26,29 +25,27 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     fun addNote(title: String, content: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val note = Note(title = title, content = content)
-            val newId = repository.insert(note).toInt()
-            val savedNote = note.copy(id = newId)
+            val id = repository.insert(title, content)
+            val note = Note(id = id, title = title, content = content)
             launch(Dispatchers.Main) {
-                notes.add(savedNote)
+                notes.add(note)
             }
         }
 
     }
 
-    fun updateNote(noteId: Int, title: String, content: String) {
+    fun updateNote(noteId: String, title: String, content: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val note = Note(id = noteId, title = title, content = content)
-            repository.update(note)
+            repository.update(noteId, title, content)
 
         }
     }
 
-    fun deleteNote(noteId: Int) {
+    fun deleteNote(noteId: String) {
         viewModelScope.launch(Dispatchers.IO) {
+            repository.delete(noteId)
             val note = notes.find { it.id == noteId }
             if (note != null) {
-                repository.delete(note)
                 launch(Dispatchers.Main) {
                     notes.remove(note)
                 }

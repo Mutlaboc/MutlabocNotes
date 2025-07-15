@@ -45,7 +45,7 @@ import androidx.compose.ui.res.painterResource
 fun HomeScreen(
     notes: List<Note>,
     onAddNoteClick: () -> Unit,
-    onNoteClick: (noteId: Int) -> Unit,
+    onNoteClick: (noteId: String) -> Unit,
     onOtherCellClick: (index: Int) -> Unit,
 
 ) {
@@ -227,9 +227,9 @@ fun BottomRowWithFiveCells (
 @Composable
 fun HomeScreenPreview() {
     val sampleNotes = listOf(
-        Note(id = 1, title = "Заметка 1", content = "Содержание заметки"),
-        Note(id = 2, title = "Заметка 2", content = "Содержание заметки"),
-        Note(id = 3, title = "Заметка 3", content = "Содержание заметки")
+        Note(id = "1", title = "Заметка 1", content = "Содержание заметки"),
+        Note(id = "2", title = "Заметка 2", content = "Содержание заметки"),
+        Note(id = "3", title = "Заметка 3", content = "Содержание заметки")
     )
     HomeScreen(
         notes = sampleNotes,

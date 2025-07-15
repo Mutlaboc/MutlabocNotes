@@ -2,6 +2,9 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id ("kotlin-kapt")
+    id("com.google.gms.google-services")
+    id("org.jetbrains.kotlin.plugin.compose")
+
 }
 
 android {
@@ -42,18 +45,20 @@ android {
         viewBinding = true // если вам нужен viewBinding, иначе можно убрать
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
-    }
 }
 
 dependencies {
 
+    implementation(libs.androidx.material3.android)
     // Подключаем Compose BOM
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
     implementation(composeBom)
     testImplementation(composeBom)
     androidTestImplementation(composeBom)
+    implementation(platform("com.google.firebase:firebase-bom:33.16.0"))
+    implementation("com.google.firebase:firebase-auth-ktx")   // -ktx пока не убрали
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
 
     // Основные библиотеки Compose
     implementation("androidx.compose.ui:ui")
@@ -86,5 +91,10 @@ dependencies {
     kapt ("androidx.room:room-compiler:2.6.1")
     // Для корутин (опционально)
     implementation ("androidx.room:room-ktx:2.6.1")
+    implementation(platform("androidx.compose:compose-bom:2025.01.00"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material:material")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    debugImplementation("androidx.compose.ui:ui-tooling")
 
 }

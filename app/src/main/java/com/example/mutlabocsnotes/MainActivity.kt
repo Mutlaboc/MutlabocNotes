@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : ComponentActivity() {
 
@@ -26,9 +27,20 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
     val navController = rememberNavController()
+    val startDestination = if (FirebaseAuth.getInstance().currentUser != null) "home" else "auth"
     NavHost(
         navController = navController,
-        startDestination = "home") {
+        startDestination = startDestination) {
+
+        composable("auth") {
+                AuthScreeen {
+                    navController.navigate("home") {
+                        popUpTo("auth") { inclusive = true
+                        }
+
+                    }
+                }
+            }
         composable("home") {
             HomeScreen(
                 notes = notesViewModel.notes,
@@ -52,9 +64,9 @@ fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
         }
         composable(
             route = "edit/{noteId}",
-            arguments = listOf(navArgument("noteId") { type = NavType.IntType })
+            arguments = listOf(navArgument("noteId") { type = NavType.StringType })
         ) {backStackEntry ->
-            val noteId = backStackEntry.arguments!!.getInt("noteId")
+            val noteId = backStackEntry.arguments!!.getString("noteId") ?: ""
             val note = notesViewModel.notes.find { it.id == noteId }
             EditNoteScreen(
                 note = note,

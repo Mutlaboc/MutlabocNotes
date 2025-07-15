@@ -18,7 +18,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -105,7 +104,7 @@ fun EditNoteScreen(
 @Composable
 fun EditNoteScreenPreview() {
     // Для предварительного просмотра редактирования заметки передаём примерную заметку.
-    val sampleNote = Note(id = 1, title = "Пример", content = "Содержимое")
+    val sampleNote = Note(id = "1", title = "Пример", content = "Содержимое")
     EditNoteScreen(
         note = sampleNote,
         onSaveClick = { _, _ -> },

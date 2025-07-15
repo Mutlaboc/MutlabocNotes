@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_id": "mutlabocnotes-sample",
+    "project_number": "1234567890",
+    "name": "Mutlaboc's notes"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1234567890:android:abcdef123456",
+        "android_client_info": {
+          "package_name": "com.example.mutlabocsnotes"
+        }
+      },
+      "api_key": [
+        {
+          "current_key": "fake_api_key"
+        }
+      ],
+      "oauth_client": [],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
