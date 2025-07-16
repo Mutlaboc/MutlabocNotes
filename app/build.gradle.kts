@@ -59,6 +59,7 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx")   // -ktx пока не убрали
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
 
     // Основные библиотеки Compose
     implementation("androidx.compose.ui:ui")

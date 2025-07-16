@@ -1,5 +1,7 @@
 package com.example.mutlabocsnotes
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,6 +20,12 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.google.firebase.auth.GoogleAuthProvider
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 
 @Composable
 fun AuthScreeen(onAuthenicated: () -> Unit) {
@@ -26,6 +34,33 @@ fun AuthScreeen(onAuthenicated: () -> Unit) {
 
     val isPreview = LocalInspectionMode.current
     val auth = if (isPreview) null else FirebaseAuth.getInstance()
+    val context = LocalContext.current
+    val defaultWebClientId = stringResource(id = R.string.default_web_client_id)
+    val googleSignInClient = remember {
+        if (isPreview) null else {
+            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(defaultWebClientId)
+                .requestEmail()
+                .build()
+            GoogleSignIn.getClient(context, gso)
+        }
+    }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        result ->
+        if (!isPreview) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            if (task.isSuccessful) {
+                val idToken = task.result.idToken
+                if (idToken != null) {
+                    val credential = GoogleAuthProvider.getCredential(idToken, null)
+                    auth?.signInWithCredential(credential)
+                        ?.addOnCompleteListener { if (it.isSuccessful) onAuthenicated() }
+                }
+            }
+        }
+    }
+
+
 
     Column(modifier = Modifier.padding(16.dp)) {
         OutlinedTextField(
@@ -52,6 +87,17 @@ fun AuthScreeen(onAuthenicated: () -> Unit) {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Sign Up")
+        }
+        Spacer(Modifier.padding(6.dp))
+        Button(
+            onClick = {
+                if (!isPreview) {
+                    launcher.launch(googleSignInClient?.signInIntent)
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Sign in with Google")
         }
     }
 }
