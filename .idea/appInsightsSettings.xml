@@ -9,9 +9,9 @@
               <option name="connection">
                 <ConnectionSetting>
                   <option name="appId" value="com.example.mutlabocsnotes" />
-                  <option name="mobileSdkAppId" value="1:1234567890:android:abcdef123456" />
-                  <option name="projectId" value="mutlabocnotes-sample" />
-                  <option name="projectNumber" value="1234567890" />
+                  <option name="mobileSdkAppId" value="1:822837772778:android:f9fc9448e1174ebd373293" />
+                  <option name="projectId" value="mutlaboc-notes" />
+                  <option name="projectNumber" value="822837772778" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
