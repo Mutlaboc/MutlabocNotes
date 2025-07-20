@@ -4,6 +4,7 @@ import androidx.compose.runtime.mutableStateListOf
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -15,10 +16,14 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     val notes = mutableStateListOf<Note>()
 
     init {
+        if (FirebaseAuth.getInstance().currentUser != null) {
+            loadNotes()
+        }
+    }
+    fun loadNotes() {
         viewModelScope.launch(Dispatchers.IO) {
             notes.clear()
             notes.addAll(repository.getAllNotes())
-
         }
     }
 

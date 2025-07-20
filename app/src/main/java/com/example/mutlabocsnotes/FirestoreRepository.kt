@@ -9,15 +9,19 @@ class FirestoreRepository {
     private val notesCollection = db.collection( "notes")
 
     suspend fun getAllNotes(): List<Note> {
-        val snapshot = notesCollection.get().await()
-        return snapshot.documents.mapNotNull { doc ->
-            val title = doc.getString("title")
-            val content = doc.getString("content")
-            if (title != null && content != null) {
-                Note(id = doc.id, title = title, content = content)
-            } else {
-                null
+        return try {
+            val snapshot = notesCollection.get().await()
+            snapshot.documents.mapNotNull { doc ->
+                val title = doc.getString("title")
+                val content = doc.getString("content")
+                if (title != null && content != null) {
+                    Note(id = doc.id, title = title, content = content)
+                } else {
+                    null
+                }
             }
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 

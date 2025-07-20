@@ -34,6 +34,7 @@ fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
 
         composable("auth") {
                 AuthScreeen {
+                    notesViewModel.loadNotes()
                     navController.navigate("home") {
                         popUpTo("auth") { inclusive = true
                         }
