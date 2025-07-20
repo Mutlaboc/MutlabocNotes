@@ -80,7 +80,7 @@ fun AuthScreeen(onAuthenicated: () -> Unit) {
         Button(
             onClick = {
                 if (!isPreview) {
-                    auth?.signInWithEmailAndPassword(email, password)
+                    auth?.createUserWithEmailAndPassword(email, password)
                         ?.addOnCompleteListener { if (it.isSuccessful) onAuthenicated() }
                 }
             },
