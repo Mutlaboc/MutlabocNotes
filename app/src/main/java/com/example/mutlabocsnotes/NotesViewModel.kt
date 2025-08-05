@@ -31,12 +31,13 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     fun addNote(title: String, content: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val id = repository.insert(title, content)
-            val note = Note(id = id, title = title, content = content)
-            launch(Dispatchers.Main) {
-                notes.add(note)
+            if (id != null) {
+                val note = Note(id = id, title = title, content = content)
+                launch(Dispatchers.Main) {
+                    notes.add(note)
+                }
             }
         }
-
     }
 
     fun updateNote(noteId: String, title: String, content: String) {
@@ -48,11 +49,13 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     fun deleteNote(noteId: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.delete(noteId)
-            val note = notes.find { it.id == noteId }
-            if (note != null) {
-                launch(Dispatchers.Main) {
-                    notes.remove(note)
+            val success = repository.delete(noteId)
+            if (success) {
+                val note = notes.find { it.id == noteId }
+                if (note != null) {
+                    launch(Dispatchers.Main) {
+                        notes.remove(note)
+                    }
                 }
             }
         }
