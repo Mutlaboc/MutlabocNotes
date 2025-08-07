@@ -39,7 +39,8 @@ import androidx.compose.material.primarySurface
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-
+import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.material.icons.filled.AccountCircle
 
 @Composable
 fun HomeScreen(
@@ -88,6 +89,16 @@ fun HomeScreen(
                         .padding(start = 8.dp)
                         .weight(1f)
                 )
+                val userEmail = FirebaseAuth.getInstance().currentUser?.email ?: ""
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = "Пользователь"
+                    )
+                    if (userEmail.isNotEmpty()) {
+                        Text(userEmail, modifier = Modifier.padding(start = 4.dp))
+                    }
+                }
 
             }
             LazyColumn(modifier = Modifier
