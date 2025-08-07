@@ -56,7 +56,13 @@ fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
                 onNoteClick = { noteId ->
                     navController.navigate("edit/$noteId")
                 },
-                onOtherCellClick = { _ -> }
+                onOtherCellClick = { _ -> },
+                onSwitchUser = {
+                    FirebaseAuth.getInstance().signOut()
+                    navController.navigate("auth") {
+                        popUpTo("home") {inclusive = true}
+                    }
+                }
             )
         }
         composable("edit") {
