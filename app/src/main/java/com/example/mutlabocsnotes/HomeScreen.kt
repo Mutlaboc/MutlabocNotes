@@ -1,5 +1,4 @@
 package com.example.mutlabocsnotes
-
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,21 +13,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.DropdownMenu
+import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
@@ -36,17 +30,27 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.primarySurface
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-
-
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.google.firebase.auth.FirebaseAuth
+// потом удалить, проверка гит
 @Composable
 fun HomeScreen(
     notes: List<Note>,
     onAddNoteClick: () -> Unit,
     onNoteClick: (noteId: String) -> Unit,
     onOtherCellClick: (index: Int) -> Unit,
+    onSwitchUser: () -> Unit,
 
 ) {
     // Простейший список категорий, пока статичный
@@ -88,6 +92,32 @@ fun HomeScreen(
                         .padding(start = 8.dp)
                         .weight(1f)
                 )
+                val userEmail = FirebaseAuth.getInstance().currentUser?.email ?: ""
+                var userMenuExtended by remember { mutableStateOf(false) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box{
+                        IconButton(onClick =  { userMenuExtended = true }) {
+                            Icon(
+                                imageVector = Icons.Default.AccountCircle,
+                                contentDescription = "Пользователь",
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = userMenuExtended,
+                            onDismissRequest = {userMenuExtended = false}
+                        ) {
+                            DropdownMenuItem (onClick = {
+                                userMenuExtended = false
+                                onSwitchUser()
+                            }) {
+                                Text("Сменить пользователя")
+                            }
+                        }
+                    }
+                    if (userEmail.isNotEmpty()) {
+                        Text(userEmail, modifier = Modifier.padding(start = 4.dp))
+                    }
+                }
 
             }
             LazyColumn(modifier = Modifier
@@ -236,6 +266,7 @@ fun HomeScreenPreview() {
         onAddNoteClick = {},
         onNoteClick = {},
         onOtherCellClick = {},
+        onSwitchUser = {}
 
     )
 }

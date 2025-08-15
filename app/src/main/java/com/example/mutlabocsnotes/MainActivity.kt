@@ -8,15 +8,18 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : ComponentActivity() {
 
    override fun onCreate(savedInstanceState: Bundle?) {
        super.onCreate(savedInstanceState)
+       FirebaseApp.initializeApp(this)
        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
        setContent {
            MyApp()
@@ -27,7 +30,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
     val navController = rememberNavController()
-    val startDestination = if (FirebaseAuth.getInstance().currentUser != null) "home" else "auth"
+    val startDestination = remember {
+        if (FirebaseAuth.getInstance().currentUser != null) "home" else "auth"
+    }
     NavHost(
         navController = navController,
         startDestination = startDestination) {
@@ -51,7 +56,13 @@ fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
                 onNoteClick = { noteId ->
                     navController.navigate("edit/$noteId")
                 },
-                onOtherCellClick = { _ -> }
+                onOtherCellClick = { _ -> },
+                onSwitchUser = {
+                    FirebaseAuth.getInstance().signOut()
+                    navController.navigate("auth") {
+                        popUpTo("home") {inclusive = true}
+                    }
+                }
             )
         }
         composable("edit") {

@@ -1,5 +1,8 @@
 package com.example.mutlabocsnotes
 
+import android.util.Log
+import android.widget.Toast
+import android.widget.Toast.LENGTH_SHORT
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
@@ -56,6 +59,10 @@ fun AuthScreeen(onAuthenicated: () -> Unit) {
                     auth?.signInWithCredential(credential)
                         ?.addOnCompleteListener { if (it.isSuccessful) onAuthenicated() }
                 }
+                else {
+                    Log.e("Auth","Google sign-in failed", task.exception)
+                    Toast.makeText(context, task.exception?.localizedMessage, LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -79,9 +86,25 @@ fun AuthScreeen(onAuthenicated: () -> Unit) {
         Spacer(Modifier.padding(6.dp))
         Button(
             onClick = {
+                if (email.isBlank() || password.length < 6) {
+                    Toast.makeText(context, "Введите корректный e-mail и пароль ≥ 6 символов", LENGTH_SHORT).show()
+                    return@Button
+                }
                 if (!isPreview) {
-                    auth?.createUserWithEmailAndPassword(email, password)
-                        ?.addOnCompleteListener { if (it.isSuccessful) onAuthenicated() }
+                    auth?.createUserWithEmailAndPassword(email.trim(), password)
+                        ?.addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                onAuthenicated()
+                            }
+                            else {
+                                Log.e("Auth", "Sign-up error", task.exception)
+                                Toast.makeText(
+                                    context,
+                                    task.exception?.localizedMessage ?: "Ошибка регистрации",
+                                    LENGTH_SHORT
+                                ).show()
+                            }
+                        }
                 }
             },
             modifier = Modifier.fillMaxWidth()

@@ -25,19 +25,33 @@ class FirestoreRepository {
         }
     }
 
-    suspend fun insert(title: String, content: String):
-            String {
+    suspend fun insert(title: String, content: String): String? {
+        return try {
             val doc = notesCollection.document()
             doc.set(mapOf("title" to title, "content" to content)).await()
-            return doc.id
+            doc.id
+        } catch (e: Exception) {
+            null
+        }
     }
 
-    suspend fun update(noteId: String, title: String, content: String) {
-        notesCollection.document(noteId).set(mapOf("title" to title, "content" to content)).await()
+    suspend fun update(noteId: String, title: String, content: String): Boolean {
+        return try {
+            notesCollection.document(noteId)
+                .set(mapOf("title" to title, "content" to content)).await()
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 
-    suspend fun delete(noteId: String) {
-        notesCollection.document(noteId).delete().await()
+    suspend fun delete(noteId: String): Boolean {
+        return try {
+            notesCollection.document(noteId).delete().await()
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 
 }
