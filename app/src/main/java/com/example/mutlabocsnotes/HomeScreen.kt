@@ -43,7 +43,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
-// потом удалить, проверка гит
+
+
 @Composable
 fun HomeScreen(
     notes: List<Note>,
@@ -172,7 +173,7 @@ fun BottomRowWithFiveCells (
                     .weight(1f)
                     .fillMaxHeight()
                     .clickable {
-                        if (index == 0) {
+                        if (index == 2) {
                             onAddClick()
                         } else {
                             onCellClick(index)

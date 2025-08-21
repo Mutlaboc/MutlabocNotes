@@ -42,7 +42,15 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateNote(noteId: String, title: String, content: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.update(noteId, title, content)
+            val success = repository.update(noteId, title, content)
+            if (success) {
+                val index = notes.indexOfFirst { it.id == noteId }
+                if (index != -1) {
+                    launch(Dispatchers.Main) {
+                        notes[index] = notes[index].copy(title = title, content = content)
+                    }
+                }
+            }
 
         }
     }

@@ -91,12 +91,39 @@ fun AuthScreeen(onAuthenicated: () -> Unit) {
                     return@Button
                 }
                 if (!isPreview) {
-                    auth?.createUserWithEmailAndPassword(email.trim(), password)
+                    auth?.signInWithEmailAndPassword(email.trim(), password)
                         ?.addOnCompleteListener { task ->
                             if (task.isSuccessful) {
                                 onAuthenicated()
                             }
                             else {
+                                Log.e("Auth", "Sign-up error", task.exception)
+                                Toast.makeText(
+                                    context,
+                                    task.exception?.localizedMessage ?: "Ошибка входа",
+                                    LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Sign In")
+        }
+        Spacer(Modifier.padding(6.dp))
+        Button(
+            onClick = {
+                if (email.isBlank() || password.length < 6) {
+                    Toast.makeText(context, "Введите корректный e-mail и пароль ≥ 6 символов", LENGTH_SHORT).show()
+                    return@Button
+            }
+                if (!isPreview) {
+                    auth?.createUserWithEmailAndPassword(email.trim(), password)
+                        ?.addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                onAuthenicated()
+                            } else {
                                 Log.e("Auth", "Sign-up error", task.exception)
                                 Toast.makeText(
                                     context,
@@ -109,7 +136,7 @@ fun AuthScreeen(onAuthenicated: () -> Unit) {
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Sign Up")
+            Text("Sign Up")
         }
         Spacer(Modifier.padding(6.dp))
         Button(
