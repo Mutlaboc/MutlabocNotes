@@ -24,11 +24,14 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddHome
+import androidx.compose.material.icons.filled.Garage
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Task
 import androidx.compose.material.primarySurface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -48,6 +51,7 @@ import com.google.firebase.auth.FirebaseAuth
 @Composable
 fun HomeScreen(
     notes: List<Note>,
+    userEmail: String,
     onAddNoteClick: () -> Unit,
     onNoteClick: (noteId: String) -> Unit,
     onOtherCellClick: (index: Int) -> Unit,
@@ -82,18 +86,17 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { TODO() }) {
+/*                IconButton(onClick = { TODO() }) {
                     Icon(Icons.Default.Menu, contentDescription = "Меню")
-                }
+                }*/
                 OutlinedTextField(
                     value = search,
-                    onValueChange = {search = it},
+                    onValueChange = { search = it },
                     placeholder = { Text("Поиск") },
                     modifier = Modifier
                         .padding(start = 8.dp)
                         .weight(1f)
                 )
-                val userEmail = FirebaseAuth.getInstance().currentUser?.email ?: ""
                 var userMenuExtended by remember { mutableStateOf(false) }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box{
@@ -115,9 +118,9 @@ fun HomeScreen(
                             }
                         }
                     }
-                    if (userEmail.isNotEmpty()) {
+/*                    if (userEmail.isNotEmpty()) {
                         Text(userEmail, modifier = Modifier.padding(start = 4.dp))
-                    }
+                    }*/
                 }
 
             }
@@ -167,7 +170,7 @@ fun BottomRowWithFiveCells (
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        for (index in 0 until 5) {
+        for (index in 0 until 3) {
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -185,7 +188,7 @@ fun BottomRowWithFiveCells (
                 when (index) {
                     0 -> {
                         Icon(
-                            imageVector = Icons.Default.Home,
+                            imageVector = Icons.Default.Task,
                             contentDescription = "Ячейка 1",
                             tint = MaterialTheme.colors.onPrimary
                         )
@@ -193,7 +196,7 @@ fun BottomRowWithFiveCells (
 
                     1 -> {
                         Icon(
-                            imageVector = Icons.Default.Search,
+                            imageVector = Icons.Default.AddHome,
                             contentDescription = "Ячейка 2",
                             tint = MaterialTheme.colors.onPrimary
                         )
@@ -202,7 +205,7 @@ fun BottomRowWithFiveCells (
                     2 -> {
                         // Иконка «Добавить»
                         Icon(
-                            imageVector = Icons.Default.Add,
+                            imageVector = Icons.Default.Settings,
                             contentDescription = "Добавить заметку",
                             tint = MaterialTheme.colors.onPrimary
                         )
@@ -264,6 +267,7 @@ fun HomeScreenPreview() {
     )
     HomeScreen(
         notes = sampleNotes,
+        userEmail = "user@example.com",
         onAddNoteClick = {},
         onNoteClick = {},
         onOtherCellClick = {},
