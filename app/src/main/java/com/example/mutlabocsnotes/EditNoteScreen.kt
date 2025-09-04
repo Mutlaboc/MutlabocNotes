@@ -25,11 +25,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.InputChip
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-
+import androidx.compose.material3.FilterChipDefaults
 @OptIn(ExperimentalMaterial3Api::class)
 
 
@@ -81,25 +77,13 @@ fun EditNoteScreen(
                         label = {
                             Text(category)
                         },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFFBBDEFB)
+                        ),
                         modifier = Modifier.padding(end = 8.dp)
                     )
                 }
             }
-            selectedCategory?.let { category ->
-                Spacer(modifier = Modifier.height(8.dp))
-                InputChip(
-                    selected = true,
-                    onClick = { selectedCategory = null },
-                    label = {Text(category)},
-                    trailingIcon = {
-                        Icon(
-                            imageVector = Icons.Filled.Close,
-                            contentDescription = "Удалить"
-                        )
-                    }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                }
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = content,
