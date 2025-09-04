@@ -71,18 +71,6 @@ fun EditNoteScreen(
 
             )
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = content,
-                onValueChange = { content = it },
-                label = { Text("Содержимое", color = Color.Black) },
-                textStyle = TextStyle(color = Color.Black),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                maxLines = Int.MAX_VALUE
-
-            )
-            Spacer(modifier = Modifier.height(8.dp))
             Row {
                 categories.forEach { category ->
                     FilterChip(
@@ -112,6 +100,18 @@ fun EditNoteScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = content,
+                onValueChange = { content = it },
+                label = { Text("Содержимое", color = Color.Black) },
+                textStyle = TextStyle(color = Color.Black),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                maxLines = Int.MAX_VALUE
+
+            )
 
             Row (
                 modifier = Modifier.fillMaxWidth()
