@@ -28,6 +28,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.Checkbox
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.ui.Alignment
 @OptIn(ExperimentalMaterial3Api::class)
 
 
@@ -87,17 +91,105 @@ fun EditNoteScreen(
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = content,
-                onValueChange = { content = it },
-                label = { Text("Содержимое", color = Color.Black) },
-                textStyle = TextStyle(color = Color.Black),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.4f),
-                maxLines = Int.MAX_VALUE
+            when (selectedCategory) {
+                "Покупки" -> {
+                    val cheklistItems = remember { mutableStateListOf(false to "")}
+                    Column {
+                        cheklistItems.forEachIndexed { index, item ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 4.dp)
+                            )
+                            {
+                                Checkbox(
+                                    checked = item.first,
+                                    onCheckedChange = { checked ->
+                                        cheklistItems[index] = checked to item.second
+                                    }
+                                )
+                                OutlinedTextField(
+                                    value = item.second,
+                                    onValueChange = { text ->
+                                        cheklistItems[index] = item.first to text
+                                    },
+                                    label = {
+                                        Text("Пункт${'$'}{index +1}")
+                                    },
+                                    textStyle = TextStyle(color = Color.Black),
+                                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                                        textColor = Color.Black,
+                                        focusedLabelColor = Color.Black,
+                                        unfocusedLabelColor = Color.Gray,
+                                        cursorColor = Color.Black
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                )
 
-            )
+                            }
+                        }
+                        Button(onClick = { cheklistItems.add(false to "") }) {
+                            Text("Добавить")
+                        }
+                    }
+                    }
+                "Дела" -> {
+                    var deadline by remember { mutableStateOf("") }
+                    var isRepeationg by remember { mutableStateOf(false) }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = deadline,
+                            onValueChange = {
+                                deadline = it
+                            },
+                            label = { Text("Дедлайн") },
+                            textStyle = TextStyle(color = Color.Black),
+                            colors = TextFieldDefaults.outlinedTextFieldColors(
+                                textColor = Color.Black,
+                                focusedLabelColor = Color.Black,
+                                unfocusedLabelColor = Color.Gray,
+                                cursorColor = Color.Black
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = isRepeationg,
+                                onCheckedChange = { isRepeationg = it }
+                            )
+                            Text("Повторять")
+                        }
+                    }
+                    OutlinedTextField(
+                        value = content,
+                        onValueChange = {
+                            content = it
+                        },
+                        label = { Text("Содержимое", color = Color.Black) },
+                        textStyle = TextStyle(color = Color.Black),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.4f),
+                        maxLines = Int.MAX_VALUE
+                    )
+                }
+                "Заметки" -> {
+                    OutlinedTextField(
+                        value = content,
+                        onValueChange = {
+                            content = it
+                        },
+                        label = { Text("Содержимое", color = Color.Black) },
+                        textStyle = TextStyle(color = Color.Black),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.4f),
+                        maxLines = Int.MAX_VALUE
+                    )
+                }
+                }
 
             Row (
                 modifier = Modifier.fillMaxWidth()
