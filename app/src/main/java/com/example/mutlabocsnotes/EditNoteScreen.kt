@@ -1,5 +1,6 @@
 package com.example.mutlabocsnotes
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -139,21 +140,59 @@ fun EditNoteScreen(
                     }
                     }
                 "Дела" -> {
-                    var deadline by remember { mutableStateOf("") }
+
                     val context = LocalContext.current
-                    val calendar = remember { Calendar.getInstance() }
-                    val datePickerDialog = remember {
+                    var todayCalendar = remember {
+                        Calendar.getInstance().apply {
+                            set(Calendar.HOUR_OF_DAY, 0)
+                            set(Calendar.MINUTE, 0)
+                            set(Calendar.SECOND, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }
+                    }
+                    val initialDeadlineCalendar = remember {
+                        (todayCalendar.clone() as Calendar).apply {
+                            add(Calendar.DAY_OF_YEAR, 1)
+                    }
+                    }
+                    var selectedDeadlineMillis by remember {
+                        mutableStateOf(initialDeadlineCalendar.timeInMillis) }
+                    val deadline = remember(selectedDeadlineMillis) {
+                        val caldarForFormat = Calendar.getInstance().apply {
+                            timeInMillis = selectedDeadlineMillis
+                        }
+                        "%02d.%02d.%04d".format(
+                            caldarForFormat.get(Calendar.DAY_OF_MONTH),
+                            caldarForFormat.get(Calendar.MONTH) + 1,
+                            caldarForFormat.get(Calendar.YEAR)
+                        )
+                    }
+                    val datePickerDialog = remember(context, todayCalendar.timeInMillis) {
+
                         DatePickerDialog(
                             context,
-                            { _, year, month, dayOfMonth -> deadline = "%02d.%02d.%04d".format(dayOfMonth, month + 1, year)},
-                            calendar.get(Calendar.YEAR),
-                            calendar.get(Calendar.MONTH),
-                            calendar.get(Calendar.DAY_OF_MONTH)).apply {
-                                datePicker.minDate = calendar.timeInMillis
-                            }
+                            {_, year, month, dayOfMonth ->
+                                val pickedCalendar = Calendar.getInstance().apply {
+                                    set(Calendar.YEAR, year)
+                                    set(Calendar.MONTH, month)
+                                    set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                                    set(Calendar.HOUR_OF_DAY, 0)
+                                    set(Calendar.HOUR_OF_DAY, 0)
+                                    set(Calendar.MINUTE, 0)
+                                    set(Calendar.SECOND, 0)
+                                    set(Calendar.MILLISECOND, 0)
+                                }
+                                selectedDeadlineMillis = pickedCalendar.timeInMillis
+                            },
+                            initialDeadlineCalendar.get(Calendar.YEAR),
+                            initialDeadlineCalendar.get(Calendar.MONTH),
+                            initialDeadlineCalendar.get(Calendar.DAY_OF_MONTH))
+                                .apply {
+                                    datePicker.minDate = todayCalendar.timeInMillis
+                                }
                     }
-
                     var isRepeationg by remember { mutableStateOf(false) }
+                    val dateFieldInteractionSource = remember { MutableInteractionSource() }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
                             value = deadline,
@@ -168,8 +207,22 @@ fun EditNoteScreen(
                             ),
                             modifier = Modifier
                                 .weight(1f)
-                                .clickable { datePickerDialog.show() },
-                            readOnly = true
+                                .clickable(
+                                    interactionSource = dateFieldInteractionSource,
+                                    indication = null
+                                ) {
+                                    val selectedCalendar = Calendar.getInstance().apply {
+                                        timeInMillis = selectedDeadlineMillis
+                                    }
+                                    datePickerDialog.updateDate(
+                                        selectedCalendar.get(Calendar.YEAR),
+                                        selectedCalendar.get(Calendar.MONTH),
+                                        selectedCalendar.get(Calendar.DAY_OF_MONTH)
+                                    )
+                                    datePickerDialog.show()
+                                },
+                            readOnly = true,
+                            interactionSource = dateFieldInteractionSource
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
