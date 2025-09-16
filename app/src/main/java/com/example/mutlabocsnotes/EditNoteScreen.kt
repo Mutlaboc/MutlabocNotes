@@ -30,10 +30,14 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.Checkbox
+import androidx.compose.material3.DatePicker
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.LocalContext
+import android.app.DatePickerDialog
+import java.util.Calendar
 @OptIn(ExperimentalMaterial3Api::class)
-
 
 @Composable
 fun EditNoteScreen(
@@ -136,13 +140,24 @@ fun EditNoteScreen(
                     }
                 "Дела" -> {
                     var deadline by remember { mutableStateOf("") }
+                    val context = LocalContext.current
+                    val calendar = remember { Calendar.getInstance() }
+                    val datePickerDialog = remember {
+                        DatePickerDialog(
+                            context,
+                            { _, year, month, dayOfMonth -> deadline = "%02d.%02d.%04d".format(dayOfMonth, month + 1, year)},
+                            calendar.get(Calendar.YEAR),
+                            calendar.get(Calendar.MONTH),
+                            calendar.get(Calendar.DAY_OF_MONTH)).apply {
+                                datePicker.minDate = calendar.timeInMillis
+                            }
+                    }
+
                     var isRepeationg by remember { mutableStateOf(false) }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
                             value = deadline,
-                            onValueChange = {
-                                deadline = it
-                            },
+                            onValueChange = {},
                             label = { Text("Дедлайн") },
                             textStyle = TextStyle(color = Color.Black),
                             colors = TextFieldDefaults.outlinedTextFieldColors(
@@ -151,7 +166,10 @@ fun EditNoteScreen(
                                 unfocusedLabelColor = Color.Gray,
                                 cursorColor = Color.Black
                             ),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { datePickerDialog.show() },
+                            readOnly = true
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
