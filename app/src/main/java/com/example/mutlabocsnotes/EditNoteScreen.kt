@@ -1,6 +1,5 @@
 package com.example.mutlabocsnotes
 
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,8 +38,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
 import android.app.DatePickerDialog
 import java.util.Calendar
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalFocusManager
 @OptIn(ExperimentalMaterial3Api::class)
 
 @Composable
@@ -145,7 +142,6 @@ fun EditNoteScreen(
                 "Дела" -> {
 
                     val context = LocalContext.current
-                    val focusManager = LocalFocusManager.current
                     var todayCalendar = remember {
                         Calendar.getInstance().apply {
                             set(Calendar.HOUR_OF_DAY, 0)
@@ -197,18 +193,6 @@ fun EditNoteScreen(
                     }
                     var isRepeationg by remember { mutableStateOf(false) }
                     val dateFieldInteractionSource = remember { MutableInteractionSource() }
-                    val openDatepicker = {
-                        val selectedCalendar = Calendar.getInstance().apply {
-                            timeInMillis = selectedDeadlineMillis
-                        }
-                        datePickerDialog.updateDate(
-                            selectedCalendar.get(Calendar.YEAR),
-                            selectedCalendar.get(Calendar.MONTH),
-                            selectedCalendar.get(Calendar.DAY_OF_MONTH)
-                        )
-                        focusManager.clearFocus()
-                        datePickerDialog.show()
-                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
                             value = deadline,
@@ -223,10 +207,19 @@ fun EditNoteScreen(
                             ),
                             modifier = Modifier
                                 .weight(1f)
-                                .pointerInput(Unit) {
-                                    detectTapGestures {
-                                        openDatepicker
+                                .clickable(
+                                    interactionSource = dateFieldInteractionSource,
+                                    indication = null
+                                ) {
+                                    val selectedCalendar = Calendar.getInstance().apply {
+                                        timeInMillis = selectedDeadlineMillis
                                     }
+                                    datePickerDialog.updateDate(
+                                        selectedCalendar.get(Calendar.YEAR),
+                                        selectedCalendar.get(Calendar.MONTH),
+                                        selectedCalendar.get(Calendar.DAY_OF_MONTH)
+                                    )
+                                    datePickerDialog.show()
                                 },
                             readOnly = true,
                             interactionSource = dateFieldInteractionSource
