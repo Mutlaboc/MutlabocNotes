@@ -1,7 +1,6 @@
 package com.example.mutlabocsnotes
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,7 +17,6 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,10 +31,11 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.Checkbox
+import androidx.compose.material3.DatePicker
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import android.app.DatePickerDialog
 import java.util.Calendar
 @OptIn(ExperimentalMaterial3Api::class)
@@ -143,7 +142,6 @@ fun EditNoteScreen(
                 "Дела" -> {
 
                     val context = LocalContext.current
-                    val focusManager = LocalFocusManager.current
                     var todayCalendar = remember {
                         Calendar.getInstance().apply {
                             set(Calendar.HOUR_OF_DAY, 0)
@@ -195,25 +193,6 @@ fun EditNoteScreen(
                     }
                     var isRepeationg by remember { mutableStateOf(false) }
                     val dateFieldInteractionSource = remember { MutableInteractionSource() }
-                    val openDatePicker = {
-                        val selectedCalendar = Calendar.getInstance().apply {
-                            timeInMillis = selectedDeadlineMillis
-                        }
-                        datePickerDialog.updateDate(
-                            selectedCalendar.get(Calendar.YEAR),
-                            selectedCalendar.get(Calendar.MONTH),
-                            selectedCalendar.get(Calendar.DAY_OF_MONTH)
-                        )
-                        focusManager.clearFocus()
-                        datePickerDialog.show()
-                    }
-                    LaunchedEffect(dateFieldInteractionSource) {
-                        dateFieldInteractionSource.interactions.collect { interaction ->
-                            if (interaction is PressInteraction.Release) {
-                                openDatePicker()
-                            }
-                        }
-                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
                             value = deadline,
@@ -228,6 +207,20 @@ fun EditNoteScreen(
                             ),
                             modifier = Modifier
                                 .weight(1f)
+                                .clickable(
+                                    interactionSource = dateFieldInteractionSource,
+                                    indication = null
+                                ) {
+                                    val selectedCalendar = Calendar.getInstance().apply {
+                                        timeInMillis = selectedDeadlineMillis
+                                    }
+                                    datePickerDialog.updateDate(
+                                        selectedCalendar.get(Calendar.YEAR),
+                                        selectedCalendar.get(Calendar.MONTH),
+                                        selectedCalendar.get(Calendar.DAY_OF_MONTH)
+                                    )
+                                    datePickerDialog.show()
+                                },
                             readOnly = true,
                             interactionSource = dateFieldInteractionSource
                         )
