@@ -38,6 +38,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
 import android.app.DatePickerDialog
 import java.util.Calendar
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.flow.collect
 @OptIn(ExperimentalMaterial3Api::class)
 
 @Composable
@@ -193,6 +196,23 @@ fun EditNoteScreen(
                     }
                     var isRepeationg by remember { mutableStateOf(false) }
                     val dateFieldInteractionSource = remember { MutableInteractionSource() }
+                    LaunchedEffect(dateFieldInteractionSource, datePickerDialog) {
+                        dateFieldInteractionSource.interactions.collect {
+                            interaction ->
+                            if (interaction is PressInteraction.Release)
+                            {
+                                val selectedCalendar = Calendar.getInstance().apply {
+                                    timeInMillis = selectedDeadlineMillis
+                                }
+                                datePickerDialog.updateDate(
+                                    selectedCalendar.get(Calendar.YEAR),
+                                    selectedCalendar.get(Calendar.MONTH),
+                                    selectedCalendar.get(Calendar.DAY_OF_MONTH)
+                                )
+                                datePickerDialog.show()
+                            }
+                        }
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
                             value = deadline,
@@ -205,22 +225,7 @@ fun EditNoteScreen(
                                 unfocusedLabelColor = Color.Gray,
                                 cursorColor = Color.Black
                             ),
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable(
-                                    interactionSource = dateFieldInteractionSource,
-                                    indication = null
-                                ) {
-                                    val selectedCalendar = Calendar.getInstance().apply {
-                                        timeInMillis = selectedDeadlineMillis
-                                    }
-                                    datePickerDialog.updateDate(
-                                        selectedCalendar.get(Calendar.YEAR),
-                                        selectedCalendar.get(Calendar.MONTH),
-                                        selectedCalendar.get(Calendar.DAY_OF_MONTH)
-                                    )
-                                    datePickerDialog.show()
-                                },
+                            modifier = Modifier.weight(1f),
                             readOnly = true,
                             interactionSource = dateFieldInteractionSource
                         )
