@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.Checkbox
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.Icon
@@ -46,6 +47,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.Checkbox
+import androidx.compose.runtime.mutableStateListOf
+
 
 
 @Composable
@@ -61,6 +66,8 @@ fun HomeScreen(
     // Простейший список категорий, пока статичный
     val categories = listOf("Все", "Работа", "Личное")
     var search by remember { mutableStateOf("") }
+
+    val completedNotes = remember { mutableStateListOf<String>() }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -128,10 +135,16 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .weight(1f)
             ) {
-                items(notes) { note ->
+                items(notes.filter { it.id !in completedNotes }, key = {it.id}) { note ->
                     NoteItem(
                         note = note,
-                        onClick = { onNoteClick(note.id)}
+                        onClick = { onNoteClick(note.id)},
+                        onCompleted = { completedId ->
+                            if (completedId !in completedNotes) {
+                                completedNotes.add(completedId)
+                            }
+
+                        }
                     )
                 }
             }
@@ -146,15 +159,56 @@ fun HomeScreen(
 
 // Простой composable для отображения одной заметки
 @Composable
-fun NoteItem(note: Note, onClick: () -> Unit) {
+fun NoteItem(
+    note: Note,
+    onClick: () -> Unit,
+    onCompleted: (String) -> Unit) {
+    var isChecked by remember { mutableStateOf(false) }
+    val coinCount by remember(note.id) { mutableStateOf((1..5).random()) }
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
             .padding(16.dp)
     ) {
-        Text(text = note.title, style = MaterialTheme.typography.subtitle1)
-        Text(text = note.content, style = MaterialTheme.typography.body2)
+        Row (
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ){
+            Checkbox(
+                checked = isChecked,
+                onCheckedChange = { checked ->
+                        isChecked = checked
+                    if (checked) {
+                        onCompleted(note.id)
+                    }
+
+                }
+            )
+            Column (
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onClick() }
+                    .padding(start = 8.dp)
+            ){
+                Text(text = note.title, style = MaterialTheme.typography.subtitle1)
+                Text(text = note.content, style = MaterialTheme.typography.body2)
+            }
+        }
+        Row (
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.End
+        ) {
+            repeat(coinCount) {
+                Image(
+                    painter = painterResource(id = R.drawable.gold_coin),
+                    contentDescription = "Золотая монета",
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+
     }
 }
 @Composable
