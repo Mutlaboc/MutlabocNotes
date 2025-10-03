@@ -69,8 +69,8 @@ fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
         composable("edit") {
             EditNoteScreen(
                 note = null,
-                onSaveClick = { title, content ->
-                    notesViewModel.addNote(title, content)
+                onSaveClick = { createdNote ->
+                    notesViewModel.addNote(createdNote)
                     navController.popBackStack()
                 }
             )
@@ -83,9 +83,9 @@ fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
             val note = notesViewModel.notes.find { it.id == noteId }
             EditNoteScreen(
                 note = note,
-                onSaveClick = { title, content ->
+                onSaveClick = { updatedNote ->
                     if (note != null) {
-                        notesViewModel.updateNote(noteId, title, content)
+                        notesViewModel.updateNote(updatedNote)
                     }
                     navController.popBackStack() },
                 onDeleteClick = {

@@ -23,35 +23,73 @@ class FirestoreRepository {
         return try {
             val snapshot = collection.get().await()
             snapshot.documents.mapNotNull { doc ->
-                val title = doc.getString("title")
-                val content = doc.getString("content")
-                if (title != null && content != null) {
-                    Note(id = doc.id, title = title, content = content)
-                } else {
-                    null
+                val title = doc.getString("title") ?: return@mapNotNull null
+                val content = doc.getString("content") ?: ""
+                val categoryName = doc.getString("category")
+                val category = NoteCategory.values().firstOrNull {
+                    it.name == categoryName
                 }
+                    ?: NoteCategory.NOTES
+                val cheklist = (doc.get("cheklist") as? List<*>)
+                    ?.mapNotNull {
+                        rawItem ->
+                        (rawItem as? Map <*, *>)?.let {
+                            itemMap ->
+                            val text = itemMap["text"] as? String ?: ""
+                            val isChecked = itemMap["isChecked"] as? Boolean ?: false
+                            CheklistItem(text = text, isChecked = isChecked)
+                        }
+                    } ?: emptyList()
+                val deadlineMillis = doc.getLong("deadlineMillis")
+                val isRepeating = doc.getBoolean("isRepeating") ?: false
+                val coinCount = doc.getLong("coinCount")?.toInt() ?: 0
+                Note(
+                    id = doc.id,
+                    title = title,
+                    content = content,
+                    category = category,
+                    checklist = cheklist,
+                    deadlineMillis = deadlineMillis,
+                    isRepeating = isRepeating,
+                    coinCount = coinCount
+                )
             }
         } catch (e: Exception) {
             emptyList()
         }
     }
 
-    suspend fun insert(title: String, content: String): String? {
+    private fun noteMap(note: Note): Map<String, Any?> = mapOf(
+        "title" to note.title,
+        "content" to note.content,
+        "category" to note.category.name,
+        "cheklist" to note.checklist.map {
+            item -> mapOf(
+                "text" to item.text,
+                "isChecked" to item.isChecked
+            )
+        },
+        "deadlineMillis" to note.deadlineMillis,
+        "isRepeating" to note.isRepeating,
+        "coinCount" to note.coinCount
+    )
+    suspend fun insert(note: Note): String? {
         val collection = userNotesCollection() ?: return null
         return try {
             val doc = collection.document()
-            doc.set(mapOf("title" to title, "content" to content)).await()
+            doc.set(noteMap(note)).await()
             doc.id
         } catch (e: Exception) {
             null
         }
     }
 
-    suspend fun update(noteId: String, title: String, content: String): Boolean {
+    suspend fun update(note: Note): Boolean {
         val collection = userNotesCollection() ?: return false
+        if (note.id.isEmpty()) return false
         return try {
-            collection.document(noteId)
-                .set(mapOf("title" to title, "content" to content)).await()
+            collection.document(note.id)
+                .set(noteMap(note)).await()
             true
         } catch (e: Exception) {
             false
@@ -69,3 +107,4 @@ class FirestoreRepository {
     }
 
 }
+

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.mutableStateListOf
 
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -22,32 +23,36 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun loadNotes() {
         viewModelScope.launch(Dispatchers.IO) {
-            notes.clear()
-            notes.addAll(repository.getAllNotes())
+            val loadNotes = repository.getAllNotes()
+            launch(Dispatchers.Main) {
+                notes.clear()
+                notes.addAll(loadNotes)
+            }
         }
     }
 
 
-    fun addNote(title: String, content: String) {
+    fun addNote(note: Note) {
         viewModelScope.launch(Dispatchers.IO) {
-            val id = repository.insert(title, content)
+            val id = repository.insert(note)
             if (id != null) {
-                val note = Note(id = id, title = title, content = content)
+                val noteWithId = note.copy(id = id)
                 launch(Dispatchers.Main) {
-                    notes.add(note)
+                    notes.add(noteWithId)
                 }
             }
         }
     }
 
-    fun updateNote(noteId: String, title: String, content: String) {
+    fun updateNote(note: Note) {
+        if (note.id.isEmpty()) return
         viewModelScope.launch(Dispatchers.IO) {
-            val success = repository.update(noteId, title, content)
+            val success = repository.update(note)
             if (success) {
-                val index = notes.indexOfFirst { it.id == noteId }
+                val index = notes.indexOfFirst { it.id == note.id }
                 if (index != -1) {
                     launch(Dispatchers.Main) {
-                        notes[index] = notes[index].copy(title = title, content = content)
+                        notes[index] = note
                     }
                 }
             }

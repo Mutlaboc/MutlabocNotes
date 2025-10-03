@@ -31,28 +31,69 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.Checkbox
-import androidx.compose.material3.DatePicker
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.Alignment
-import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
 import android.app.DatePickerDialog
 import java.util.Calendar
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.runtime.LaunchedEffect
-import kotlinx.coroutines.flow.collect
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+
 @OptIn(ExperimentalMaterial3Api::class)
 
 @Composable
 fun EditNoteScreen(
     note: Note?,
-    onSaveClick: (title: String, content:String) -> Unit,
+    onSaveClick: (Note) -> Unit,
     onDeleteClick: (() -> Unit)? = null
 ) {
-    var title by remember { mutableStateOf(note?.title ?: "") }
-    var content by remember { mutableStateOf(note?.content ?: "") }
-    var selectedCategory by remember { mutableStateOf<String?>(null) }
-    val categories = listOf("Покупки", "Дела", "Заметки")
+    val noteId = note?.id.orEmpty()
+    var title by remember(noteId) { mutableStateOf(note?.title ?: "") }
+    var content by remember(noteId) { mutableStateOf(note?.content ?: "") }
+    var selectedCategory by remember(noteId) {
+        mutableStateOf(note?.category ?: NoteCategory.NOTES)
+    }
+    val checklistItems = remember(noteId) {
+        val initial = note
+            ?.takeIf { it.category == NoteCategory.SHOPPING && it.checklist.isNotEmpty() }
+            ?.checklist
+            ?: listOf(CheklistItem())
+        mutableStateListOf<CheklistItem>().apply { addAll(initial) }
+    }
+
+    val todayCalendar = remember {
+        Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+    }
+    val defaultDeadline = remember {
+        (todayCalendar.clone() as Calendar).apply {
+            add(Calendar.DAY_OF_YEAR, 1)
+        }.timeInMillis
+    }
+    var selectedDeadlineMillis by remember(noteId) {
+        mutableStateOf(note?.deadlineMillis ?: defaultDeadline)
+    }
+    var isRepeating by remember(noteId) {
+        mutableStateOf(note?.isRepeating ?: false)
+    }
+    val defaultCoinCount = remember(noteId) { note?.coinCount ?: (1..5).random() }
+    var coinCountText by remember(noteId) {
+        mutableStateOf(defaultCoinCount.toString())
+    }
+    val categories = listOf(
+        NoteCategory.SHOPPING to "Покупки",
+        NoteCategory.TASKS to "Дела",
+        NoteCategory.NOTES to "Заметки"
+    )
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -64,6 +105,7 @@ fun EditNoteScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
             OutlinedTextField(
@@ -76,21 +118,17 @@ fun EditNoteScreen(
                     focusedLabelColor = Color.Black,
                     unfocusedLabelColor = Color.Gray,
                     cursorColor = Color.Black),
-
                 modifier = Modifier.fillMaxWidth(),
-
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row {
-                categories.forEach { category ->
+                categories.forEach { (category, label) ->
                     FilterChip(
                         selected = selectedCategory == category,
                         onClick = {
-                            selectedCategory = if (selectedCategory == category) null else category
+                            selectedCategory = category
                         },
-                        label = {
-                            Text(category)
-                        },
+                        label = { Text(label) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = Color(0xFFBBDEFB)
                         ),
@@ -100,10 +138,9 @@ fun EditNoteScreen(
             }
             Spacer(modifier = Modifier.height(8.dp))
             when (selectedCategory) {
-                "Покупки" -> {
-                    val cheklistItems = remember { mutableStateListOf(false to "")}
-                    Column {
-                        cheklistItems.forEachIndexed { index, item ->
+                NoteCategory.SHOPPING -> {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        checklistItems.forEachIndexed { index, item ->
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
@@ -112,18 +149,15 @@ fun EditNoteScreen(
                             )
                             {
                                 Checkbox(
-                                    checked = item.first,
+                                    checked = item.isChecked,
                                     onCheckedChange = { checked ->
-                                        cheklistItems[index] = checked to item.second
+                                        checklistItems[index] = item.copy(isChecked = checked)
                                     }
                                 )
                                 OutlinedTextField(
-                                    value = item.second,
+                                    value = item.text,
                                     onValueChange = { text ->
-                                        cheklistItems[index] = item.first to text
-                                    },
-                                    label = {
-                                        Text("Пункт${'$'}{index +1}")
+                                        checklistItems[index] = item.copy(text = text)
                                     },
                                     textStyle = TextStyle(color = Color.Black),
                                     colors = TextFieldDefaults.outlinedTextFieldColors(
@@ -132,54 +166,31 @@ fun EditNoteScreen(
                                         unfocusedLabelColor = Color.Gray,
                                         cursorColor = Color.Black
                                     ),
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(start = 8.dp)
                                 )
 
                             }
                         }
-                        Button(onClick = { cheklistItems.add(false to "") }) {
+                        Button(onClick = { checklistItems.add(CheklistItem()) }) {
                             Text("Добавить")
                         }
                     }
                     }
-                "Дела" -> {
+                NoteCategory.TASKS -> {
 
                     val context = LocalContext.current
-                    var todayCalendar = remember {
-                        Calendar.getInstance().apply {
-                            set(Calendar.HOUR_OF_DAY, 0)
-                            set(Calendar.MINUTE, 0)
-                            set(Calendar.SECOND, 0)
-                            set(Calendar.MILLISECOND, 0)
-                        }
-                    }
-                    val initialDeadlineCalendar = remember {
-                        (todayCalendar.clone() as Calendar).apply {
-                            add(Calendar.DAY_OF_YEAR, 1)
-                    }
-                    }
-                    var selectedDeadlineMillis by remember {
-                        mutableStateOf(initialDeadlineCalendar.timeInMillis) }
-                    val deadline = remember(selectedDeadlineMillis) {
-                        val caldarForFormat = Calendar.getInstance().apply {
-                            timeInMillis = selectedDeadlineMillis
-                        }
-                        "%02d.%02d.%04d".format(
-                            caldarForFormat.get(Calendar.DAY_OF_MONTH),
-                            caldarForFormat.get(Calendar.MONTH) + 1,
-                            caldarForFormat.get(Calendar.YEAR)
-                        )
-                    }
-                    val datePickerDialog = remember(context, todayCalendar.timeInMillis) {
 
+                    val datePickerDialog = remember(context) {
+                        val calendar = Calendar.getInstance().apply { timeInMillis = selectedDeadlineMillis }
                         DatePickerDialog(
                             context,
-                            {_, year, month, dayOfMonth ->
+                            { _, year, month, dayOfMonth ->
                                 val pickedCalendar = Calendar.getInstance().apply {
                                     set(Calendar.YEAR, year)
                                     set(Calendar.MONTH, month)
                                     set(Calendar.DAY_OF_MONTH, dayOfMonth)
-                                    set(Calendar.HOUR_OF_DAY, 0)
                                     set(Calendar.HOUR_OF_DAY, 0)
                                     set(Calendar.MINUTE, 0)
                                     set(Calendar.SECOND, 0)
@@ -187,35 +198,41 @@ fun EditNoteScreen(
                                 }
                                 selectedDeadlineMillis = pickedCalendar.timeInMillis
                             },
-                            initialDeadlineCalendar.get(Calendar.YEAR),
-                            initialDeadlineCalendar.get(Calendar.MONTH),
-                            initialDeadlineCalendar.get(Calendar.DAY_OF_MONTH))
-                                .apply {
-                                    datePicker.minDate = todayCalendar.timeInMillis
-                                }
+                            calendar.get(Calendar.YEAR),
+                            calendar.get(Calendar.MONTH),
+                            calendar.get(Calendar.DAY_OF_MONTH)
+                        ).apply {
+                            datePicker.minDate = todayCalendar.timeInMillis
+                        }
                     }
-                    var isRepeationg by remember { mutableStateOf(false) }
+
                     val dateFieldInteractionSource = remember { MutableInteractionSource() }
-                    LaunchedEffect(dateFieldInteractionSource, datePickerDialog) {
-                        dateFieldInteractionSource.interactions.collect {
-                            interaction ->
-                            if (interaction is PressInteraction.Release)
-                            {
-                                val selectedCalendar = Calendar.getInstance().apply {
-                                    timeInMillis = selectedDeadlineMillis
-                                }
+                    LaunchedEffect(dateFieldInteractionSource) {
+                        dateFieldInteractionSource.interactions.collect { interaction ->
+                            if (interaction is PressInteraction.Release) {
+                                val cal = Calendar.getInstance().apply { timeInMillis = selectedDeadlineMillis }
                                 datePickerDialog.updateDate(
-                                    selectedCalendar.get(Calendar.YEAR),
-                                    selectedCalendar.get(Calendar.MONTH),
-                                    selectedCalendar.get(Calendar.DAY_OF_MONTH)
+                                    cal.get(Calendar.YEAR),
+                                    cal.get(Calendar.MONTH),
+                                    cal.get(Calendar.DAY_OF_MONTH)
                                 )
                                 datePickerDialog.show()
                             }
                         }
                     }
+                    val deadlineText = remember(selectedDeadlineMillis) {
+                        val calendar = Calendar.getInstance().apply {
+                            timeInMillis = selectedDeadlineMillis
+                        }
+                        "%02d.%02d.%04d".format(
+                            calendar.get(Calendar.DAY_OF_MONTH),
+                            calendar.get(Calendar.MONTH) +1,
+                            calendar.get(Calendar.YEAR)
+                        )
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
-                            value = deadline,
+                            value = deadlineText,
                             onValueChange = {},
                             label = { Text("Дедлайн") },
                             textStyle = TextStyle(color = Color.Black),
@@ -232,12 +249,25 @@ fun EditNoteScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(
-                                checked = isRepeationg,
-                                onCheckedChange = { isRepeationg = it }
+                                checked = isRepeating,
+                                onCheckedChange = { isRepeating = it }
                             )
                             Text("Повторять")
                         }
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = content,
+                        onValueChange = { content = it },
+                        label = { Text("Содержимое", color = Color.Black) },
+                        textStyle = TextStyle(color = Color.Black),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.4f),
+                        maxLines = Int.MAX_VALUE
+                    )
+                }
+                NoteCategory.NOTES -> {
                     OutlinedTextField(
                         value = content,
                         onValueChange = {
@@ -251,31 +281,67 @@ fun EditNoteScreen(
                         maxLines = Int.MAX_VALUE
                     )
                 }
-                "Заметки" -> {
-                    OutlinedTextField(
-                        value = content,
-                        onValueChange = {
-                            content = it
-                        },
-                        label = { Text("Содержимое", color = Color.Black) },
-                        textStyle = TextStyle(color = Color.Black),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.4f),
-                        maxLines = Int.MAX_VALUE
-                    )
                 }
-                }
-
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = coinCountText,
+                onValueChange = { value ->
+                    if (value.all {it.isDigit()}) {
+                        coinCountText = value
+                    }
+                },
+                label = { Text("Колличество монет") },
+                textStyle = TextStyle(color = Color.Black),
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    textColor = Color.Black,
+                    focusedLabelColor = Color.Black,
+                    unfocusedLabelColor = Color.Gray,
+                    cursorColor = Color.Black
+                ),
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
             Row (
                 modifier = Modifier.fillMaxWidth()
             ) {
 
                 Button(
                     onClick = {
-                        onSaveClick(title, content)
+                        val coinCount = coinCountText.toIntOrNull()
+                            ?: defaultCoinCount
+                        val cleanedChecklist  = if (selectedCategory == NoteCategory.SHOPPING)
+                        {
+                            checklistItems
+                                .map {it.copy(text = it.text.trim())}
+                                .filter { it.text.isNotEmpty() || it.isChecked }
+                        } else {
+                            emptyList()
+                        }
+                        val preparedContent = when (selectedCategory) {
+                            NoteCategory.SHOPPING -> note?.content ?: ""
+                            else -> content
+                        }
+                        val preparedNote = Note (
+                            id = noteId,
+                            title = title,
+                            content = preparedContent,
+                            category = selectedCategory,
+                            checklist = cleanedChecklist,
+                            deadlineMillis = if (selectedCategory == NoteCategory.TASKS) {
+                                selectedDeadlineMillis
+                            } else {
+                                null
+                            },
+                            isRepeating = if (selectedCategory == NoteCategory.TASKS) {
+                                isRepeating
+                            } else {
+                                false
+                            },
+                            coinCount = coinCount
+                        )
+                        onSaveClick(preparedNote)
                     },
-
                 ) {
                     Text("Сохранить")
                 }
@@ -283,13 +349,11 @@ fun EditNoteScreen(
                 onDeleteClick?.let {
                     Button(
                         onClick = { it() },
-
                     ) {
                         Text("Удалить")
                     }
                 }
             }
-
         }
     }
 }
@@ -297,11 +361,16 @@ fun EditNoteScreen(
 @Preview(showBackground = true)
 @Composable
 fun EditNoteScreenPreview() {
-    // Для предварительного просмотра редактирования заметки передаём примерную заметку.
-    val sampleNote = Note(id = "1", title = "Пример", content = "Содержимое")
+    val sampleNote = Note(
+        id = "1",
+        title = "Пример",
+        content = "Содержимое",
+        category = NoteCategory.NOTES,
+        coinCount = 3
+    )
     EditNoteScreen(
         note = sampleNote,
-        onSaveClick = { _, _ -> },
+        onSaveClick = { _ -> },
         onDeleteClick = { }
     )
 }

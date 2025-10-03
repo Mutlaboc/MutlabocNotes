@@ -24,13 +24,9 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddHome
-import androidx.compose.material.icons.filled.Garage
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Task
 import androidx.compose.material.primarySurface
@@ -41,16 +37,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.Checkbox
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.mutableStateListOf
-
+import java.util.Calendar
 
 
 @Composable
@@ -164,7 +158,7 @@ fun NoteItem(
     onClick: () -> Unit,
     onCompleted: (String) -> Unit) {
     var isChecked by remember { mutableStateOf(false) }
-    val coinCount by remember(note.id) { mutableStateOf((1..5).random()) }
+    val coinCount = note.coinCount
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -173,25 +167,68 @@ fun NoteItem(
         Row (
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
-        ){
+        ) {
             Checkbox(
                 checked = isChecked,
                 onCheckedChange = { checked ->
-                        isChecked = checked
+                    isChecked = checked
                     if (checked) {
                         onCompleted(note.id)
                     }
 
                 }
             )
-            Column (
+            Column(
                 modifier = Modifier
                     .weight(1f)
                     .clickable { onClick() }
                     .padding(start = 8.dp)
-            ){
+            ) {
                 Text(text = note.title, style = MaterialTheme.typography.subtitle1)
-                Text(text = note.content, style = MaterialTheme.typography.body2)
+                when (note.category) {
+                    NoteCategory.SHOPPING -> {
+                        if (note.checklist.isNotEmpty()) {
+                            note.checklist.take(3).forEach { item ->
+                                Text(
+                                    text = "• ${item.text}",
+                                    style = MaterialTheme.typography.body2
+                                )
+                            }
+                            if (note.checklist.size > 3) {
+                                Text(
+                                    text = "…",
+                                    style = MaterialTheme.typography.body2
+                                )
+                            }
+                        } else if (note.content.isNotBlank()) {
+                            Text(text = note.content, style = MaterialTheme.typography.body2)
+                        }
+                    }
+
+                    NoteCategory.NOTES -> {
+                        if (note.content.isNotBlank()) {
+                            Text(text = note.content, style = MaterialTheme.typography.body2)
+                        }
+                    }
+
+                    NoteCategory.TASKS -> {
+                        if (note.content.isNotBlank()) {
+                            Text(text = note.content, style = MaterialTheme.typography.body2)
+                        }
+                        note.deadlineMillis?.let { millis ->
+                            Text(
+                                text = "Дедлайн: ${formatDeadline(millis)}",
+                                style = MaterialTheme.typography.caption
+                            )
+                        }
+                        if (note.isRepeating) {
+                            Text(
+                                text = "Повторяется",
+                                style = MaterialTheme.typography.caption
+                            )
+                        }
+                    }
+                }
             }
         }
         Row (
@@ -200,7 +237,7 @@ fun NoteItem(
                 .padding(top = 8.dp),
             horizontalArrangement = Arrangement.End
         ) {
-            repeat(coinCount) {
+            repeat(coinCount.coerceAtLeast(0)) {
                 Image(
                     painter = painterResource(id = R.drawable.gold_coin),
                     contentDescription = "Золотая монета",
@@ -210,6 +247,16 @@ fun NoteItem(
         }
 
     }
+}
+private fun formatDeadline(millis: Long): String {
+    val calendar = Calendar.getInstance().apply {
+        timeInMillis = millis
+    }
+    return "%02d.%02d.%04d".format(
+        calendar.get(Calendar.DAY_OF_MONTH),
+        calendar.get(Calendar.MONTH) + 1,
+        calendar.get(Calendar.YEAR)
+    )
 }
 @Composable
 fun BottomRowWithFiveCells (
@@ -230,7 +277,7 @@ fun BottomRowWithFiveCells (
                     .weight(1f)
                     .fillMaxHeight()
                     .clickable {
-                        if (index == 2) {
+                        if (index == 1) {
                             onAddClick()
                         } else {
                             onCellClick(index)
@@ -250,7 +297,7 @@ fun BottomRowWithFiveCells (
 
                     1 -> {
                         Icon(
-                            imageVector = Icons.Default.AddHome,
+                            imageVector = Icons.Default.Add,
                             contentDescription = "Ячейка 2",
                             tint = MaterialTheme.colors.onPrimary
                         )
