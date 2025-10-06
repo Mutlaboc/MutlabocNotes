@@ -33,5 +33,6 @@ data class Note(
     val checklist: List<CheklistItem> = emptyList(),
     val deadlineMillis: Long? = null,
     val isRepeating: Boolean = false,
-    val coinCount: Int = 0
+    val coinCount: Int = 0,
+    val isCompleted: Boolean = false
 )

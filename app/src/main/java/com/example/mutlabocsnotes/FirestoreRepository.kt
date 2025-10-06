@@ -43,6 +43,7 @@ class FirestoreRepository {
                 val deadlineMillis = doc.getLong("deadlineMillis")
                 val isRepeating = doc.getBoolean("isRepeating") ?: false
                 val coinCount = doc.getLong("coinCount")?.toInt() ?: 0
+                val isCompleted = doc.getBoolean("isCompleted") ?: false
                 Note(
                     id = doc.id,
                     title = title,
@@ -51,7 +52,8 @@ class FirestoreRepository {
                     checklist = cheklist,
                     deadlineMillis = deadlineMillis,
                     isRepeating = isRepeating,
-                    coinCount = coinCount
+                    coinCount = coinCount,
+                    isCompleted = isCompleted
                 )
             }
         } catch (e: Exception) {
@@ -71,7 +73,8 @@ class FirestoreRepository {
         },
         "deadlineMillis" to note.deadlineMillis,
         "isRepeating" to note.isRepeating,
-        "coinCount" to note.coinCount
+        "coinCount" to note.coinCount,
+        "isCompleted" to note.isCompleted
     )
     suspend fun insert(note: Note): String? {
         val collection = userNotesCollection() ?: return null

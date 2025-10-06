@@ -59,6 +59,24 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
         }
     }
+    fun setNoteCompletion(noteId: String, isCompleted: Boolean) {
+        val index = notes.indexOfFirst { it.id == noteId }
+        if (index == -1) return
+        val existing = notes[index]
+        val updatedNote = existing.copy(isCompleted = isCompleted)
+        notes[index] = updatedNote
+        viewModelScope.launch(Dispatchers.IO) {
+            val success = repository.update(updatedNote)
+            if (!success) {
+                launch(Dispatchers.Main) {
+                    val currentIndex = notes.indexOfFirst { it.id == noteId }
+                    if (currentIndex != -1) {
+                        notes[currentIndex] = existing
+                    }
+                }
+            }
+        }
+    }
 
     fun deleteNote(noteId: String) {
         viewModelScope.launch(Dispatchers.IO) {

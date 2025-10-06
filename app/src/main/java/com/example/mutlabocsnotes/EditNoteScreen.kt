@@ -338,7 +338,8 @@ fun EditNoteScreen(
                             } else {
                                 false
                             },
-                            coinCount = coinCount
+                            coinCount = coinCount,
+                            isCompleted = note?.isCompleted ?: false
                         )
                         onSaveClick(preparedNote)
                     },

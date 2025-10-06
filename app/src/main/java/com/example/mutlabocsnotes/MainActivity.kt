@@ -57,12 +57,40 @@ fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
                 onNoteClick = { noteId ->
                     navController.navigate("edit/$noteId")
                 },
-                onOtherCellClick = { _ -> },
+                onOtherCellClick = { index ->
+                    when (index) {
+                        0 -> navController.navigate("completed") {
+                            launchSingleTop = true
+                        }
+                        2 -> Unit
+                    }
+                },
+                onCompletionChange = { noteId, isCompleted ->
+                    notesViewModel.setNoteCompletion(noteId, isCompleted)
+                },
                 onSwitchUser = {
                     FirebaseAuth.getInstance().signOut()
                     navController.navigate("auth") {
                         popUpTo("home") {inclusive = true}
                     }
+                }
+            )
+        }
+        composable("completed") {
+            CompletedNotesScreen(
+                notes = notesViewModel.notes,
+                onaddNoteClick = {
+                    navController.navigate("edit")
+                },
+                onNoteClick = {
+                    noteId ->
+                    navController.navigate("edit/$noteId")
+                },
+                onCompletionChange = { noteId, isCompleted ->
+                    notesViewModel.setNoteCompletion(noteId, isCompleted)
+                },
+                onNavigateHome = {
+                    navController.popBackStack()
                 }
             )
         }

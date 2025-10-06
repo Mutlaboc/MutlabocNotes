@@ -45,6 +45,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.mutableStateListOf
 import java.util.Calendar
+import androidx.compose.material.icons.filled.DoneAll
 
 
 @Composable
@@ -54,6 +55,7 @@ fun HomeScreen(
     onAddNoteClick: () -> Unit,
     onNoteClick: (noteId: String) -> Unit,
     onOtherCellClick: (index: Int) -> Unit,
+    onCompletionChange: (noteId: String, Boolean) -> Unit,
     onSwitchUser: () -> Unit,
 
 ) {
@@ -61,12 +63,11 @@ fun HomeScreen(
     val categories = listOf("Все", "Работа", "Личное")
     var search by remember { mutableStateOf("") }
 
-    val completedNotes = remember { mutableStateListOf<String>() }
-
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
             BottomRowWithFiveCells(
+                selectedIndex = 0,
                 onAddClick = onAddNoteClick,
                 onCellClick = onOtherCellClick
             )
@@ -125,19 +126,17 @@ fun HomeScreen(
                 }
 
             }
-            LazyColumn(modifier = Modifier
+            LazyColumn(
+                modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
             ) {
-                items(notes.filter { it.id !in completedNotes }, key = {it.id}) { note ->
+                items(notes.filter { !it.isCompleted }, key = { it.id }) { note ->
                     NoteItem(
                         note = note,
                         onClick = { onNoteClick(note.id)},
-                        onCompleted = { completedId ->
-                            if (completedId !in completedNotes) {
-                                completedNotes.add(completedId)
-                            }
-
+                        onCompletionChange = { isCompleted ->
+                            onCompletionChange(note.id, isCompleted)
                         }
                     )
                 }
@@ -150,14 +149,79 @@ fun HomeScreen(
 
     }
 }
+@Composable
+fun CompletedNotesScreen (
+    notes: List<Note>,
+    onaddNoteClick: () -> Unit,
+    onNoteClick: (noteId:String) -> Unit,
+    onCompletionChange: (noteId: String, Boolean) -> Unit,
+    onNavigateHome: () -> Unit
+) {
+    val completedNotes = notes.filter { it.isCompleted }
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        bottomBar = {
+            BottomRowWithFiveCells(
+                selectedIndex = 2,
+                onAddClick = onaddNoteClick,
+                onCellClick = { index ->
+                    when (index) {
+                        0 -> onNavigateHome()
+                        2 -> { /* already on completed screen */ }
+                    }
 
+                }
+
+            )
+        }
+    ) {
+        paddingValues ->
+        Column (
+            modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxSize()
+        ) {
+            Text(
+                text = "Выполненные задачи",
+                style = MaterialTheme.typography.h6,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+            )
+            if (completedNotes.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Здесь будут отображаться выполненнные задачи")
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
+                    items(completedNotes, key = {it.id}) {note ->
+                        NoteItem(
+                            note = note,
+                            onClick = {onNoteClick(note.id)},
+                            onCompletionChange = { isCompleted ->
+                                onCompletionChange(note.id, isCompleted)
+
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 // Простой composable для отображения одной заметки
 @Composable
 fun NoteItem(
     note: Note,
     onClick: () -> Unit,
-    onCompleted: (String) -> Unit) {
-    var isChecked by remember { mutableStateOf(false) }
+    onCompletionChange: (Boolean) -> Unit) {
     val coinCount = note.coinCount
     Column(
         modifier = Modifier
@@ -169,14 +233,8 @@ fun NoteItem(
             modifier = Modifier.fillMaxWidth()
         ) {
             Checkbox(
-                checked = isChecked,
-                onCheckedChange = { checked ->
-                    isChecked = checked
-                    if (checked) {
-                        onCompleted(note.id)
-                    }
-
-                }
+                checked = note.isCompleted,
+                onCheckedChange = onCompletionChange
             )
             Column(
                 modifier = Modifier
@@ -260,6 +318,7 @@ private fun formatDeadline(millis: Long): String {
 }
 @Composable
 fun BottomRowWithFiveCells (
+    selectedIndex: Int,
     onAddClick: () -> Unit,
     onCellClick: (index: Int) -> Unit
 ) {
@@ -272,6 +331,7 @@ fun BottomRowWithFiveCells (
         verticalAlignment = Alignment.CenterVertically
     ) {
         for (index in 0 until 3) {
+            val isSelected = index == selectedIndex
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -290,8 +350,8 @@ fun BottomRowWithFiveCells (
                     0 -> {
                         Icon(
                             imageVector = Icons.Default.Task,
-                            contentDescription = "Ячейка 1",
-                            tint = MaterialTheme.colors.onPrimary
+                            contentDescription = "Активные задачи",
+                            tint = if (isSelected) MaterialTheme.colors.secondary else MaterialTheme.colors.onPrimary
                         )
                     }
 
@@ -314,9 +374,9 @@ fun BottomRowWithFiveCells (
 
                     3 -> {
                         Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Ячейка 4",
-                            tint = MaterialTheme.colors.onPrimary
+                            imageVector = Icons.Default.DoneAll,
+                            contentDescription = "Выполненные задачи",
+                            tint = if (isSelected) MaterialTheme.colors.secondary else MaterialTheme.colors.onPrimary
                         )
                     }
 
@@ -372,6 +432,7 @@ fun HomeScreenPreview() {
         onAddNoteClick = {},
         onNoteClick = {},
         onOtherCellClick = {},
+        onCompletionChange = { _, _ -> },
         onSwitchUser = {}
 
     )
