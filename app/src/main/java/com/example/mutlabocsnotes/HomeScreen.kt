@@ -46,12 +46,14 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.mutableStateListOf
 import java.util.Calendar
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 
 @Composable
 fun HomeScreen(
     notes: List<Note>,
     userEmail: String,
+    totalCoins: Int,
     onAddNoteClick: () -> Unit,
     onNoteClick: (noteId: String) -> Unit,
     onOtherCellClick: (index: Int) -> Unit,
@@ -74,15 +76,43 @@ fun HomeScreen(
         }
     ) { paddingValues ->
         Column (modifier = Modifier.padding(paddingValues) ) {
-            Image(
-                painter = painterResource(id = R.drawable.main_image),
-                contentDescription = "Home image",
-                contentScale = ContentScale.Crop,
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
+            ){
+                Image(
+                    painter = painterResource(id = R.drawable.main_image),
+                    contentDescription = "Home image",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                )
+                Row (
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                            .padding(16.dp)
+                        .background(
+                            color = MaterialTheme.colors.surface.copy(alpha = 0.85f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                )
+                {
+                    Image(
+                        painter = painterResource(id = R.drawable.gold_coin),
+                        contentDescription = "Всего монет",
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = totalCoins.toString(),
+                        style = MaterialTheme.typography.subtitle1,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+            }
 
-            )
             Row (
                 modifier = Modifier
                     .fillMaxWidth()
@@ -428,6 +458,7 @@ fun HomeScreenPreview() {
     )
     HomeScreen(
         notes = sampleNotes,
+        totalCoins = 12,
         userEmail = "user@example.com",
         onAddNoteClick = {},
         onNoteClick = {},

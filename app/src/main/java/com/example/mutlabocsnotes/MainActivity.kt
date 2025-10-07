@@ -50,6 +50,7 @@ fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
         composable("home") {
             HomeScreen(
                 notes = notesViewModel.notes,
+                totalCoins = notesViewModel.totalCoins,
                 userEmail = FirebaseAuth.getInstance().currentUser?.email ?: "",
                 onAddNoteClick = {
                     navController.navigate("edit")

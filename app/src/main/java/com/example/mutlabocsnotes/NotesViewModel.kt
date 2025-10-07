@@ -8,6 +8,10 @@ import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -15,6 +19,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     // Локальный кэш заметок, можно сделать LiveData или StateFlow для наблюдения за изменениями
     val notes = mutableStateListOf<Note>()
+    var totalCoins by mutableStateOf(0)
+    private set
 
     init {
         if (FirebaseAuth.getInstance().currentUser != null) {
@@ -27,6 +33,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             launch(Dispatchers.Main) {
                 notes.clear()
                 notes.addAll(loadNotes)
+                recalculateTotalCoins()
             }
         }
     }
@@ -39,6 +46,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 val noteWithId = note.copy(id = id)
                 launch(Dispatchers.Main) {
                     notes.add(noteWithId)
+                    recalculateTotalCoins()
                 }
             }
         }
@@ -53,6 +61,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 if (index != -1) {
                     launch(Dispatchers.Main) {
                         notes[index] = note
+                        recalculateTotalCoins()
                     }
                 }
             }
@@ -65,6 +74,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         val existing = notes[index]
         val updatedNote = existing.copy(isCompleted = isCompleted)
         notes[index] = updatedNote
+        recalculateTotalCoins()
         viewModelScope.launch(Dispatchers.IO) {
             val success = repository.update(updatedNote)
             if (!success) {
@@ -72,6 +82,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                     val currentIndex = notes.indexOfFirst { it.id == noteId }
                     if (currentIndex != -1) {
                         notes[currentIndex] = existing
+                        recalculateTotalCoins()
                     }
                 }
             }
@@ -86,9 +97,13 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 if (note != null) {
                     launch(Dispatchers.Main) {
                         notes.remove(note)
+                        recalculateTotalCoins()
                     }
                 }
             }
         }
+    }
+    private fun recalculateTotalCoins() {
+        totalCoins = notes.sumOf { if (it.isCompleted) it.coinCount else 0 }
     }
 }
