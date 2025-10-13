@@ -47,6 +47,9 @@ import androidx.compose.runtime.mutableStateListOf
 import java.util.Calendar
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Surface
+import androidx.compose.ui.graphics.Color
+
 
 
 @Composable
@@ -179,6 +182,7 @@ fun HomeScreen(
 
     }
 }
+
 @Composable
 fun CompletedNotesScreen (
     notes: List<Note>,
@@ -253,218 +257,250 @@ fun NoteItem(
     onClick: () -> Unit,
     onCompletionChange: (Boolean) -> Unit) {
     val coinCount = note.coinCount
+    val backgroundColor = when (note.category) {
+        NoteCategory.SHOPPING -> Color(0xFFD9F0FF)
+        NoteCategory.TASKS -> Color(0xFFFFE2E2)
+        NoteCategory.NOTES -> Color(0xFFE1F5E3)
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        Row (
-            verticalAlignment = Alignment.CenterVertically,
+        Surface(
+            color = backgroundColor,
+            shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Checkbox(
-                checked = note.isCompleted,
-                onCheckedChange = onCompletionChange
-            )
             Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .clickable { onClick() }
-                    .padding(start = 8.dp)
+                    .fillMaxWidth()
+                    .padding(16.dp)
             ) {
-                Text(text = note.title, style = MaterialTheme.typography.subtitle1)
-                when (note.category) {
-                    NoteCategory.SHOPPING -> {
-                        if (note.checklist.isNotEmpty()) {
-                            note.checklist.take(3).forEach { item ->
-                                Text(
-                                    text = "• ${item.text}",
-                                    style = MaterialTheme.typography.body2
-                                )
-                            }
-                            if (note.checklist.size > 3) {
-                                Text(
-                                    text = "…",
-                                    style = MaterialTheme.typography.body2
-                                )
-                            }
-                        } else if (note.content.isNotBlank()) {
-                            Text(text = note.content, style = MaterialTheme.typography.body2)
-                        }
-                    }
-
-                    NoteCategory.NOTES -> {
-                        if (note.content.isNotBlank()) {
-                            Text(text = note.content, style = MaterialTheme.typography.body2)
-                        }
-                    }
-
-                    NoteCategory.TASKS -> {
-                        if (note.content.isNotBlank()) {
-                            Text(text = note.content, style = MaterialTheme.typography.body2)
-                        }
-                        note.deadlineMillis?.let { millis ->
-                            Text(
-                                text = "Дедлайн: ${formatDeadline(millis)}",
-                                style = MaterialTheme.typography.caption
-                            )
-                        }
-                        if (note.isRepeating) {
-                            Text(
-                                text = "Повторяется",
-                                style = MaterialTheme.typography.caption
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        Row (
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp),
-            horizontalArrangement = Arrangement.End
-        ) {
-            repeat(coinCount.coerceAtLeast(0)) {
-                Image(
-                    painter = painterResource(id = R.drawable.gold_coin),
-                    contentDescription = "Золотая монета",
-                    modifier = Modifier.size(24.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
                 )
+                {
+                    Checkbox(
+                        checked = note.isCompleted,
+                        onCheckedChange = onCompletionChange
+                    )
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onClick() }
+                            .padding(start = 8.dp)
+                    ) {
+                        Text(text = note.title, style = MaterialTheme.typography.subtitle1)
+                        when (note.category) {
+                            NoteCategory.SHOPPING -> {
+                                if (note.checklist.isNotEmpty()) {
+                                    note.checklist.take(3).forEach { item ->
+                                        Text(
+                                            text = "• ${item.text}",
+                                            style = MaterialTheme.typography.body2
+                                        )
+                                    }
+                                    if (note.checklist.size > 3) {
+                                        Text(
+                                            text = "…",
+                                            style = MaterialTheme.typography.body2
+                                        )
+                                    }
+                                } else if (note.content.isNotBlank()) {
+                                    Text(
+                                        text = note.content,
+                                        style = MaterialTheme.typography.body2
+                                    )
+                                }
+                            }
+
+                            NoteCategory.NOTES -> {
+                                if (note.content.isNotBlank()) {
+                                    Text(
+                                        text = note.content,
+                                        style = MaterialTheme.typography.body2
+                                    )
+                                }
+                            }
+
+                            NoteCategory.TASKS -> {
+                                if (note.content.isNotBlank()) {
+                                    Text(
+                                        text = note.content,
+                                        style = MaterialTheme.typography.body2
+                                    )
+                                }
+                                note.deadlineMillis?.let { millis ->
+                                    Text(
+                                        text = "Дедлайн: ${formatDeadline(millis)}",
+                                        style = MaterialTheme.typography.caption
+                                    )
+                                }
+                                if (note.isRepeating) {
+                                    Text(
+                                        text = "Повторяется",
+                                        style = MaterialTheme.typography.caption
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    repeat(coinCount.coerceAtLeast(0)) {
+                        Image(
+                            painter = painterResource(id = R.drawable.gold_coin),
+                            contentDescription = "Золотая монета",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
             }
         }
+    }
+}
 
-    }
-}
-private fun formatDeadline(millis: Long): String {
-    val calendar = Calendar.getInstance().apply {
-        timeInMillis = millis
-    }
-    return "%02d.%02d.%04d".format(
-        calendar.get(Calendar.DAY_OF_MONTH),
-        calendar.get(Calendar.MONTH) + 1,
-        calendar.get(Calendar.YEAR)
-    )
-}
-@Composable
-fun BottomRowWithFiveCells (
-    selectedIndex: Int,
-    onAddClick: () -> Unit,
-    onCellClick: (index: Int) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .background(MaterialTheme.colors.primarySurface),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        for (index in 0 until 3) {
-            val isSelected = index == selectedIndex
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .clickable {
-                        if (index == 1) {
-                            onAddClick()
-                        } else {
-                            onCellClick(index)
-                        }
-                    },
-                contentAlignment = Alignment.Center
+        private fun formatDeadline(millis: Long): String {
+            val calendar = Calendar.getInstance().apply {
+                timeInMillis = millis
+            }
+            return "%02d.%02d.%04d".format(
+                calendar.get(Calendar.DAY_OF_MONTH),
+                calendar.get(Calendar.MONTH) + 1,
+                calendar.get(Calendar.YEAR)
             )
-            {
-                when (index) {
-                    0 -> {
-                        Icon(
-                            imageVector = Icons.Default.Task,
-                            contentDescription = "Активные задачи",
-                            tint = if (isSelected) MaterialTheme.colors.secondary else MaterialTheme.colors.onPrimary
-                        )
-                    }
+        }
 
-                    1 -> {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Ячейка 2",
-                            tint = MaterialTheme.colors.onPrimary
-                        )
-                    }
+        @Composable
+        fun BottomRowWithFiveCells(
+            selectedIndex: Int,
+            onAddClick: () -> Unit,
+            onCellClick: (index: Int) -> Unit
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .background(MaterialTheme.colors.primarySurface),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                for (index in 0 until 3) {
+                    val isSelected = index == selectedIndex
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clickable {
+                                if (index == 1) {
+                                    onAddClick()
+                                } else {
+                                    onCellClick(index)
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    )
+                    {
+                        when (index) {
+                            0 -> {
+                                Icon(
+                                    imageVector = Icons.Default.Task,
+                                    contentDescription = "Активные задачи",
+                                    tint = if (isSelected) MaterialTheme.colors.secondary else MaterialTheme.colors.onPrimary
+                                )
+                            }
 
-                    2 -> {
-                        // Иконка «Добавить»
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Добавить заметку",
-                            tint = MaterialTheme.colors.onPrimary
-                        )
-                    }
+                            1 -> {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Ячейка 2",
+                                    tint = MaterialTheme.colors.onPrimary
+                                )
+                            }
 
-                    3 -> {
-                        Icon(
-                            imageVector = Icons.Default.DoneAll,
-                            contentDescription = "Выполненные задачи",
-                            tint = if (isSelected) MaterialTheme.colors.secondary else MaterialTheme.colors.onPrimary
-                        )
-                    }
+                            2 -> {
+                                // Иконка «Добавить»
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Добавить заметку",
+                                    tint = MaterialTheme.colors.onPrimary
+                                )
+                            }
 
-                    4 -> {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Ячейка 5",
-                            tint = MaterialTheme.colors.onPrimary
-                        )
-                    }
+                            3 -> {
+                                Icon(
+                                    imageVector = Icons.Default.DoneAll,
+                                    contentDescription = "Выполненные задачи",
+                                    tint = if (isSelected) MaterialTheme.colors.secondary else MaterialTheme.colors.onPrimary
+                                )
+                            }
 
+                            4 -> {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Ячейка 5",
+                                    tint = MaterialTheme.colors.onPrimary
+                                )
+                            }
+
+                        }
+                    }
+                }
+            }
+            @Composable
+            fun SearchRow(
+                query: String,
+                onQueryChange: (String) -> Unit
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { /* TODO: открыть боковое меню */ }) {
+                        Icon(Icons.Default.Menu, contentDescription = "Меню")
+                    }
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = onQueryChange,
+                        placeholder = { Text("Поиск") },
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .weight(1f)
+                    )
                 }
             }
         }
-    }
-    @Composable
-    fun SearchRow(
-        query: String,
-        onQueryChange: (String) -> Unit
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = { /* TODO: открыть боковое меню */ }) {
-                Icon(Icons.Default.Menu, contentDescription = "Меню")
-            }
-            OutlinedTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                placeholder = { Text("Поиск") },
-                modifier = Modifier
-                    .padding(start = 8.dp)
-                    .weight(1f)
+
+        @Preview(showBackground = true)
+        @Composable
+        fun HomeScreenPreview() {
+            val sampleNotes = listOf(
+                Note(id = "1", title = "Заметка 1", content = "Содержание заметки"),
+                Note(id = "2", title = "Заметка 2", content = "Содержание заметки"),
+                Note(id = "3", title = "Заметка 3", content = "Содержание заметки")
+            )
+            HomeScreen(
+                notes = sampleNotes,
+                totalCoins = 12,
+                userEmail = "user@example.com",
+                onAddNoteClick = {},
+                onNoteClick = {},
+                onOtherCellClick = {},
+                onCompletionChange = { _, _ -> },
+                onSwitchUser = {}
+
             )
         }
-    }
-}
 
-@Preview(showBackground = true)
-@Composable
-fun HomeScreenPreview() {
-    val sampleNotes = listOf(
-        Note(id = "1", title = "Заметка 1", content = "Содержание заметки"),
-        Note(id = "2", title = "Заметка 2", content = "Содержание заметки"),
-        Note(id = "3", title = "Заметка 3", content = "Содержание заметки")
-    )
-    HomeScreen(
-        notes = sampleNotes,
-        totalCoins = 12,
-        userEmail = "user@example.com",
-        onAddNoteClick = {},
-        onNoteClick = {},
-        onOtherCellClick = {},
-        onCompletionChange = { _, _ -> },
-        onSwitchUser = {}
-
-    )
-}
