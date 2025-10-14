@@ -1,5 +1,6 @@
 package com.example.mutlabocsnotes
 
+import DeadlineNotificationScheduler
 import androidx.compose.runtime.mutableStateListOf
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -16,6 +17,7 @@ import androidx.compose.runtime.setValue
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = FirestoreRepository()
+    private val notificationScheduler = DeadlineNotificationScheduler(application)
 
     // Локальный кэш заметок, можно сделать LiveData или StateFlow для наблюдения за изменениями
     val notes = mutableStateListOf<Note>()
@@ -33,6 +35,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             launch(Dispatchers.Main) {
                 notes.clear()
                 notes.addAll(loadNotes)
+                notificationScheduler.scheduleAll(notes)
                 recalculateTotalCoins()
             }
         }
@@ -46,6 +49,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 val noteWithId = note.copy(id = id)
                 launch(Dispatchers.Main) {
                     notes.add(noteWithId)
+                    notificationScheduler.schedule(noteWithId)
                     recalculateTotalCoins()
                 }
             }
@@ -61,6 +65,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 if (index != -1) {
                     launch(Dispatchers.Main) {
                         notes[index] = note
+                        notificationScheduler.schedule(note)
                         recalculateTotalCoins()
                     }
                 }
@@ -74,6 +79,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         val existing = notes[index]
         val updatedNote = existing.copy(isCompleted = isCompleted)
         notes[index] = updatedNote
+        notificationScheduler.schedule(updatedNote)
         recalculateTotalCoins()
         viewModelScope.launch(Dispatchers.IO) {
             val success = repository.update(updatedNote)
@@ -82,6 +88,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                     val currentIndex = notes.indexOfFirst { it.id == noteId }
                     if (currentIndex != -1) {
                         notes[currentIndex] = existing
+                        notificationScheduler.schedule(existing)
                         recalculateTotalCoins()
                     }
                 }
@@ -97,6 +104,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 if (note != null) {
                     launch(Dispatchers.Main) {
                         notes.remove(note)
+                        notificationScheduler.cancel(noteId)
                         recalculateTotalCoins()
                     }
                 }
