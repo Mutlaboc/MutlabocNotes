@@ -1,4 +1,13 @@
 package com.example.mutlabocsnotes
+
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -49,8 +58,25 @@ import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Surface
 import androidx.compose.ui.graphics.Color
-
-
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Path
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlin.math.roundToInt
 
 @Composable
 fun HomeScreen(
@@ -84,25 +110,49 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .height(200.dp)
             ){
-                Image(
-                    painter = painterResource(id = R.drawable.main_image),
-                    contentDescription = "Home image",
+                Image (
+                    painter = painterResource(id = R.drawable.background_country_home),
+                    contentDescription = "Home background",
                     contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+                SpriteSheetAnimation(
+                    spriteSheetRes = R.drawable.animated_tree,
+                    frameWidth = 256,
+                    frameHeight = 256,
+                    frameCount = 6,
+                    frameDurationMillis = 180L,
+                    row = 0,
                     modifier = Modifier
-                        .fillMaxSize()
+                        .align(Alignment.BottomStart)
+                        .padding(start = 24.dp, bottom = 12.dp)
+                        .width(140.dp)
+                        .aspectRatio(1f)
+                )
+                SpriteSheetAnimation (
+                    spriteSheetRes = R.drawable.animated_man,
+                    frameWidth = 192,
+                    frameHeight = 128,
+                    frameCount = 8,
+                    frameDurationMillis = 140L,
+                    row = 0,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 8.dp)
+                        .width(96.dp)
+                        .aspectRatio(192f / 128f)
                 )
                 Row (
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                            .padding(16.dp)
+                        .padding(16.dp)
                         .background(
                             color = MaterialTheme.colors.surface.copy(alpha = 0.85f),
                             shape = RoundedCornerShape(12.dp)
                         )
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
-                )
-                {
+                ) {
                     Image(
                         painter = painterResource(id = R.drawable.gold_coin),
                         contentDescription = "Всего монет",
@@ -182,6 +232,162 @@ fun HomeScreen(
 
     }
 }
+
+private enum class  BuildingStage {
+    Foundation,
+    Walls,
+    Roof,
+    Details,
+    Lively
+}
+
+private fun stageForCoins(totalCoins: Int): BuildingStage = when {
+    totalCoins >= 400 -> BuildingStage.Lively
+    totalCoins >= 300 -> BuildingStage.Details
+    totalCoins >= 200 -> BuildingStage.Roof
+    totalCoins >= 100 -> BuildingStage.Walls
+    else -> BuildingStage.Foundation
+}
+
+@Composable
+private fun BuildingAnimation(totalCoins: Int, modifier: Modifier) {
+    val stage = stageForCoins(totalCoins)
+    val infiniteTransition = rememberInfiniteTransition(label = "home-building")
+    val windowPulse by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "window-pulse"
+    )
+    val smokeDrift by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = -12f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "smoke-drift"
+    )
+
+    Canvas(modifier = modifier.background(Color(0xFFB3E5FC))) {
+        val groundHeight = size.height * 0.25f
+        val groundTop = size.height - groundHeight
+        drawRect(
+            color = Color(0xFF81C784),
+            topLeft = Offset(0f, groundTop),
+            size = Size(size.width, groundHeight)
+        )
+
+        val baseWidth = size.width * 0.55f
+        val baseLeft = (size.width - baseWidth) / 2f
+        val foundationHeight = size.height * 0.08f
+        val wallHeight = size.height * 0.32f
+        val roofHeight = size.height * 0.22f
+        val baseTop = groundTop - foundationHeight
+        val wallTop = baseTop - wallHeight
+
+        if (stage.ordinal >= BuildingStage.Walls.ordinal) {
+            drawRect(
+                color = Color(0xFFE0E0E0),
+                topLeft = Offset(baseLeft + baseWidth * 0.05f, wallTop),
+                size = Size(baseWidth * 0.9f, wallHeight)
+            )
+        }
+        if (stage.ordinal >= BuildingStage.Roof.ordinal) {
+            val roofPath = Path().apply {
+                val roofLeft = baseLeft - baseWidth * 0.05f
+                val roofRight = baseLeft + baseWidth * 1.05f
+                moveTo((roofLeft + roofRight) / 2f, wallTop - roofHeight)
+                lineTo(roofRight, wallTop)
+                lineTo(roofLeft, wallTop)
+                close()
+            }
+            drawPath(path = roofPath, color = Color(0xFF8D6E63))
+        }
+
+        if (stage.ordinal >= BuildingStage.Details.ordinal) {
+            val wallLeft = baseLeft + baseWidth * 0.05f
+            val wallWidth = baseWidth * 0.9f
+            val windowWidth = wallWidth * 0.22f
+            val windowHeight = wallHeight * 0.35f
+            val windowTop = wallTop + wallHeight * 0.2f
+            val windowLight = if (stage == BuildingStage.Lively) {
+                Color(0xFFFFF176).copy(alpha = windowPulse)
+            } else {
+                Color(0xFFCFD8DC)
+            }
+
+            val doorWidth = wallWidth * 0.18f
+            val doorHeight = wallHeight * 0.55f
+            drawRect(
+                color = Color(0xFF4E342E),
+                topLeft = Offset(wallLeft + wallWidth / 2f - doorWidth / 2f, baseTop - doorHeight),
+                size = Size(doorWidth, doorHeight)
+            )
+            drawRect(
+                color = windowLight,
+                topLeft = Offset(wallLeft + wallWidth * 0.1f, windowTop),
+                size = Size(windowWidth, windowHeight)
+            )
+            drawRect(
+                color = windowLight,
+                topLeft = Offset(wallLeft + wallWidth - windowWidth - wallWidth * 0.1f, windowTop),
+                size = Size(windowWidth, windowHeight)
+            )
+
+            val chimneyLeft = wallLeft + wallWidth * 0.75f
+            drawRect(
+                color = Color(0xFF6D4C41),
+                topLeft = Offset(chimneyLeft, wallTop - roofHeight * 0.6f),
+                size = Size(wallWidth * 0.1f, roofHeight * 0.6f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SpriteSheetAnimation(
+    @DrawableRes spriteSheetRes: Int,
+    frameWidth: Int,
+    frameHeight: Int,
+    frameCount: Int,
+    frameDurationMillis: Long,
+    row: Int,
+    modifier: Modifier = Modifier,
+) {
+    val spriteSheet = ImageBitmap.imageResource(id = spriteSheetRes)
+    var currentFrame by remember { mutableStateOf (0)}
+
+    LaunchedEffect(frameCount, frameDurationMillis, row) {
+        while (isActive) {
+            delay(frameDurationMillis)
+            currentFrame = (currentFrame + 1) % frameCount
+        }
+    }
+    Canvas(modifier = modifier) {
+        val srcLeft = currentFrame * frameWidth
+        val srcTop = row * frameHeight
+
+        val srcOffset = IntOffset(srcLeft, srcTop)
+        val srcSize = IntSize(width = frameWidth, height = frameHeight)
+        val dstSize = IntSize(
+            width = size.width.roundToInt().coerceAtLeast(1),
+            height = size.height.roundToInt().coerceAtLeast(1)
+        )
+
+        drawImage(
+            image = spriteSheet,
+            srcOffset = srcOffset,
+            srcSize = srcSize,
+            dstOffset = IntOffset.Zero,
+            dstSize = dstSize,
+            filterQuality = FilterQuality.High
+        )
+    }
+    }
 
 @Composable
 fun CompletedNotesScreen (
