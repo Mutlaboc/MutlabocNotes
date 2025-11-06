@@ -116,32 +116,17 @@ fun HomeScreen(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
-                SpriteSheetAnimation(
-                    spriteSheetRes = R.drawable.animated_tree,
-                    frameWidth = 256,
-                    frameHeight = 256,
-                    frameCount = 6,
-                    frameDurationMillis = 180L,
+                OakAnimation(
+                    spriteSheetRes = R.drawable.young_oak_idle,
+                    frameCount = 1,
+                    framesInRow = 1,
+                    frameDurationMillis = 180,
                     row = 0,
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .padding(start = 24.dp, bottom = 12.dp)
-                        .width(140.dp)
-                        .aspectRatio(1f)
                 )
-                SpriteSheetAnimation (
-                    spriteSheetRes = R.drawable.animated_man,
-                    frameWidth = 192,
-                    frameHeight = 128,
-                    frameCount = 8,
-                    frameDurationMillis = 140L,
-                    row = 0,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 8.dp)
-                        .width(96.dp)
-                        .aspectRatio(192f / 128f)
-                )
+
                 Row (
                     modifier = Modifier
                         .align(Alignment.TopStart)
@@ -349,11 +334,10 @@ private fun BuildingAnimation(totalCoins: Int, modifier: Modifier) {
 }
 
 @Composable
-private fun SpriteSheetAnimation(
+private fun OakAnimation(
     @DrawableRes spriteSheetRes: Int,
-    frameWidth: Int,
-    frameHeight: Int,
     frameCount: Int,
+    framesInRow: Int,
     frameDurationMillis: Long,
     row: Int,
     modifier: Modifier = Modifier,
@@ -361,33 +345,8 @@ private fun SpriteSheetAnimation(
     val spriteSheet = ImageBitmap.imageResource(id = spriteSheetRes)
     var currentFrame by remember { mutableStateOf (0)}
 
-    LaunchedEffect(frameCount, frameDurationMillis, row) {
-        while (isActive) {
-            delay(frameDurationMillis)
-            currentFrame = (currentFrame + 1) % frameCount
-        }
-    }
-    Canvas(modifier = modifier) {
-        val srcLeft = currentFrame * frameWidth
-        val srcTop = row * frameHeight
 
-        val srcOffset = IntOffset(srcLeft, srcTop)
-        val srcSize = IntSize(width = frameWidth, height = frameHeight)
-        val dstSize = IntSize(
-            width = size.width.roundToInt().coerceAtLeast(1),
-            height = size.height.roundToInt().coerceAtLeast(1)
-        )
-
-        drawImage(
-            image = spriteSheet,
-            srcOffset = srcOffset,
-            srcSize = srcSize,
-            dstOffset = IntOffset.Zero,
-            dstSize = dstSize,
-            filterQuality = FilterQuality.High
-        )
-    }
-    }
+}
 
 @Composable
 fun CompletedNotesScreen (
