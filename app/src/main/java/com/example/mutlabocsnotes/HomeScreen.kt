@@ -1,5 +1,7 @@
 package com.example.mutlabocsnotes
 
+import android.annotation.SuppressLint
+import android.graphics.BitmapFactory
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -70,6 +72,8 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntOffset
@@ -77,6 +81,8 @@ import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
+import androidx.compose.ui.platform.LocalDensity
+import kotlin.math.max
 
 @Composable
 fun HomeScreen(
@@ -110,12 +116,6 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .height(200.dp)
             ){
-                Image (
-                    painter = painterResource(id = R.drawable.background_country_home),
-                    contentDescription = "Home background",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
                 OakAnimation(
                     spriteSheetRes = R.drawable.young_oak_idle,
                     frameCount = 1,
@@ -123,9 +123,16 @@ fun HomeScreen(
                     frameDurationMillis = 180,
                     row = 0,
                     modifier = Modifier
-                        .align(Alignment.BottomStart)
                         .padding(start = 24.dp, bottom = 12.dp)
+
                 )
+                Image (
+                    painter = painterResource(id = R.drawable.background_country_home),
+                    contentDescription = "Home background",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+
 
                 Row (
                     modifier = Modifier
@@ -342,11 +349,75 @@ private fun OakAnimation(
     row: Int,
     modifier: Modifier = Modifier,
 ) {
-    val spriteSheet = ImageBitmap.imageResource(id = spriteSheetRes)
-    var currentFrame by remember { mutableStateOf (0)}
-
-
+    SpriteSheetAnimation(
+        spriteSheetRes = spriteSheetRes,
+        frameCount = frameCount,
+        framesInRow = framesInRow,
+        frameDurationMillis = frameDurationMillis,
+        row = row,
+        modifier = modifier
+    )
 }
+
+@SuppressLint("ResourceType")
+@Composable
+private fun SpriteSheetAnimation(
+    @DrawableRes spriteSheetRes: Int,
+    frameCount: Int,
+    framesInRow: Int,
+    frameDurationMillis: Long,
+    row: Int,
+    modifier: Modifier = Modifier,
+    filterQuality: FilterQuality = FilterQuality.Medium
+) {
+    require(frameCount > 0) { "frameCount must be greater than zero" }
+    require(framesInRow > 0) { "framesInRow must be greater than zero" }
+
+    val context = LocalContext.current
+    val spriteSheet: ImageBitmap? = remember(spriteSheetRes) {
+        context.resources.openRawResource(spriteSheetRes).use { stream ->
+            BitmapFactory.decodeStream(stream)?.asImageBitmap()
+        }
+    }
+
+    if (spriteSheet == null) {
+        return
+    }
+
+    var currentFrame by remember(spriteSheetRes, frameCount) { mutableStateOf(0) }
+
+    LaunchedEffect(spriteSheetRes, frameDurationMillis, frameCount) {
+        while (isActive) {
+            delay(frameDurationMillis)
+            currentFrame = (currentFrame + 1) % frameCount
+        }
+    }
+
+    Canvas(modifier = modifier) {
+        val frameWidth = spriteSheet.width / framesInRow
+        val computedRows = ((frameCount - 1) / framesInRow) + 1
+        val totalRows = max(row + 1, computedRows)
+        val frameHeight = spriteSheet.height / totalRows
+
+        val column = currentFrame % framesInRow
+        val srcOffset = IntOffset(column * frameWidth, row * frameHeight)
+        val srcSize = IntSize(frameWidth, frameHeight)
+
+        val targetWidth = if (size.width > 0f) size.width.roundToInt() else frameWidth
+        val targetHeight = if (size.height > 0f) size.height.roundToInt() else frameHeight
+        val dstSize = IntSize(targetWidth, targetHeight)
+
+        drawImage(
+            image = spriteSheet,
+            srcOffset = srcOffset,
+            srcSize = srcSize,
+            dstOffset = IntOffset.Zero,
+            dstSize = dstSize,
+            filterQuality = filterQuality
+        )
+    }
+}
+
 
 @Composable
 fun CompletedNotesScreen (
