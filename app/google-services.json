@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "822837772778-1j2uc64ipes40nbkj3l80j5k3pgmhgss.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.mutlabocsnotes",
+            "certificate_hash": "a496096ca9e8983af790158c33156ec9adcec207"
+          }
+        },
+        {
           "client_id": "822837772778-5n786au0om93mkhg8o9fu7hbrl5hq2iv.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
