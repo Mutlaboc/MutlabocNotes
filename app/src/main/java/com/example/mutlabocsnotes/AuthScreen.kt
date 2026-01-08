@@ -1,5 +1,7 @@
 package com.example.mutlabocsnotes
 
+
+import android.app.Activity
 import android.util.Log
 import android.widget.Toast
 import android.widget.Toast.LENGTH_SHORT
@@ -29,6 +31,7 @@ import com.google.firebase.auth.GoogleAuthProvider
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 
 @Composable
 fun AuthScreeen(onAuthenicated: () -> Unit) {
@@ -48,22 +51,41 @@ fun AuthScreeen(onAuthenicated: () -> Unit) {
             GoogleSignIn.getClient(context, gso)
         }
     }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        result ->
-        if (!isPreview) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-            if (task.isSuccessful) {
-                val idToken = task.result.idToken
-                if (idToken != null) {
-                    val credential = GoogleAuthProvider.getCredential(idToken, null)
-                    auth?.signInWithCredential(credential)
-                        ?.addOnCompleteListener { if (it.isSuccessful) onAuthenicated() }
-                }
-                else {
-                    Log.e("Auth","Google sign-in failed", task.exception)
-                    Toast.makeText(context, task.exception?.localizedMessage, LENGTH_SHORT).show()
-                }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (isPreview) return@rememberLauncherForActivityResult
+
+        if (result.resultCode != Activity.RESULT_OK || result.data == null) {
+            Log.w("Auth", "Googlw sight-in cancelled or empty result")
+            Toast.makeText(context, "Google sign-in cancelled", LENGTH_SHORT).show()
+            return@rememberLauncherForActivityResult
+    }
+        try {
+            val account = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+                .getResult(ApiException::class.java)
+            val idToken = account?.idToken
+            if (idToken.isNullOrBlank()) {
+                Log.e("Auth", "Google sign-in failed: missing idToken")
+                Toast.makeText(context, "Google sign-in failed: missing token", LENGTH_SHORT).show()
+                return@rememberLauncherForActivityResult
             }
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
+            auth?.signInWithCredential(credential)
+                ?.addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        onAuthenicated()
+                    } else {
+                        Log.e("Auth", "Firebase auth failed", task.exception)
+                        Toast.makeText(
+                            context,
+                            task.exception?.localizedMessage ?: "Firebase auth failed",
+                            LENGTH_SHORT
+                        ).show()
+                    }
+                }
+        } catch (exception: ApiException) {
+            Log.e("Auth", "Google sign in failed", exception)
+            Toast.makeText(context, exception.localizedMessage ?: "Google sign in failed", LENGTH_SHORT)
+                .show()
         }
     }
 
@@ -142,7 +164,12 @@ fun AuthScreeen(onAuthenicated: () -> Unit) {
         Button(
             onClick = {
                 if (!isPreview) {
-                    launcher.launch(googleSignInClient?.signInIntent)
+                    val signIntent = googleSignInClient?.signInIntent
+                    if (signIntent == null) {
+                        Toast.makeText(context, "Google sigh in unavailable", LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    launcher.launch(signIntent)
                 }
             },
             modifier = Modifier.fillMaxWidth()
