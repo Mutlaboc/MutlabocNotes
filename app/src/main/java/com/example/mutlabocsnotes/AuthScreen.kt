@@ -32,6 +32,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
 
 @Composable
 fun AuthScreeen(onAuthenicated: () -> Unit) {
@@ -54,13 +55,14 @@ fun AuthScreeen(onAuthenicated: () -> Unit) {
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (isPreview) return@rememberLauncherForActivityResult
 
-        if (result.resultCode != Activity.RESULT_OK || result.data == null) {
-            Log.w("Auth", "Googlw sight-in cancelled or empty result")
+        val resultData = result.data
+        if (resultData == null) {
+            Log.w("Auth", "Google sign-in cancelled or empty result")
             Toast.makeText(context, "Google sign-in cancelled", LENGTH_SHORT).show()
             return@rememberLauncherForActivityResult
     }
         try {
-            val account = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            val account = GoogleSignIn.getSignedInAccountFromIntent(resultData)
                 .getResult(ApiException::class.java)
             val idToken = account?.idToken
             if (idToken.isNullOrBlank()) {
@@ -83,9 +85,13 @@ fun AuthScreeen(onAuthenicated: () -> Unit) {
                     }
                 }
         } catch (exception: ApiException) {
+            val message = when (exception.statusCode) {
+                CommonStatusCodes.CANCELED -> "Google sign-in cancelled"
+                CommonStatusCodes.NETWORK_ERROR -> "Google sign-in failed: network error"
+                else -> exception.localizedMessage ?: "Google sign in failed"
+            }
             Log.e("Auth", "Google sign in failed", exception)
-            Toast.makeText(context, exception.localizedMessage ?: "Google sign in failed", LENGTH_SHORT)
-                .show()
+            Toast.makeText(context, message, LENGTH_SHORT).show()
         }
     }
 
