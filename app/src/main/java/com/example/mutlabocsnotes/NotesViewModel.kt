@@ -1,5 +1,6 @@
 package com.example.mutlabocsnotes
 
+import DeadlineNotificationScheduler
 import androidx.compose.runtime.mutableStateListOf
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -7,13 +8,21 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = FirestoreRepository()
+    private val notificationScheduler = DeadlineNotificationScheduler(application)
 
     // Локальный кэш заметок, можно сделать LiveData или StateFlow для наблюдения за изменениями
     val notes = mutableStateListOf<Note>()
+    var totalCoins by mutableStateOf(0)
+    private set
 
     init {
         if (FirebaseAuth.getInstance().currentUser != null) {
@@ -22,28 +31,68 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun loadNotes() {
         viewModelScope.launch(Dispatchers.IO) {
-            notes.clear()
-            notes.addAll(repository.getAllNotes())
+            val loadNotes = repository.getAllNotes()
+            launch(Dispatchers.Main) {
+                notes.clear()
+                notes.addAll(loadNotes)
+                notificationScheduler.scheduleAll(notes)
+                recalculateTotalCoins()
+            }
         }
     }
 
 
-    fun addNote(title: String, content: String) {
+    fun addNote(note: Note) {
         viewModelScope.launch(Dispatchers.IO) {
-            val id = repository.insert(title, content)
+            val id = repository.insert(note)
             if (id != null) {
-                val note = Note(id = id, title = title, content = content)
+                val noteWithId = note.copy(id = id)
                 launch(Dispatchers.Main) {
-                    notes.add(note)
+                    notes.add(noteWithId)
+                    notificationScheduler.schedule(noteWithId)
+                    recalculateTotalCoins()
                 }
             }
         }
     }
 
-    fun updateNote(noteId: String, title: String, content: String) {
+    fun updateNote(note: Note) {
+        if (note.id.isEmpty()) return
         viewModelScope.launch(Dispatchers.IO) {
-            repository.update(noteId, title, content)
+            val success = repository.update(note)
+            if (success) {
+                val index = notes.indexOfFirst { it.id == note.id }
+                if (index != -1) {
+                    launch(Dispatchers.Main) {
+                        notes[index] = note
+                        notificationScheduler.schedule(note)
+                        recalculateTotalCoins()
+                    }
+                }
+            }
 
+        }
+    }
+    fun setNoteCompletion(noteId: String, isCompleted: Boolean) {
+        val index = notes.indexOfFirst { it.id == noteId }
+        if (index == -1) return
+        val existing = notes[index]
+        val updatedNote = existing.copy(isCompleted = isCompleted)
+        notes[index] = updatedNote
+        notificationScheduler.schedule(updatedNote)
+        recalculateTotalCoins()
+        viewModelScope.launch(Dispatchers.IO) {
+            val success = repository.update(updatedNote)
+            if (!success) {
+                launch(Dispatchers.Main) {
+                    val currentIndex = notes.indexOfFirst { it.id == noteId }
+                    if (currentIndex != -1) {
+                        notes[currentIndex] = existing
+                        notificationScheduler.schedule(existing)
+                        recalculateTotalCoins()
+                    }
+                }
+            }
         }
     }
 
@@ -55,9 +104,14 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 if (note != null) {
                     launch(Dispatchers.Main) {
                         notes.remove(note)
+                        notificationScheduler.cancel(noteId)
+                        recalculateTotalCoins()
                     }
                 }
             }
         }
+    }
+    private fun recalculateTotalCoins() {
+        totalCoins = notes.sumOf { if (it.isCompleted) it.coinCount else 0 }
     }
 }
