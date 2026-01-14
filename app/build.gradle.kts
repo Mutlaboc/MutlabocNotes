@@ -19,6 +19,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders["YANDEX_CLIENT_ID"] =
+            (project.findProperty("YANDEX_CLIENT_ID") as String?) ?: "776676c1ec6c4097ba260b05824f3a39"
     }
 
     buildTypes {
@@ -97,5 +99,7 @@ dependencies {
     implementation("androidx.compose.material:material")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    implementation("com.yandex.android:authsdk:3.1.3")
 
 }

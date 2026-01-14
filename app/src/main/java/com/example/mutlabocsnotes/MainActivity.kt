@@ -20,7 +20,6 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
-import androidx.core.content.getSystemService
 
 class MainActivity : ComponentActivity() {
     private val requestNotificationPermission =
@@ -74,7 +73,7 @@ fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
         startDestination = startDestination) {
 
         composable("auth") {
-                AuthScreeen {
+                AuthScreen {
                     notesViewModel.loadNotes()
                     navController.navigate("home") {
                         popUpTo("auth") { inclusive = true

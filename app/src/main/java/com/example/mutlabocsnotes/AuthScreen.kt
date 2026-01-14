@@ -1,7 +1,6 @@
 package com.example.mutlabocsnotes
 
 
-import android.app.Activity
 import android.util.Log
 import android.widget.Toast
 import android.widget.Toast.LENGTH_SHORT
@@ -29,13 +28,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.CommonStatusCodes
+import com.yandex.authsdk.YandexAuthException
+import com.yandex.authsdk.YandexAuthLoginOptions
+import com.yandex.authsdk.YandexAuthOptions
+import com.yandex.authsdk.YandexAuthResult
+import com.yandex.authsdk.YandexAuthSdk
+import java.nio.file.WatchEvent
 
 @Composable
-fun AuthScreeen(onAuthenicated: () -> Unit) {
+fun AuthScreen(onAuthenicated: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
@@ -50,6 +54,11 @@ fun AuthScreeen(onAuthenicated: () -> Unit) {
                 .requestEmail()
                 .build()
             GoogleSignIn.getClient(context, gso)
+        }
+    }
+    val yandexAuthSdk = remember {
+        if (isPreview) null else {
+            YandexAuthSdk.create(YandexAuthOptions(context))
         }
     }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -92,6 +101,35 @@ fun AuthScreeen(onAuthenicated: () -> Unit) {
             }
             Log.e("Auth", "Google sign in failed", exception)
             Toast.makeText(context, message, LENGTH_SHORT).show()
+        }
+    }
+    val yandexAuthLauncher = rememberLauncherForActivityResult(
+        yandexAuthSdk?.contract ?: YandexAuthSdk.create(YandexAuthOptions(context)).contract
+    ) { result ->
+        if (isPreview) return@rememberLauncherForActivityResult
+
+        when (result) {
+            is YandexAuthResult.Success -> {
+                val token = result.token
+                val jwt = try {
+                    yandexAuthSdk?.getJwt(token)
+                } catch (exception: YandexAuthException) {
+                    Log.e("Auth", "Yandex JWT exchange failed", exception)
+                    null
+                }
+                Log.i("Auth", "Yandex auth success. Token=${token.value}, jwt=$jwt")
+                Toast.makeText(context, "Yandex sign-in success", LENGTH_SHORT).show()
+                onAuthenicated()
+            }
+            is YandexAuthResult.Failure -> {
+                val message = result.exception.errors.joinToString(", ")
+                    .ifBlank { "Yandex sign-in failed" }
+                Log.e("Auth", "Yandex sign-in failed", result.exception)
+                Toast.makeText(context, message, LENGTH_SHORT).show()
+            }
+            YandexAuthResult.Cancelled -> {
+                Toast.makeText(context, "Yandex sign-in cancelled", LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -182,6 +220,17 @@ fun AuthScreeen(onAuthenicated: () -> Unit) {
         ) {
             Text("Sign in with Google")
         }
+        Spacer(Modifier.padding(6.dp))
+        Button(
+          onClick = {
+              if (!isPreview) {
+                  yandexAuthLauncher.launch(YandexAuthLoginOptions())
+              }
+          },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Зайти через Яндекс")
+        }
     }
 }
 
@@ -193,6 +242,6 @@ fun AuthScreeen(onAuthenicated: () -> Unit) {
 @Composable
 fun AuthScreenPreview() {
     MaterialTheme {
-        AuthScreeen(onAuthenicated = {})
+        AuthScreen(onAuthenicated = {})
     }
 }
