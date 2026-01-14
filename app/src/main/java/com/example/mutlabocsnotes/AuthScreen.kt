@@ -36,7 +36,10 @@ import com.yandex.authsdk.YandexAuthLoginOptions
 import com.yandex.authsdk.YandexAuthOptions
 import com.yandex.authsdk.YandexAuthResult
 import com.yandex.authsdk.YandexAuthSdk
-import java.nio.file.WatchEvent
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun AuthScreen(onAuthenicated: () -> Unit) {
@@ -61,6 +64,7 @@ fun AuthScreen(onAuthenicated: () -> Unit) {
             YandexAuthSdk.create(YandexAuthOptions(context))
         }
     }
+    val coroutineScope = rememberCoroutineScope()
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (isPreview) return@rememberLauncherForActivityResult
 
@@ -111,15 +115,20 @@ fun AuthScreen(onAuthenicated: () -> Unit) {
         when (result) {
             is YandexAuthResult.Success -> {
                 val token = result.token
-                val jwt = try {
-                    yandexAuthSdk?.getJwt(token)
-                } catch (exception: YandexAuthException) {
-                    Log.e("Auth", "Yandex JWT exchange failed", exception)
-                    null
+                coroutineScope.launch {
+                    val jwt = try {
+                        withContext(Dispatchers.IO) {
+                            yandexAuthSdk?.getJwt(token)
+                        }
+                    } catch (exception: YandexAuthException) {
+                        Log.e("Auth", "Yandex JWT exchange failed", exception)
+                        null
+                    }
+                    Log.i("Auth", "Yandex auth success. Token=${token.value}, jwt=$jwt")
+                    Toast.makeText(context, "Yandex sign-in success", LENGTH_SHORT).show()
+                    onAuthenicated()
                 }
-                Log.i("Auth", "Yandex auth success. Token=${token.value}, jwt=$jwt")
-                Toast.makeText(context, "Yandex sign-in success", LENGTH_SHORT).show()
-                onAuthenicated()
+
             }
             is YandexAuthResult.Failure -> {
                 val message = result.exception.errors.joinToString(", ")
