@@ -94,6 +94,7 @@ fun HomeScreen(
     onOtherCellClick: (index: Int) -> Unit,
     onCompletionChange: (noteId: String, Boolean) -> Unit,
     onSwitchUser: () -> Unit,
+    onOpenSettings: () -> Unit,
 
 ) {
     // Простейший список категорий, пока статичный
@@ -181,6 +182,13 @@ fun HomeScreen(
                                 onSwitchUser()
                             }) {
                                 Text("Сменить пользователя")
+                            }
+                            DropdownMenuItem (onClick = {
+                                userMenuExtended = false
+                                onOpenSettings()
+
+                            }) {
+                                Text("Настройки")
                             }
                         }
                     }
@@ -548,8 +556,8 @@ fun NoteItem(
                 onNoteClick = {},
                 onOtherCellClick = {},
                 onCompletionChange = { _, _ -> },
-                onSwitchUser = {}
-
+                onSwitchUser = {},
+                onOpenSettings = {}
             )
         }
 

@@ -20,6 +20,14 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
+import androidx.compose.material.FilterChip
+import androidx.compose.runtime.getValue
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.darkColors
+import androidx.compose.material.lightColors
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 
 class MainActivity : ComponentActivity() {
     private val requestNotificationPermission =
@@ -68,103 +76,131 @@ fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
     val startDestination = remember {
         if (FirebaseAuth.getInstance().currentUser != null) "home" else "auth"
     }
-    NavHost(
-        navController = navController,
-        startDestination = startDestination) {
+    var isDarkTheme by rememberSaveable { mutableStateOf(false) }
+    MaterialTheme(colors = if (isDarkTheme) darkColors() else lightColors()) {
 
-        composable("auth") {
+        NavHost(
+            navController = navController,
+            startDestination = startDestination
+        ) {
+
+            composable("auth") {
                 AuthScreen {
                     notesViewModel.loadNotes()
                     navController.navigate("home") {
-                        popUpTo("auth") { inclusive = true
-                        }
-
+                        popUpTo("auth") { inclusive = true }
                     }
                 }
             }
-        composable("home") {
-            HomeScreen(
-                notes = notesViewModel.notes,
-                totalCoins = notesViewModel.totalCoins,
-                userEmail = FirebaseAuth.getInstance().currentUser?.email ?: "",
-                onAddNoteClick = {
-                    navController.navigate("edit")
-                },
-                onNoteClick = { noteId ->
-                    navController.navigate("edit/$noteId")
-                },
-                onOtherCellClick = { index ->
-                    when (index) {
-                        0 -> navController.navigate("completed") {
-                            launchSingleTop = true
+            composable("home") {
+                HomeScreen(
+                    notes = notesViewModel.notes,
+                    totalCoins = notesViewModel.totalCoins,
+                    userEmail = FirebaseAuth.getInstance().currentUser?.email ?: "",
+                    onAddNoteClick = {
+                        navController.navigate("edit")
+                    },
+                    onNoteClick = { noteId ->
+                        navController.navigate("edit/$noteId")
+                    },
+                    onOtherCellClick = { index ->
+                        when (index) {
+                            0 -> navController.navigate("completed") {
+                                launchSingleTop = true
+                            }
+
+                            2 -> Unit
                         }
-                        2 -> Unit
+                    },
+                    onCompletionChange = { noteId, isCompleted ->
+                        notesViewModel.setNoteCompletion(noteId, isCompleted)
+                    },
+                    onSwitchUser = {
+                        FirebaseAuth.getInstance().signOut()
+                        navController.navigate("auth") {
+                            popUpTo("home") { inclusive = true }
+                        }
+                    },
+                    onOpenSettings = {
+                        navController.navigate("settings")
                     }
-                },
-                onCompletionChange = { noteId, isCompleted ->
-                    notesViewModel.setNoteCompletion(noteId, isCompleted)
-                },
-                onSwitchUser = {
-                    FirebaseAuth.getInstance().signOut()
-                    navController.navigate("auth") {
-                        popUpTo("home") {inclusive = true}
+                )
+            }
+            composable("settings") {
+                SettingsScreen(
+                    isDarkTheme = isDarkTheme,
+                    onThemeChange = { isDarkTheme = it },
+                    onDeleteAccount = {
+                        val user = FirebaseAuth.getInstance().currentUser
+                        user?.delete()?.addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                FirebaseAuth.getInstance().signOut()
+                                navController.navigate("auth") {
+                                    popUpTo("home") { inclusive = true }
+                                }
+                            }
+                        }
+                    },
+                    onBack = {
+                        navController.popBackStack()
                     }
-                }
-            )
-        }
-        composable("completed") {
-            CompletedNotesScreen(
-                notes = notesViewModel.notes,
-                onaddNoteClick = {
-                    navController.navigate("edit")
-                },
-                onNoteClick = {
-                    noteId ->
-                    navController.navigate("edit/$noteId")
-                },
-                onCompletionChange = { noteId, isCompleted ->
-                    notesViewModel.setNoteCompletion(noteId, isCompleted)
-                },
-                onNavigateHome = {
-                    navController.popBackStack()
-                }
-            )
-        }
-        composable("edit") {
-            EditNoteScreen(
-                note = null,
-                onSaveClick = { createdNote ->
-                    notesViewModel.addNote(createdNote)
-                    navController.popBackStack()
-                }
-            )
-        }
-        composable(
-            route = "edit/{noteId}",
-            arguments = listOf(navArgument("noteId") { type = NavType.StringType })
-        ) {backStackEntry ->
-            val noteId = backStackEntry.arguments!!.getString("noteId") ?: ""
-            val note = notesViewModel.notes.find { it.id == noteId }
-            EditNoteScreen(
-                note = note,
-                onSaveClick = { updatedNote ->
-                    if (note != null) {
-                        notesViewModel.updateNote(updatedNote)
+                )
+            }
+            composable("completed") {
+                CompletedNotesScreen(
+                    notes = notesViewModel.notes,
+                    onaddNoteClick = {
+                        navController.navigate("edit")
+                    },
+                    onNoteClick = { noteId ->
+                        navController.navigate("edit/$noteId")
+                    },
+                    onCompletionChange = { noteId, isCompleted ->
+                        notesViewModel.setNoteCompletion(noteId, isCompleted)
+                    },
+                    onNavigateHome = {
+                        navController.popBackStack()
                     }
-                    navController.popBackStack() },
-                onDeleteClick = {
-                    if (note != null) {
-                        notesViewModel.deleteNote(noteId)
+                )
+            }
+            composable("edit") {
+                EditNoteScreen(
+                    note = null,
+                    onSaveClick = { createdNote ->
+                        notesViewModel.addNote(createdNote)
+                        navController.popBackStack()
                     }
-                    navController.popBackStack()
+                )
+            }
+            composable(
+                route = "edit/{noteId}",
+                arguments = listOf(navArgument("noteId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val noteId = backStackEntry.arguments!!.getString("noteId") ?: ""
+                val note = notesViewModel.notes.find { it.id == noteId }
+                EditNoteScreen(
+                    note = note,
+                    onSaveClick = { updatedNote ->
+                        if (note != null) {
+                            notesViewModel.updateNote(updatedNote)
+                        }
+                        navController.popBackStack()
+                    },
+                    onDeleteClick = {
+                        if (note != null) {
+                            notesViewModel.deleteNote(noteId)
+                        }
+                        navController.popBackStack()
 
-                }
-            )
+                    }
+                )
+
+            }
 
         }
-
     }
 }
+
 
 
 
