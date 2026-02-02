@@ -1,15 +1,6 @@
 package com.example.mutlabocsnotes
 
-import android.annotation.SuppressLint
-import android.graphics.BitmapFactory
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,9 +26,7 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.AddHome
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Task
 import androidx.compose.material.primarySurface
@@ -54,35 +43,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.runtime.mutableStateListOf
 import java.util.Calendar
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Surface
+import androidx.compose.material.icons.filled.QuestionMark
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Path
-import androidx.annotation.DrawableRes
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.width
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Canvas
-import androidx.compose.ui.graphics.FilterQuality
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.imageResource
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlin.math.roundToInt
-import androidx.compose.ui.platform.LocalDensity
-import kotlin.math.max
+
 
 @Composable
 fun HomeScreen(
@@ -98,8 +66,8 @@ fun HomeScreen(
 
 ) {
     // Простейший список категорий, пока статичный
-    val categories = listOf("Все", "Работа", "Личное")
     var search by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -115,7 +83,8 @@ fun HomeScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp)
+                    .height(200.dp),
+                contentAlignment = Alignment.BottomCenter
             ){
                 Image (
                     painter = painterResource(id = R.drawable.background_country_home),
@@ -186,6 +155,11 @@ fun HomeScreen(
                             DropdownMenuItem (onClick = {
                                 userMenuExtended = false
                                 onOpenSettings()
+
+                            }) {
+                                Text("Настройки")
+                            }
+                            DropdownMenuItem (onClick = {
 
                             }) {
                                 Text("Настройки")
@@ -488,7 +462,7 @@ fun NoteItem(
                             2 -> {
                                 // Иконка «Добавить»
                                 Icon(
-                                    imageVector = Icons.Default.Settings,
+                                    imageVector = Icons.Default.QuestionMark,
                                     contentDescription = "Добавить заметку",
                                     tint = MaterialTheme.colors.onPrimary
                                 )

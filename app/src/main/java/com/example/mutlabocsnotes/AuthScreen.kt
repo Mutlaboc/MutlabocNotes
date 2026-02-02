@@ -1,6 +1,6 @@
 package com.example.mutlabocsnotes
 
-
+import android.app.Activity
 import android.util.Log
 import android.widget.Toast
 import android.widget.Toast.LENGTH_SHORT
@@ -28,27 +28,20 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
-import com.google.android.gms.common.api.CommonStatusCodes
-import com.yandex.authsdk.YandexAuthException
-import com.yandex.authsdk.YandexAuthLoginOptions
-import com.yandex.authsdk.YandexAuthOptions
-import com.yandex.authsdk.YandexAuthResult
-import com.yandex.authsdk.YandexAuthSdk
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import androidx.compose.runtime.LaunchedEffect
+import com.google.firebase.auth.OAuthProvider
 
 @Composable
-fun AuthScreen(onAuthenicated: () -> Unit) {
+fun AuthScreeen(onAuthenicated: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
     val isPreview = LocalInspectionMode.current
     val auth = if (isPreview) null else FirebaseAuth.getInstance()
     val context = LocalContext.current
+    val activity = context as? Activity
     val defaultWebClientId = stringResource(id = R.string.default_web_client_id)
     val googleSignInClient = remember {
         if (isPreview) null else {
@@ -59,85 +52,35 @@ fun AuthScreen(onAuthenicated: () -> Unit) {
             GoogleSignIn.getClient(context, gso)
         }
     }
-    val yandexAuthSdk = remember {
-        if (isPreview) null else {
-            YandexAuthSdk.create(YandexAuthOptions(context))
+    LaunchedEffect(auth) {
+        if (!isPreview) {
+            auth?.pendingAuthResult
+                ?.addOnSuccessListener { onAuthenicated() }
+                ?.addOnFailureListener {
+                    Log.e("Auth", "Pending Yandex sign-in failed", it)
+                    Toast.makeText(
+                        context,
+                        it.localizedMessage ?: "Не удалось завершить вход через Яндекс",
+                        LENGTH_SHORT
+                    ).show()
+                }
         }
     }
-    val coroutineScope = rememberCoroutineScope()
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (isPreview) return@rememberLauncherForActivityResult
-
-        val resultData = result.data
-        if (resultData == null) {
-            Log.w("Auth", "Google sign-in cancelled or empty result")
-            Toast.makeText(context, "Google sign-in cancelled", LENGTH_SHORT).show()
-            return@rememberLauncherForActivityResult
-    }
-        try {
-            val account = GoogleSignIn.getSignedInAccountFromIntent(resultData)
-                .getResult(ApiException::class.java)
-            val idToken = account?.idToken
-            if (idToken.isNullOrBlank()) {
-                Log.e("Auth", "Google sign-in failed: missing idToken")
-                Toast.makeText(context, "Google sign-in failed: missing token", LENGTH_SHORT).show()
-                return@rememberLauncherForActivityResult
-            }
-            val credential = GoogleAuthProvider.getCredential(idToken, null)
-            auth?.signInWithCredential(credential)
-                ?.addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        onAuthenicated()
-                    } else {
-                        Log.e("Auth", "Firebase auth failed", task.exception)
-                        Toast.makeText(
-                            context,
-                            task.exception?.localizedMessage ?: "Firebase auth failed",
-                            LENGTH_SHORT
-                        ).show()
-                    }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        result ->
+        if (!isPreview) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            if (task.isSuccessful) {
+                val idToken = task.result.idToken
+                if (idToken != null) {
+                    val credential = GoogleAuthProvider.getCredential(idToken, null)
+                    auth?.signInWithCredential(credential)
+                        ?.addOnCompleteListener { if (it.isSuccessful) onAuthenicated() }
                 }
-        } catch (exception: ApiException) {
-            val message = when (exception.statusCode) {
-                CommonStatusCodes.CANCELED -> "Google sign-in cancelled"
-                CommonStatusCodes.NETWORK_ERROR -> "Google sign-in failed: network error"
-                else -> exception.localizedMessage ?: "Google sign in failed"
-            }
-            Log.e("Auth", "Google sign in failed", exception)
-            Toast.makeText(context, message, LENGTH_SHORT).show()
-        }
-    }
-    val yandexAuthLauncher = rememberLauncherForActivityResult(
-        yandexAuthSdk?.contract ?: YandexAuthSdk.create(YandexAuthOptions(context)).contract
-    ) { result ->
-        if (isPreview) return@rememberLauncherForActivityResult
-
-        when (result) {
-            is YandexAuthResult.Success -> {
-                val token = result.token
-                coroutineScope.launch {
-                    val jwt = try {
-                        withContext(Dispatchers.IO) {
-                            yandexAuthSdk?.getJwt(token)
-                        }
-                    } catch (exception: YandexAuthException) {
-                        Log.e("Auth", "Yandex JWT exchange failed", exception)
-                        null
-                    }
-                    Log.i("Auth", "Yandex auth success. Token=${token.value}, jwt=$jwt")
-                    Toast.makeText(context, "Yandex sign-in success", LENGTH_SHORT).show()
-                    onAuthenicated()
+                else {
+                    Log.e("Auth","Google sign-in failed", task.exception)
+                    Toast.makeText(context, task.exception?.localizedMessage, LENGTH_SHORT).show()
                 }
-
-            }
-            is YandexAuthResult.Failure -> {
-                val message = result.exception.errors.joinToString(", ")
-                    .ifBlank { "Yandex sign-in failed" }
-                Log.e("Auth", "Yandex sign-in failed", result.exception)
-                Toast.makeText(context, message, LENGTH_SHORT).show()
-            }
-            YandexAuthResult.Cancelled -> {
-                Toast.makeText(context, "Yandex sign-in cancelled", LENGTH_SHORT).show()
             }
         }
     }
@@ -217,12 +160,7 @@ fun AuthScreen(onAuthenicated: () -> Unit) {
         Button(
             onClick = {
                 if (!isPreview) {
-                    val signIntent = googleSignInClient?.signInIntent
-                    if (signIntent == null) {
-                        Toast.makeText(context, "Google sigh in unavailable", LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    launcher.launch(signIntent)
+                    launcher.launch(googleSignInClient?.signInIntent)
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -231,14 +169,49 @@ fun AuthScreen(onAuthenicated: () -> Unit) {
         }
         Spacer(Modifier.padding(6.dp))
         Button(
-          onClick = {
-              if (!isPreview) {
-                  yandexAuthLauncher.launch(YandexAuthLoginOptions())
-              }
-          },
+            onClick = {
+                if (isPreview) {
+                    return@Button
+                }
+                if (activity == null) {
+                    Toast.makeText(
+                        context,
+                        "Не удалось получить Activity для запуска входа",
+                        LENGTH_SHORT
+                    ).show()
+                    return@Button
+                }
+                val pendingResult = auth?.pendingAuthResult
+                if (pendingResult != null) {
+                    pendingResult
+                        .addOnSuccessListener { onAuthenicated() }
+                        .addOnFailureListener {
+                            Log.e("Auth", "Pending Yandex sign-in failed", it)
+                            Toast.makeText(
+                                context,
+                                it.localizedMessage ?: "Ошибка входа через Яндекс",
+                                LENGTH_SHORT
+                            ).show()
+                        }
+                    return@Button
+                }
+                val provider = OAuthProvider.newBuilder("oidc.yandex").apply {
+                    scopes = listOf("openid", "email", "profile")
+                }
+                auth?.startActivityForSignInWithProvider(activity, provider.build())
+                    ?.addOnSuccessListener { onAuthenicated() }
+                    ?.addOnFailureListener {
+                        Log.e("Auth", "Yandex sign-in failed", it)
+                        Toast.makeText(
+                            context,
+                            it.localizedMessage ?: "Ошибка входа через Яндекс",
+                            LENGTH_SHORT
+                        ).show()
+                    }
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Зайти через Яндекс")
+            Text("Sign in with Yandex")
         }
     }
 }
@@ -251,6 +224,6 @@ fun AuthScreen(onAuthenicated: () -> Unit) {
 @Composable
 fun AuthScreenPreview() {
     MaterialTheme {
-        AuthScreen(onAuthenicated = {})
+        AuthScreeen(onAuthenicated = {})
     }
 }
