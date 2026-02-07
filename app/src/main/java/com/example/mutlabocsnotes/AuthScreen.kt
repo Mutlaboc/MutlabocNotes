@@ -34,7 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import com.google.firebase.auth.OAuthProvider
 
 @Composable
-fun AuthScreeen(onAuthenicated: () -> Unit) {
+fun AuthScreen(onAuthenicated: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
@@ -224,6 +224,6 @@ fun AuthScreeen(onAuthenicated: () -> Unit) {
 @Composable
 fun AuthScreenPreview() {
     MaterialTheme {
-        AuthScreeen(onAuthenicated = {})
+        AuthScreen(onAuthenicated = {})
     }
 }

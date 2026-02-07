@@ -71,7 +71,9 @@ class MainActivity : ComponentActivity() {
     }
  }
 @Composable
-fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
+fun MyApp(
+    notesViewModel: NotesViewModel = viewModel(),
+    homeInfoViewModel: HomeInfoViewModel = viewModel()) {
     val navController = rememberNavController()
     val startDestination = remember {
         if (FirebaseAuth.getInstance().currentUser != null) "home" else "auth"
@@ -109,7 +111,7 @@ fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
                                 launchSingleTop = true
                             }
 
-                            2 -> Unit
+                            2 -> navController.navigate("home_info")
                         }
                     },
                     onCompletionChange = { noteId, isCompleted ->
@@ -161,6 +163,51 @@ fun MyApp(notesViewModel: NotesViewModel = viewModel()) {
                     onNavigateHome = {
                         navController.popBackStack()
                     }
+                )
+            }
+            composable("home_info") {
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    homeInfoViewModel.loadCards()
+                }
+                HomeInfoScreen(
+                    cards = homeInfoViewModel.cards,
+                    isLoading = homeInfoViewModel.isLoading,
+                    errorMessage = homeInfoViewModel.errorMessage,
+                    onAddClick = { navController.navigate("home_info_edit") },
+                    onCardClick = { cardId ->
+                        navController.navigate("home_info_edit/$cardId")
+                    },
+                    onBack = { navController.popBackStack()}
+                )
+            }
+            composable("home_info_edit") {
+                EditHomeInfoCardScreen(
+                    card = null,
+                    onSaveClick = { card ->
+                        homeInfoViewModel.addCard(card)
+                        navController.popBackStack()
+                    },
+                    onDeleteClick = null,
+                    onBack = { navController.popBackStack()}
+                )
+            }
+            composable(
+                route = "home_info_edit/{cardId}",
+                arguments = listOf(navArgument("cardId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val cardId = backStackEntry.arguments?.getString("cardId") ?: ""
+                val card = homeInfoViewModel.cards.find { it.id == cardId}
+                EditHomeInfoCardScreen(
+                    card = card,
+                    onSaveClick = { updatedCard ->
+                        homeInfoViewModel.updateCard(updatedCard)
+                        navController.popBackStack()
+                    },
+                    onDeleteClick = {
+                        homeInfoViewModel.deleteCard(cardId)
+                        navController.popBackStack()
+                    },
+                    onBack = { navController.popBackStack()}
                 )
             }
             composable("edit") {
