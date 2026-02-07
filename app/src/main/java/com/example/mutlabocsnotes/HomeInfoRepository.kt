@@ -11,13 +11,14 @@ class HomeInfoRepository {
 
     private fun userHomeCardsCollection(): CollectionReference? {
         return FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
-            db.collection("users").document(uid).collection("home_cards")
+            db.collection("users").document(uid).collection("homeСards")
         }
     }
 
-    suspend fun getAllCards(): List<HomeInfoCard> {
-        val collection = userHomeCardsCollection() ?: return emptyList()
-        return try {
+    suspend fun getAllCards(): Result<List<HomeInfoCard>> {
+        val collection = userHomeCardsCollection()
+            ?: return Result.failure(IllegalStateException("Пользователь не авторизован"))
+        return runCatching  {
             val snapshot = collection.get().await()
             snapshot.documents.map { doc ->
                 val title = doc.getString("title") ?: ""
@@ -50,8 +51,6 @@ class HomeInfoRepository {
                     updatedAt = updatedAt
                 )
             }
-        } catch (e: Exception) {
-            emptyList()
         }
     }
 
@@ -70,36 +69,30 @@ class HomeInfoRepository {
         "updatedAt" to card.updatedAt
     )
 
-    suspend fun insert(card: HomeInfoCard): String? {
-        val collection = userHomeCardsCollection() ?: return null
-        return try {
+    suspend fun insert(card: HomeInfoCard): Result<String> {
+        val collection = userHomeCardsCollection() ?: return Result.failure(IllegalStateException("Пользователь не авторизован"))
+        return runCatching  {
             val doc = collection.document()
             doc.set(cardMap(card)).await()
             doc.id
-        } catch (e: Exception) {
-            null
         }
     }
 
-    suspend fun update(card: HomeInfoCard): Boolean {
-        val collection = userHomeCardsCollection() ?: return false
-        if (card.id.isEmpty()) return false
-        return try {
+    suspend fun update(card: HomeInfoCard): Result<Unit> {
+        val collection = userHomeCardsCollection()  ?: return Result.failure(IllegalStateException("Пользователь не авторизован"))
+        if (card.id.isEmpty()) return Result.failure(IllegalArgumentException("Пустой идентификатор карточки"))
+        return runCatching  {
             collection.document(card.id)
                 .set(cardMap(card)).await()
             true
-        } catch (e: Exception) {
-            false
         }
     }
 
-    suspend fun delete(cardId: String): Boolean {
-        val collection = userHomeCardsCollection() ?: return false
-        return try {
+    suspend fun delete(cardId: String): Result<Unit>{
+        val collection = userHomeCardsCollection() ?: return Result.failure(IllegalStateException("Пользователь не авторизован"))
+        return runCatching  {
             collection.document(cardId).delete().await()
             true
-        } catch (e: Exception) {
-            false
         }
     }
 }

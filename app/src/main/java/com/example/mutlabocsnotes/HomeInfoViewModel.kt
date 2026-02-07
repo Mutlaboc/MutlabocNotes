@@ -24,10 +24,14 @@ class HomeInfoViewModel(application: Application) : AndroidViewModel(application
                 isLoading = true
                 errorMessage = null
             }
-            val loadedCards = repository.getAllCards()
+            val result = repository.getAllCards()
             launch(Dispatchers.Main) {
-                cards.clear()
-                cards.addAll(loadedCards.sortedByDescending { it.updatedAt })
+                result.onSuccess { loadedCards ->
+                    cards.clear()
+                    cards.addAll(loadedCards.sortedByDescending { it.updatedAt })
+                }.onFailure { error ->
+                    errorMessage = error.message ?: "Не удалось загрузить карточки"
+                }
                 isLoading = false
             }
         }
@@ -35,12 +39,14 @@ class HomeInfoViewModel(application: Application) : AndroidViewModel(application
 
     fun addCard(card: HomeInfoCard) {
         viewModelScope.launch(Dispatchers.IO) {
-            val id = repository.insert(card)
-            if (id != null) {
-                val cardWithId = card.copy(id = id)
-                launch(Dispatchers.Main) {
+            val result = repository.insert(card)
+            launch(Dispatchers.Main) {
+                result.onSuccess { id ->
+                    val cardWithId = card.copy(id = id)
                     cards.add(cardWithId)
                     cards.sortByDescending { it.updatedAt }
+                }.onFailure { error ->
+                    errorMessage = error.message ?: "Не удалось сохранить карточку"
                 }
             }
         }
@@ -49,30 +55,35 @@ class HomeInfoViewModel(application: Application) : AndroidViewModel(application
     fun updateCard(card: HomeInfoCard) {
         if (card.id.isEmpty()) return
         viewModelScope.launch(Dispatchers.IO) {
-            val success = repository.update(card)
-            if (success) {
-                val index = cards.indexOfFirst { it.id == card.id }
-                if (index != -1) {
-                    launch(Dispatchers.Main) {
+            val result = repository.update(card)
+            launch(Dispatchers.Main) {
+                result.onSuccess {
+                    val index = cards.indexOfFirst { it.id == card.id }
+                    if (index != -1) {
                         cards[index] = card
                         cards.sortByDescending { it.updatedAt }
                     }
+                }.onFailure { error ->
+                    errorMessage = error.message ?: "Не удалось обновить карточку"
                 }
             }
         }
     }
 
-    fun deleteCard(cardId: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val success = repository.delete(cardId)
-            if (success) {
-                val card = cards.find { it.id == cardId }
-                if (card != null) {
-                    launch(Dispatchers.Main) {
-                        cards.remove(card)
+        fun deleteCard(cardId: String) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val success = repository.delete(cardId)
+                val result = repository.delete(cardId)
+                launch(Dispatchers.Main) {
+                    result.onSuccess {
+                        val card = cards.find { it.id == cardId }
+                        if (card != null) {
+                            cards.remove(card)
+                        }
+                    }.onFailure { error ->
+                        errorMessage = error.message ?: "Не удалось удалить карточку"
                     }
                 }
             }
         }
     }
-}
