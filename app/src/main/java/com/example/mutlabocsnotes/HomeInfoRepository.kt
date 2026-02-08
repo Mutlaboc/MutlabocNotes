@@ -2,6 +2,7 @@ package com.example.mutlabocsnotes
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.tasks.await
@@ -9,16 +10,39 @@ import kotlinx.coroutines.tasks.await
 class HomeInfoRepository {
     private val db = Firebase.firestore
 
-    private fun userHomeCardsCollection(): CollectionReference? {
+    private fun userHomeCardsCollections(): List<CollectionReference>? {
         return FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
-            db.collection("users").document(uid).collection("homeСards")
+            listOf(
+                db.collection("users").document(uid).collection("homeCards"),
+                db.collection("users").document(uid).collection("homeСards")
+            )
         }
     }
 
-    suspend fun getAllCards(): Result<List<HomeInfoCard>> {
-        val collection = userHomeCardsCollection()
+    private suspend fun <T> runWithAccessibleCollection(
+        action: suspend (CollectionReference) -> T
+    ): Result<T> {
+        val collections = userHomeCardsCollections()
             ?: return Result.failure(IllegalStateException("Пользователь не авторизован"))
-        return runCatching  {
+        var permissionDenied: FirebaseFirestoreException? = null
+        for (collection in collections) {
+            try {
+                return Result.success(action(collection))
+            } catch (error: FirebaseFirestoreException) {
+                if (error.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                    permissionDenied = error
+                    continue
+                }
+                return Result.failure(error)
+            } catch (error: Exception) {
+                return Result.failure(error)
+            }
+        }
+        return Result.failure(permissionDenied ?: IllegalStateException("Нет доступа к коллекции карточек"))
+    }
+
+    suspend fun getAllCards(): Result<List<HomeInfoCard>> {
+        return runWithAccessibleCollection { collection ->
             val snapshot = collection.get().await()
             snapshot.documents.map { doc ->
                 val title = doc.getString("title") ?: ""
@@ -70,8 +94,7 @@ class HomeInfoRepository {
     )
 
     suspend fun insert(card: HomeInfoCard): Result<String> {
-        val collection = userHomeCardsCollection() ?: return Result.failure(IllegalStateException("Пользователь не авторизован"))
-        return runCatching  {
+        return runWithAccessibleCollection { collection ->
             val doc = collection.document()
             doc.set(cardMap(card)).await()
             doc.id
@@ -79,20 +102,18 @@ class HomeInfoRepository {
     }
 
     suspend fun update(card: HomeInfoCard): Result<Unit> {
-        val collection = userHomeCardsCollection()  ?: return Result.failure(IllegalStateException("Пользователь не авторизован"))
         if (card.id.isEmpty()) return Result.failure(IllegalArgumentException("Пустой идентификатор карточки"))
-        return runCatching  {
+        return runWithAccessibleCollection { collection ->
             collection.document(card.id)
                 .set(cardMap(card)).await()
-            true
+            Unit
         }
     }
 
     suspend fun delete(cardId: String): Result<Unit>{
-        val collection = userHomeCardsCollection() ?: return Result.failure(IllegalStateException("Пользователь не авторизован"))
-        return runCatching  {
+        return runWithAccessibleCollection { collection ->
             collection.document(cardId).delete().await()
-            true
+            Unit
         }
     }
 }
