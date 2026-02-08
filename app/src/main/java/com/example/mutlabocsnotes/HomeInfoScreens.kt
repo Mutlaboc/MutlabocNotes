@@ -146,12 +146,15 @@ fun HomeInfoScreen(
             if (filteredCards.isEmpty() && !isLoading) {
                 Text("Нет карточек для отображения")
             } else {
+                val uniqueCards = remember(filteredCards) {
+                    filteredCards.distinctBy { it.id }
+                }
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f, fill = false)
                 ) {
-                    items(filteredCards, key = { it.id }) { card ->
+                    items(uniqueCards, key = { it.id }) { card ->
                         HomeInfoCardItem(card = card, onClick = { onCardClick(card.id) })
                     }
                 }
