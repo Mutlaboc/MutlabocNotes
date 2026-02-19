@@ -1,8 +1,7 @@
 package com.example.mutlabocsnotes
 
 /**
- * Represents a single item inside a checklist. Each item stores the
- * text entered by the user and whether it was marked as completed.
+Один пункт в чек-листе
  */
 
 data class CheklistItem(
@@ -11,8 +10,7 @@ data class CheklistItem(
 )
 
 /**
- * Categories supported by a note.  They map directly to the user facing
- * options «Покупки», «Дела» и «Заметки».
+ * Категории.   «Покупки», «Дела» и «Заметки».
  */
 
 enum class NoteCategory {
@@ -22,7 +20,7 @@ enum class NoteCategory {
 }
 
 /**
- * Core domain model used across the application and stored in Firestore.
+ * Базовая модель
  */
 
 data class Note(
