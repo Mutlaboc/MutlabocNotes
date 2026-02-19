@@ -7,12 +7,7 @@ import com.google.firebase.auth.FirebaseAuth
 class FirestoreRepository {
     private val db = Firebase.firestore
 
-    /**
-     * Returns a reference to the notes collection for the currently
-     * authenticated user.  Notes are stored under
-     * `users/{uid}/notes` in Firestore so that each user only sees
-     * their own notes.
-     */
+
     private fun userNotesCollection() =
         FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
             db.collection("users").document(uid).collection("notes")
