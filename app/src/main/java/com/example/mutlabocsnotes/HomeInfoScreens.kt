@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun HomeInfoScreen(
@@ -420,4 +421,23 @@ private fun HomeSection.displayName(): String = when (this) {
     HomeSection.DOCUMENTS -> "Документы"
     HomeSection.CONTACTS -> "Контакты"
     HomeSection.OTHER -> "Другое"
+}
+
+
+@Preview(showBackground = true)
+@Composable
+fun HomeInfoScreenPreview() {
+    val cards = listOf(
+        HomeInfoCard(id = "1", title = "Заметка 1"),
+        HomeInfoCard(id = "2", title = "Заметка 2"),
+        HomeInfoCard(id = "3", title = "Заметка 3")
+    )
+    HomeInfoScreen(
+        cards = cards,
+        isLoading = false,
+        errorMessage = "",
+        onAddClick = {  },
+        onCardClick = {  },
+        onBack = {  }
+    )
 }
