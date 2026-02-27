@@ -28,16 +28,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import androidx.compose.runtime.LaunchedEffect
 import com.google.firebase.auth.OAuthProvider
 
 @Composable
-fun AuthScreen(onAuthenicated: () -> Unit) {
+fun AuthScreen(onAuthenticated: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
+    // Чуть настроек для Preview, чтобы не крашилось
     val isPreview = LocalInspectionMode.current
     val auth = if (isPreview) null else FirebaseAuth.getInstance()
     val context = LocalContext.current
@@ -55,7 +55,7 @@ fun AuthScreen(onAuthenicated: () -> Unit) {
     LaunchedEffect(auth) {
         if (!isPreview) {
             auth?.pendingAuthResult
-                ?.addOnSuccessListener { onAuthenicated() }
+                ?.addOnSuccessListener { onAuthenticated() }
                 ?.addOnFailureListener {
                     Log.e("Auth", "Pending Yandex sign-in failed", it)
                     Toast.makeText(
@@ -75,7 +75,7 @@ fun AuthScreen(onAuthenicated: () -> Unit) {
                 if (idToken != null) {
                     val credential = GoogleAuthProvider.getCredential(idToken, null)
                     auth?.signInWithCredential(credential)
-                        ?.addOnCompleteListener { if (it.isSuccessful) onAuthenicated() }
+                        ?.addOnCompleteListener { if (it.isSuccessful) onAuthenticated() }
                 }
                 else {
                     Log.e("Auth","Google sign-in failed", task.exception)
@@ -112,7 +112,7 @@ fun AuthScreen(onAuthenicated: () -> Unit) {
                     auth?.signInWithEmailAndPassword(email.trim(), password)
                         ?.addOnCompleteListener { task ->
                             if (task.isSuccessful) {
-                                onAuthenicated()
+                                onAuthenticated()
                             }
                             else {
                                 Log.e("Auth", "Sign-up error", task.exception)
@@ -140,7 +140,7 @@ fun AuthScreen(onAuthenicated: () -> Unit) {
                     auth?.createUserWithEmailAndPassword(email.trim(), password)
                         ?.addOnCompleteListener { task ->
                             if (task.isSuccessful) {
-                                onAuthenicated()
+                                onAuthenticated()
                             } else {
                                 Log.e("Auth", "Sign-up error", task.exception)
                                 Toast.makeText(
@@ -184,7 +184,7 @@ fun AuthScreen(onAuthenicated: () -> Unit) {
                 val pendingResult = auth?.pendingAuthResult
                 if (pendingResult != null) {
                     pendingResult
-                        .addOnSuccessListener { onAuthenicated() }
+                        .addOnSuccessListener { onAuthenticated() }
                         .addOnFailureListener {
                             Log.e("Auth", "Pending Yandex sign-in failed", it)
                             Toast.makeText(
@@ -199,7 +199,7 @@ fun AuthScreen(onAuthenicated: () -> Unit) {
                     scopes = listOf("openid", "email", "profile")
                 }
                 auth?.startActivityForSignInWithProvider(activity, provider.build())
-                    ?.addOnSuccessListener { onAuthenicated() }
+                    ?.addOnSuccessListener { onAuthenticated() }
                     ?.addOnFailureListener {
                         Log.e("Auth", "Yandex sign-in failed", it)
                         Toast.makeText(
@@ -224,6 +224,6 @@ fun AuthScreen(onAuthenicated: () -> Unit) {
 @Composable
 fun AuthScreenPreview() {
     MaterialTheme {
-        AuthScreen(onAuthenicated = {})
+        AuthScreen(onAuthenticated = {})
     }
 }

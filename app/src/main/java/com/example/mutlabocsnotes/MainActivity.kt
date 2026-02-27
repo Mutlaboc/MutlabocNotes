@@ -32,18 +32,18 @@ import androidx.compose.runtime.setValue
 class MainActivity : ComponentActivity() {
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
-
     override fun onCreate(savedInstanceState: Bundle?) {
        super.onCreate(savedInstanceState)
        FirebaseApp.initializeApp(this)
         createNotificationChannel()
         requestNotificationPermissionIfNeeded()
-       AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+       /*AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)*/
        setContent {
            MyApp()
 
        }
    }
+// Создаем канал для уведомлений
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -58,6 +58,8 @@ class MainActivity : ComponentActivity() {
             notificationManager?.createNotificationChannel(channel)
         }
     }
+
+    // Метод для запроса разрешения
     private fun requestNotificationPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val granted = ContextCompat.checkSelfPermission(
@@ -80,7 +82,7 @@ fun MyApp(
     }
     var isDarkTheme by rememberSaveable { mutableStateOf(false) }
     MaterialTheme(colors = if (isDarkTheme) darkColors() else lightColors()) {
-
+// Расписываем навиграцию
         NavHost(
             navController = navController,
             startDestination = startDestination
