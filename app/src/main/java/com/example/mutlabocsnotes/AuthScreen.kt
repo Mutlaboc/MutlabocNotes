@@ -45,6 +45,7 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
     val defaultWebClientId = stringResource(id = R.string.default_web_client_id)
     val googleSignInClient = remember {
         if (isPreview) null else {
+            // TODO надо бы переписать на Credential Manager
             val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(defaultWebClientId)
                 .requestEmail()
@@ -52,6 +53,7 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
             GoogleSignIn.getClient(context, gso)
         }
     }
+    // Подвешивание состояния при переходе в яндекс
     LaunchedEffect(auth) {
         if (!isPreview) {
             auth?.pendingAuthResult
@@ -66,10 +68,12 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
                 }
         }
     }
+        // Регистрация через гугл
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         result ->
         if (!isPreview) {
             val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+                // TODO обработать task.isSuccessful == false ?
             if (task.isSuccessful) {
                 val idToken = task.result.idToken
                 if (idToken != null) {
@@ -86,7 +90,7 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
     }
 
 
-
+//TODO Можно обдумать и добавить visualTransformation и KeyboardOptions
     Column(modifier = Modifier.padding(16.dp)) {
         OutlinedTextField(
             value = email,
@@ -105,7 +109,7 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
         Button(
             onClick = {
                 if (email.isBlank() || password.length < 6) {
-                    Toast.makeText(context, "Введите корректный e-mail и пароль ≥ 6 символов", LENGTH_SHORT).show()
+                    Toast.makeText(context, "Введите корректный e-mail и пароль больше 6 символов", LENGTH_SHORT).show()
                     return@Button
                 }
                 if (!isPreview) {
@@ -133,7 +137,7 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
         Button(
             onClick = {
                 if (email.isBlank() || password.length < 6) {
-                    Toast.makeText(context, "Введите корректный e-mail и пароль ≥ 6 символов", LENGTH_SHORT).show()
+                    Toast.makeText(context, "Введите корректный e-mail и больше 6 символов", LENGTH_SHORT).show()
                     return@Button
             }
                 if (!isPreview) {

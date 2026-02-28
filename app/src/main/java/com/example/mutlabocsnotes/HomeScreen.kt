@@ -162,7 +162,7 @@ fun HomeScreen(
                             DropdownMenuItem (onClick = {
 
                             }) {
-                                Text("Настройки")
+
                             }
                         }
                     }
