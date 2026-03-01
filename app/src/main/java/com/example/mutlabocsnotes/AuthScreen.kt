@@ -89,7 +89,7 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
         }
     }
 
-
+    // Интерфейс
 //TODO Можно обдумать и добавить visualTransformation и KeyboardOptions
     Column(modifier = Modifier.padding(16.dp)) {
         OutlinedTextField(

@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -21,7 +22,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     // Локальный кэш заметок, можно сделать LiveData или StateFlow для наблюдения за изменениями
     val notes = mutableStateListOf<Note>()
-    var totalCoins by mutableStateOf(0)
+    var totalCoins by mutableIntStateOf(0)
     private set
 
     init {
@@ -29,6 +30,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             loadNotes()
         }
     }
+    // Загружаем заметки
     fun loadNotes() {
         viewModelScope.launch(Dispatchers.IO) {
             val loadNotes = repository.getAllNotes()
@@ -41,7 +43,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-
+// Добавляем заметку
     fun addNote(note: Note) {
         viewModelScope.launch(Dispatchers.IO) {
             val id = repository.insert(note)
@@ -56,6 +58,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Обновляем заметку
+    // TODO Надо бы сделать защиту от сбоя одновления в FireStore
     fun updateNote(note: Note) {
         if (note.id.isEmpty()) return
         viewModelScope.launch(Dispatchers.IO) {
@@ -73,6 +77,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
         }
     }
+    // Помечаем заметку как выполненную (с защитой от сбоя)
     fun setNoteCompletion(noteId: String, isCompleted: Boolean) {
         val index = notes.indexOfFirst { it.id == noteId }
         if (index == -1) return
@@ -96,6 +101,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Удаление заметки
     fun deleteNote(noteId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val success = repository.delete(noteId)
