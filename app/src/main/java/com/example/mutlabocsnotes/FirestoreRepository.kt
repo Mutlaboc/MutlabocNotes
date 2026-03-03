@@ -7,7 +7,7 @@ import com.google.firebase.auth.FirebaseAuth
 class FirestoreRepository {
     private val db = Firebase.firestore
 
-
+// привязываем заметки к пользователю.
     private fun userNotesCollection() =
         FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
             db.collection("users").document(uid).collection("notes")
