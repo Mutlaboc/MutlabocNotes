@@ -51,6 +51,7 @@ fun EditNoteScreen(
     onSaveClick: (Note) -> Unit,
     onDeleteClick: (() -> Unit)? = null
 ) {
+    // особенность - привязываем изменение данных при рекомпозиции к noteId
     val noteId = note?.id.orEmpty()
     var title by remember(noteId) { mutableStateOf(note?.title ?: "") }
     var content by remember(noteId) { mutableStateOf(note?.content ?: "") }
@@ -93,7 +94,7 @@ fun EditNoteScreen(
         NoteCategory.TASKS to "Дела",
         NoteCategory.NOTES to "Заметки"
     )
-
+// Экран
     Scaffold(
         topBar = {
             TopAppBar(
@@ -112,6 +113,7 @@ fun EditNoteScreen(
                 value = title,
                 onValueChange = { title = it },
                 label = { Text("Заголовок") },
+                // TODO может убрать жесткую привязку к черному?
                 textStyle = TextStyle(color = Color.Black),
                 colors = TextFieldDefaults.outlinedTextFieldColors(
                     textColor = Color.Black,

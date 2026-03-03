@@ -25,7 +25,7 @@ class FirestoreRepository {
                     it.name == categoryName
                 }
                     ?: NoteCategory.NOTES
-                val cheklist = (doc.get("cheklist") as? List<*>)
+                val checklist = (doc.get("checklist") as? List<*>)
                     ?.mapNotNull {
                         rawItem ->
                         (rawItem as? Map <*, *>)?.let {
@@ -44,7 +44,7 @@ class FirestoreRepository {
                     title = title,
                     content = content,
                     category = category,
-                    checklist = cheklist,
+                    checklist = checklist,
                     deadlineMillis = deadlineMillis,
                     isRepeating = isRepeating,
                     coinCount = coinCount,
@@ -60,7 +60,7 @@ class FirestoreRepository {
         "title" to note.title,
         "content" to note.content,
         "category" to note.category.name,
-        "cheklist" to note.checklist.map {
+        "checklist" to note.checklist.map {
             item -> mapOf(
                 "text" to item.text,
                 "isChecked" to item.isChecked
