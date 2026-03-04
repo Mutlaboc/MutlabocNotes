@@ -65,9 +65,8 @@ fun HomeScreen(
     onOpenSettings: () -> Unit,
 
 ) {
-    // Простейший список категорий, пока статичный
+    // Зачатки поиска
     var search by remember { mutableStateOf("") }
-    val context = LocalContext.current
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -86,6 +85,7 @@ fun HomeScreen(
                     .height(200.dp),
                 contentAlignment = Alignment.BottomCenter
             ){
+                //TODO надо будет интерактивную картинку сделать.
                 Image (
                     painter = painterResource(id = R.drawable.background_country_home),
                     contentDescription = "Home background",
@@ -195,7 +195,7 @@ fun HomeScreen(
 
     }
 }
-
+// базовая геймофикация, пока не реализовано
 private enum class  BuildingStage {
     Foundation,
     Walls,
