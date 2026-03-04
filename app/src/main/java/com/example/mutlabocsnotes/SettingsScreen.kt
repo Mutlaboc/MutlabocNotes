@@ -14,7 +14,6 @@ import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.ModalDrawer
 import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Switch
@@ -40,6 +39,7 @@ fun SettingsScreen (
     onDeleteAccount: () -> Unit,
     onBack: () -> Unit,
 ) {
+    // TODO реализовать бы смену языков...
     val languages = listOf("Русский", "English", "Deutsch")
     var isLanguageMenuExpanded by remember { mutableStateOf(false) }
     var selectedLanguage by rememberSaveable { mutableStateOf(languages.first()) }
@@ -100,7 +100,6 @@ fun SettingsScreen (
                 text = "Язык",
                 style = MaterialTheme.typography.subtitle1
             )
-            Spacer(modifier = Modifier.fillMaxWidth())
             OutlinedButton(
                 onClick = { isLanguageMenuExpanded = true },
                 modifier = Modifier.fillMaxWidth()

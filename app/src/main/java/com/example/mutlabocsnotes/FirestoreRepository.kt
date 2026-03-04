@@ -32,7 +32,7 @@ class FirestoreRepository {
                             itemMap ->
                             val text = itemMap["text"] as? String ?: ""
                             val isChecked = itemMap["isChecked"] as? Boolean ?: false
-                            CheklistItem(text = text, isChecked = isChecked)
+                            ChecklistItem(text = text, isChecked = isChecked)
                         }
                     } ?: emptyList()
                 val deadlineMillis = doc.getLong("deadlineMillis")

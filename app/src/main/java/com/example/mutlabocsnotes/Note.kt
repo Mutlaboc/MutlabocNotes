@@ -4,7 +4,7 @@ package com.example.mutlabocsnotes
 Один пункт в чек-листе
  */
 
-data class CheklistItem(
+data class ChecklistItem(
     val text: String = "",
     val isChecked: Boolean = false
 )
@@ -28,7 +28,7 @@ data class Note(
     val title: String = "",
     val content: String = "",
     val category: NoteCategory = NoteCategory.NOTES,
-    val checklist: List<CheklistItem> = emptyList(),
+    val checklist: List<ChecklistItem> = emptyList(),
     val deadlineMillis: Long? = null,
     val isRepeating: Boolean = false,
     val coinCount: Int = 0,

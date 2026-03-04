@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import com.google.firebase.BuildConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 
@@ -62,8 +63,8 @@ fun EditNoteScreen(
         val initial = note
             ?.takeIf { it.category == NoteCategory.SHOPPING && it.checklist.isNotEmpty() }
             ?.checklist
-            ?: listOf(CheklistItem())
-        mutableStateListOf<CheklistItem>().apply { addAll(initial) }
+            ?: listOf(ChecklistItem())
+        mutableStateListOf<ChecklistItem>().apply { addAll(initial) }
     }
 
     val todayCalendar = remember {
@@ -175,7 +176,7 @@ fun EditNoteScreen(
 
                             }
                         }
-                        Button(onClick = { checklistItems.add(CheklistItem()) }) {
+                        Button(onClick = { checklistItems.add(ChecklistItem()) }) {
                             Text("Добавить")
                         }
                     }
@@ -285,25 +286,28 @@ fun EditNoteScreen(
                 }
                 }
             Spacer(modifier = Modifier.height(16.dp))
-            OutlinedTextField(
-                value = coinCountText,
-                onValueChange = { value ->
-                    if (value.all {it.isDigit()}) {
-                        coinCountText = value
-                    }
-                },
-                label = { Text("Колличество монет") },
-                textStyle = TextStyle(color = Color.Black),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    textColor = Color.Black,
-                    focusedLabelColor = Color.Black,
-                    unfocusedLabelColor = Color.Gray,
-                    cursorColor = Color.Black
-                ),
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
+            if (BuildConfig.DEBUG) {
+                OutlinedTextField(
+                    value = coinCountText,
+                    onValueChange = { value ->
+                        if (value.all { it.isDigit() }) {
+                            coinCountText = value
+                        }
+                    },
+                    label = { Text("Количество монет") },
+                    textStyle = TextStyle(color = Color.Black),
+                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                        textColor = Color.Black,
+                        focusedLabelColor = Color.Black,
+                        unfocusedLabelColor = Color.Gray,
+                        cursorColor = Color.Black
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
             Spacer(modifier = Modifier.height(16.dp))
+            }
+
             Row (
                 modifier = Modifier.fillMaxWidth()
             ) {
