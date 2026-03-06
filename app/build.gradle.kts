@@ -44,7 +44,7 @@ android {
 
     buildFeatures {
         compose = true
-        viewBinding = true // если вам нужен viewBinding, иначе можно убрать
+        viewBinding = true
     }
 
 }
@@ -53,7 +53,8 @@ dependencies {
 
     implementation(libs.androidx.material3.android)
     // Подключаем Compose BOM
-    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
+    //val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
+    val composeBom = platform("androidx.compose:compose-bom:2025.01.00")
     implementation(composeBom)
     testImplementation(composeBom)
     androidTestImplementation(composeBom)
@@ -69,9 +70,6 @@ dependencies {
     // Основные библиотеки Compose
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material:material")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    implementation("androidx.compose.material:material-icons-extended")
 
     // Остальные зависимости
     implementation("androidx.core:core-ktx:1.10.1")
@@ -93,11 +91,11 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
-    implementation ("androidx.room:room-runtime:2.5.0")
+
+    implementation ("androidx.room:room-runtime:2.6.1")
     kapt ("androidx.room:room-compiler:2.6.1")
     // Для корутин (опционально)
     implementation ("androidx.room:room-ktx:2.6.1")
-    implementation(platform("androidx.compose:compose-bom:2025.01.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material:material")
     implementation("androidx.compose.ui:ui-tooling-preview")

@@ -72,7 +72,6 @@ class HomeInfoViewModel(application: Application) : AndroidViewModel(application
 
         fun deleteCard(cardId: String) {
             viewModelScope.launch(Dispatchers.IO) {
-                val success = repository.delete(cardId)
                 val result = repository.delete(cardId)
                 launch(Dispatchers.Main) {
                     result.onSuccess {

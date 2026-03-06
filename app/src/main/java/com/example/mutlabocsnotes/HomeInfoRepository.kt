@@ -84,15 +84,13 @@ class HomeInfoRepository {
         return runCatching  {
             collection.document(card.id)
                 .set(cardMap(card)).await()
-            true
-        }
+                    }
     }
 
     suspend fun delete(cardId: String): Result<Unit>{
         val collection = userHomeCardsCollection() ?: return Result.failure(IllegalStateException("Пользователь не авторизован"))
         return runCatching  {
             collection.document(cardId).delete().await()
-            true
         }
     }
 }
