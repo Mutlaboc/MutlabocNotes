@@ -22,6 +22,9 @@ android {
         manifestPlaceholders["YANDEX_CLIENT_ID"] =
             (project.findProperty("YANDEX_CLIENT_ID") as String?) ?: "776676c1ec6c4097ba260b05824f3a39"
     }
+    buildFeatures {
+        buildConfig = true
+    }
 
     buildTypes {
         getByName("release") {
@@ -102,5 +105,10 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     implementation("com.yandex.android:authsdk:3.1.3")
+
+    // Сетевые взаимодействия
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
 }
