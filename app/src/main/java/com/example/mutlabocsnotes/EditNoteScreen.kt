@@ -42,7 +42,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
-import com.google.firebase.BuildConfig
+import com.example.mutlabocsnotes.BuildConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 
