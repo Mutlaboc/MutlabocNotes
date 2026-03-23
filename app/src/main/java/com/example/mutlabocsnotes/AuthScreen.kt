@@ -32,6 +32,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import androidx.compose.runtime.LaunchedEffect
 import com.google.firebase.auth.OAuthProvider
 
+
 @Composable
 fun AuthScreen(onAuthenticated: () -> Unit) {
     var email by remember { mutableStateOf("") }
