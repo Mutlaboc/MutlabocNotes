@@ -6,36 +6,24 @@ import com.example.mutlabocsnotes.network.toDomain
 import com.example.mutlabocsnotes.network.toUpsertRequestDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import java.util.concurrent.TimeUnit
 
 class HomeInfoRepository(
     application: Application,
     baseUrl: String = ApiConfig.BASE_URL,
-    private val bridgeUserKeyProvider: BridgeUserKeyProvider =
-        BridgeUserKeyProvider(SessionManager(application)),
-    private val api: HomeCardsApi = createHomeCardsApi(baseUrl),
+    private val api: HomeCardsApi = createHomeCardsApi(application, baseUrl),
 ) {
 
     suspend fun getAllCards(): Result<List<HomeInfoCard>> = withContext(Dispatchers.IO) {
-        val bridgeUserKey = bridgeUserKeyProvider.getBridgeUserKeyOrNull()
-            ?: return@withContext Result.failure(IllegalStateException("Пользователь не авторизован"))
-
         return@withContext try {
-            Result.success(api.getHomeCards(bridgeUserKey).map { it.toDomain() })
+            Result.success(api.getHomeCards().map { it.toDomain() })
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
     suspend fun insert(card: HomeInfoCard): Result<String> = withContext(Dispatchers.IO) {
-        val bridgeUserKey = bridgeUserKeyProvider.getBridgeUserKeyOrNull()
-            ?: return@withContext Result.failure(IllegalStateException("Пользователь не авторизован"))
-
         return@withContext try {
-            val created = api.createHomeCard(bridgeUserKey, card.toUpsertRequestDto())
+            val created = api.createHomeCard(card.toUpsertRequestDto())
             Result.success(created.id)
         } catch (e: Exception) {
             Result.failure(e)
@@ -47,11 +35,8 @@ class HomeInfoRepository(
             return@withContext Result.failure(IllegalArgumentException("Пустой идентификатор карточки"))
         }
 
-        val bridgeUserKey = bridgeUserKeyProvider.getBridgeUserKeyOrNull()
-            ?: return@withContext Result.failure(IllegalStateException("Пользователь не авторизован"))
-
         return@withContext try {
-            api.updateHomeCard(bridgeUserKey, card.id, card.toUpsertRequestDto())
+            api.updateHomeCard(card.id, card.toUpsertRequestDto())
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -63,11 +48,8 @@ class HomeInfoRepository(
             return@withContext Result.failure(IllegalArgumentException("Пустой идентификатор карточки"))
         }
 
-        val bridgeUserKey = bridgeUserKeyProvider.getBridgeUserKeyOrNull()
-            ?: return@withContext Result.failure(IllegalStateException("Пользователь не авторизован"))
-
         return@withContext try {
-            api.deleteHomeCard(bridgeUserKey, cardId)
+            api.deleteHomeCard(cardId)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -75,18 +57,12 @@ class HomeInfoRepository(
     }
 
     companion object {
-        private fun createHomeCardsApi(baseUrl: String): HomeCardsApi {
-            val client = OkHttpClient.Builder()
-                .connectTimeout(15, TimeUnit.SECONDS)
-                .readTimeout(15, TimeUnit.SECONDS)
-                .writeTimeout(15, TimeUnit.SECONDS)
-                .build()
-
-            return Retrofit.Builder()
-                .baseUrl(baseUrl)
-                .client(client)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build()
+        private fun createHomeCardsApi(
+            application: Application,
+            baseUrl: String
+        ): HomeCardsApi {
+            return AuthenticatedApiFactory
+                .createRetrofit(application, baseUrl)
                 .create(HomeCardsApi::class.java)
         }
     }
