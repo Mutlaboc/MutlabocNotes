@@ -6,12 +6,14 @@ import androidx.security.crypto.MasterKey
 
 class SessionManager(context: Context) {
 
-    private val masterKey = MasterKey.Builder(context)
+    private val appContext = context.applicationContext
+
+    private val masterKey = MasterKey.Builder(appContext)
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
 
     private val prefs = EncryptedSharedPreferences.create(
-        context,
+        appContext,
         FILE_NAME,
         masterKey,
         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
@@ -20,21 +22,17 @@ class SessionManager(context: Context) {
 
     fun saveSession(
         accessToken: String,
-        email: String?,
-        bridgeUserKey: String?
+        email: String?
     ) {
         prefs.edit()
             .putString(KEY_ACCESS_TOKEN, accessToken)
             .putString(KEY_EMAIL, email)
-            .putString(KEY_BRIDGE_USER_KEY, bridgeUserKey)
             .apply()
     }
 
     fun getAccessToken(): String? = prefs.getString(KEY_ACCESS_TOKEN, null)
 
     fun getEmail(): String? = prefs.getString(KEY_EMAIL, null)
-
-    fun getBridgeUserKey(): String? = prefs.getString(KEY_BRIDGE_USER_KEY, null)
 
     fun hasSession(): Boolean = !getAccessToken().isNullOrBlank()
 
@@ -46,6 +44,5 @@ class SessionManager(context: Context) {
         const val FILE_NAME = "secure_session"
         const val KEY_ACCESS_TOKEN = "access_token"
         const val KEY_EMAIL = "email"
-        const val KEY_BRIDGE_USER_KEY = "bridge_user_key"
     }
 }

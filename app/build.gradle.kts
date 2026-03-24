@@ -2,7 +2,6 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id ("kotlin-kapt")
-    id("com.google.gms.google-services")
     id("org.jetbrains.kotlin.plugin.compose")
 
 }
@@ -19,8 +18,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        manifestPlaceholders["YANDEX_CLIENT_ID"] =
-            (project.findProperty("YANDEX_CLIENT_ID") as String?) ?: "776676c1ec6c4097ba260b05824f3a39"
+//        manifestPlaceholders["YANDEX_CLIENT_ID"] =
+//            (project.findProperty("YANDEX_CLIENT_ID") as String?) ?: "776676c1ec6c4097ba260b05824f3a39"
     }
     buildFeatures {
         buildConfig = true
@@ -61,11 +60,6 @@ dependencies {
     implementation(composeBom)
     testImplementation(composeBom)
     androidTestImplementation(composeBom)
-    implementation(platform("com.google.firebase:firebase-bom:33.16.0"))
-    implementation("com.google.firebase:firebase-auth-ktx")   // -ktx пока не убрали
-    implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
-    implementation("com.google.android.gms:play-services-auth:21.3.0")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation("io.coil-kt:coil-gif:2.6.0")
@@ -103,8 +97,6 @@ dependencies {
     implementation("androidx.compose.material:material")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
-
-    implementation("com.yandex.android:authsdk:3.1.3")
 
     // Сетевые взаимодействия
     implementation("com.squareup.retrofit2:retrofit:2.11.0")

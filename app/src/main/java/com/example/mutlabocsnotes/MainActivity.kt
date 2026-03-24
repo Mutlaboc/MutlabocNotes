@@ -1,53 +1,47 @@
 package com.example.mutlabocsnotes
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.runtime.Composable
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.runtime.remember
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
-import com.google.firebase.FirebaseApp
-import com.google.firebase.auth.FirebaseAuth
-import androidx.core.content.ContextCompat
-import androidx.activity.result.contract.ActivityResultContracts
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.FilterChip
-import androidx.compose.runtime.getValue
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
 import androidx.compose.material.darkColors
 import androidx.compose.material.lightColors
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.material.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 
 class MainActivity : ComponentActivity() {
+
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+
     override fun onCreate(savedInstanceState: Bundle?) {
-       super.onCreate(savedInstanceState)
-       FirebaseApp.initializeApp(this)
+        super.onCreate(savedInstanceState)
         createNotificationChannel()
         requestNotificationPermissionIfNeeded()
-       /*AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)*/
-       setContent {
-           MyApp()
 
-       }
-   }
-// Создаем канал для уведомлений
+        setContent {
+            MyApp()
+        }
+    }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -58,29 +52,33 @@ class MainActivity : ComponentActivity() {
                 .apply {
                     description = descriptionText
                 }
-            val notificationManager: NotificationManager? = getSystemService(NotificationManager::class.java)
+
+            val notificationManager: NotificationManager? =
+                getSystemService(NotificationManager::class.java)
             notificationManager?.createNotificationChannel(channel)
         }
     }
 
-    // Метод для запроса разрешения
     private fun requestNotificationPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val granted = ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.POST_NOTIFICATIONS
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
             if (!granted) {
                 requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }
- }
+}
+
 @Composable
 fun MyApp(
     authViewModel: AuthViewModel = viewModel(),
     notesViewModel: NotesViewModel = viewModel(),
-    homeInfoViewModel: HomeInfoViewModel = viewModel()) {
+    homeInfoViewModel: HomeInfoViewModel = viewModel()
+) {
     val navController = rememberNavController()
     val authState = authViewModel.uiState
     var isDarkTheme by rememberSaveable { mutableStateOf(false) }
@@ -96,13 +94,12 @@ fun MyApp(
     }
 
     val startDestination = if (authState.isAuthenticated) "home" else "auth"
+
     MaterialTheme(colors = if (isDarkTheme) darkColors() else lightColors()) {
-// Расписываем навиграцию
         NavHost(
             navController = navController,
             startDestination = startDestination
         ) {
-
             composable("auth") {
                 AuthScreen(
                     authViewModel = authViewModel,
@@ -114,6 +111,7 @@ fun MyApp(
                     }
                 )
             }
+
             composable("home") {
                 HomeScreen(
                     notes = notesViewModel.notes,
@@ -150,19 +148,20 @@ fun MyApp(
                     }
                 )
             }
+
             composable("settings") {
                 SettingsScreen(
                     isDarkTheme = isDarkTheme,
                     onThemeChange = { isDarkTheme = it },
                     onDeleteAccount = {
-                        // TODO: перевести на backend endpoint удаления аккаунта,
-                        // а пока кнопку лучше скрыть или показать заглушку
+                        // TODO: перевести на backend endpoint удаления аккаунта
                     },
                     onBack = {
                         navController.popBackStack()
                     }
                 )
             }
+
             composable("completed") {
                 CompletedNotesScreen(
                     notes = notesViewModel.notes,
@@ -180,6 +179,7 @@ fun MyApp(
                     }
                 )
             }
+
             composable("home_info") {
                 androidx.compose.runtime.LaunchedEffect(Unit) {
                     homeInfoViewModel.loadCards()
@@ -192,9 +192,10 @@ fun MyApp(
                     onCardClick = { cardId ->
                         navController.navigate("home_info_edit/$cardId")
                     },
-                    onBack = { navController.popBackStack()}
+                    onBack = { navController.popBackStack() }
                 )
             }
+
             composable("home_info_edit") {
                 EditHomeInfoCardScreen(
                     card = null,
@@ -203,15 +204,17 @@ fun MyApp(
                         navController.popBackStack()
                     },
                     onDeleteClick = null,
-                    onBack = { navController.popBackStack()}
+                    onBack = { navController.popBackStack() }
                 )
             }
+
             composable(
                 route = "home_info_edit/{cardId}",
                 arguments = listOf(navArgument("cardId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val cardId = backStackEntry.arguments?.getString("cardId") ?: ""
-                val card = homeInfoViewModel.cards.find { it.id == cardId}
+                val card = homeInfoViewModel.cards.find { it.id == cardId }
+
                 EditHomeInfoCardScreen(
                     card = card,
                     onSaveClick = { updatedCard ->
@@ -222,9 +225,10 @@ fun MyApp(
                         homeInfoViewModel.deleteCard(cardId)
                         navController.popBackStack()
                     },
-                    onBack = { navController.popBackStack()}
+                    onBack = { navController.popBackStack() }
                 )
             }
+
             composable("edit") {
                 EditNoteScreen(
                     note = null,
@@ -234,12 +238,14 @@ fun MyApp(
                     }
                 )
             }
+
             composable(
                 route = "edit/{noteId}",
                 arguments = listOf(navArgument("noteId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val noteId = backStackEntry.arguments!!.getString("noteId") ?: ""
                 val note = notesViewModel.notes.find { it.id == noteId }
+
                 EditNoteScreen(
                     note = note,
                     onSaveClick = { updatedNote ->
@@ -253,16 +259,9 @@ fun MyApp(
                             notesViewModel.deleteNote(noteId)
                         }
                         navController.popBackStack()
-
                     }
                 )
-
             }
-
         }
     }
 }
-
-
-
-

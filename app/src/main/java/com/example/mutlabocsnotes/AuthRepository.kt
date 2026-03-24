@@ -11,8 +11,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 data class AuthorizedSession(
-    val email: String,
-    val bridgeUserKey: String?
+    val email: String
 )
 
 class AuthRepository(
@@ -41,18 +40,13 @@ class AuthRepository(
         return@withContext runCatching {
             val me = api.me("Bearer $token")
             val email = me.email
-            val bridgeUserKey = me.resolvedBridgeUserKey() ?: sessionManager.getBridgeUserKey()
 
             sessionManager.saveSession(
                 accessToken = token,
-                email = email,
-                bridgeUserKey = bridgeUserKey
+                email = email
             )
 
-            AuthorizedSession(
-                email = email,
-                bridgeUserKey = bridgeUserKey
-            )
+            AuthorizedSession(email = email)
         }.onFailure {
             sessionManager.clear()
         }
@@ -69,23 +63,14 @@ class AuthRepository(
             val response = block()
             val token = response.accessToken
             val me = api.me("Bearer $token")
-
-            val email = me.email.ifBlank {
-                response.resolvedEmail().orEmpty()
-            }
-
-            val bridgeUserKey = me.resolvedBridgeUserKey() ?: response.resolvedBridgeUserKey()
+            val email = me.email
 
             sessionManager.saveSession(
                 accessToken = token,
-                email = email,
-                bridgeUserKey = bridgeUserKey
+                email = email
             )
 
-            AuthorizedSession(
-                email = email,
-                bridgeUserKey = bridgeUserKey
-            )
+            AuthorizedSession(email = email)
         }
     }
 
