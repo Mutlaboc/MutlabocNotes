@@ -1,5 +1,6 @@
 package com.example.mutlabocsnotes
 
+import android.app.Application
 import com.example.mutlabocsnotes.network.HomeCardsApi
 import com.example.mutlabocsnotes.network.toDomain
 import com.example.mutlabocsnotes.network.toUpsertRequestDto
@@ -11,28 +12,30 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 class HomeInfoRepository(
+    application: Application,
     baseUrl: String = ApiConfig.BASE_URL,
-    private val firebaseUidProvider: FirebaseUidProvider = FirebaseUidProvider(),
+    private val bridgeUserKeyProvider: BridgeUserKeyProvider =
+        BridgeUserKeyProvider(SessionManager(application)),
     private val api: HomeCardsApi = createHomeCardsApi(baseUrl),
 ) {
 
     suspend fun getAllCards(): Result<List<HomeInfoCard>> = withContext(Dispatchers.IO) {
-        val uid = firebaseUidProvider.getUidOrNull()
+        val bridgeUserKey = bridgeUserKeyProvider.getBridgeUserKeyOrNull()
             ?: return@withContext Result.failure(IllegalStateException("Пользователь не авторизован"))
 
         return@withContext try {
-            Result.success(api.getHomeCards(uid).map { it.toDomain() })
+            Result.success(api.getHomeCards(bridgeUserKey).map { it.toDomain() })
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
     suspend fun insert(card: HomeInfoCard): Result<String> = withContext(Dispatchers.IO) {
-        val uid = firebaseUidProvider.getUidOrNull()
+        val bridgeUserKey = bridgeUserKeyProvider.getBridgeUserKeyOrNull()
             ?: return@withContext Result.failure(IllegalStateException("Пользователь не авторизован"))
 
         return@withContext try {
-            val created = api.createHomeCard(uid, card.toUpsertRequestDto())
+            val created = api.createHomeCard(bridgeUserKey, card.toUpsertRequestDto())
             Result.success(created.id)
         } catch (e: Exception) {
             Result.failure(e)
@@ -44,11 +47,11 @@ class HomeInfoRepository(
             return@withContext Result.failure(IllegalArgumentException("Пустой идентификатор карточки"))
         }
 
-        val uid = firebaseUidProvider.getUidOrNull()
+        val bridgeUserKey = bridgeUserKeyProvider.getBridgeUserKeyOrNull()
             ?: return@withContext Result.failure(IllegalStateException("Пользователь не авторизован"))
 
         return@withContext try {
-            api.updateHomeCard(uid, card.id, card.toUpsertRequestDto())
+            api.updateHomeCard(bridgeUserKey, card.id, card.toUpsertRequestDto())
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -60,11 +63,11 @@ class HomeInfoRepository(
             return@withContext Result.failure(IllegalArgumentException("Пустой идентификатор карточки"))
         }
 
-        val uid = firebaseUidProvider.getUidOrNull()
+        val bridgeUserKey = bridgeUserKeyProvider.getBridgeUserKeyOrNull()
             ?: return@withContext Result.failure(IllegalStateException("Пользователь не авторизован"))
 
         return@withContext try {
-            api.deleteHomeCard(uid, cardId)
+            api.deleteHomeCard(bridgeUserKey, cardId)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

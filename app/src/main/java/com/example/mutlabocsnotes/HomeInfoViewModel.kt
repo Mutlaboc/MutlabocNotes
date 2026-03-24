@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 
 class HomeInfoViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = HomeInfoRepository()
+    private val repository = HomeInfoRepository(application)
 
     val cards = mutableStateListOf<HomeInfoCard>()
     var isLoading by mutableStateOf(false)
@@ -85,4 +85,10 @@ class HomeInfoViewModel(application: Application) : AndroidViewModel(application
                 }
             }
         }
+
+    fun clearAll() {
+        cards.clear()
+        errorMessage = null
+        isLoading = false
+    }
     }
