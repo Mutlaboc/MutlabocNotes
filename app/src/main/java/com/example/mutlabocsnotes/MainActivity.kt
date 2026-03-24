@@ -20,6 +20,7 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.FilterChip
 import androidx.compose.runtime.getValue
 import androidx.compose.material.MaterialTheme
@@ -28,6 +29,9 @@ import androidx.compose.material.lightColors
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.material.Text
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
     private val requestNotificationPermission =
@@ -74,13 +78,24 @@ class MainActivity : ComponentActivity() {
  }
 @Composable
 fun MyApp(
+    authViewModel: AuthViewModel = viewModel(),
     notesViewModel: NotesViewModel = viewModel(),
     homeInfoViewModel: HomeInfoViewModel = viewModel()) {
     val navController = rememberNavController()
-    val startDestination = remember {
-        if (FirebaseAuth.getInstance().currentUser != null) "home" else "auth"
-    }
+    val authState = authViewModel.uiState
     var isDarkTheme by rememberSaveable { mutableStateOf(false) }
+
+    if (authState.isCheckingSession) {
+        MaterialTheme(colors = if (isDarkTheme) darkColors() else lightColors()) {
+            Text(
+                text = "Проверка сессии...",
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+        return
+    }
+
+    val startDestination = if (authState.isAuthenticated) "home" else "auth"
     MaterialTheme(colors = if (isDarkTheme) darkColors() else lightColors()) {
 // Расписываем навиграцию
         NavHost(
@@ -89,18 +104,21 @@ fun MyApp(
         ) {
 
             composable("auth") {
-                AuthScreen {
-                    notesViewModel.loadNotes()
-                    navController.navigate("home") {
-                        popUpTo("auth") { inclusive = true }
+                AuthScreen(
+                    authViewModel = authViewModel,
+                    onAuthenticated = {
+                        notesViewModel.loadNotes()
+                        navController.navigate("home") {
+                            popUpTo("auth") { inclusive = true }
+                        }
                     }
-                }
+                )
             }
             composable("home") {
                 HomeScreen(
                     notes = notesViewModel.notes,
                     totalCoins = notesViewModel.totalCoins,
-                    userEmail = FirebaseAuth.getInstance().currentUser?.email ?: "",
+                    userEmail = authState.currentEmail,
                     onAddNoteClick = {
                         navController.navigate("edit")
                     },
@@ -112,7 +130,6 @@ fun MyApp(
                             0 -> navController.navigate("completed") {
                                 launchSingleTop = true
                             }
-
                             2 -> navController.navigate("home_info")
                         }
                     },
@@ -120,9 +137,12 @@ fun MyApp(
                         notesViewModel.setNoteCompletion(noteId, isCompleted)
                     },
                     onSwitchUser = {
-                        FirebaseAuth.getInstance().signOut()
+                        authViewModel.logout()
+                        notesViewModel.clearAll()
+                        homeInfoViewModel.clearAll()
+
                         navController.navigate("auth") {
-                            popUpTo("home") { inclusive = true }
+                            popUpTo(0)
                         }
                     },
                     onOpenSettings = {
@@ -135,15 +155,8 @@ fun MyApp(
                     isDarkTheme = isDarkTheme,
                     onThemeChange = { isDarkTheme = it },
                     onDeleteAccount = {
-                        val user = FirebaseAuth.getInstance().currentUser
-                        user?.delete()?.addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                FirebaseAuth.getInstance().signOut()
-                                navController.navigate("auth") {
-                                    popUpTo("home") { inclusive = true }
-                                }
-                            }
-                        }
+                        // TODO: перевести на backend endpoint удаления аккаунта,
+                        // а пока кнопку лучше скрыть или показать заглушку
                     },
                     onBack = {
                         navController.popBackStack()

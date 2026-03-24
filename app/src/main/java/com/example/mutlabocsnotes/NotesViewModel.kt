@@ -17,7 +17,7 @@ import androidx.compose.runtime.setValue
 
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = FirestoreRepository()
+    private val repository = FirestoreRepository(application)
     private val notificationScheduler = DeadlineNotificationScheduler(application)
 
     // Локальный кэш заметок, можно сделать LiveData или StateFlow для наблюдения за изменениями
@@ -25,11 +25,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     var totalCoins by mutableIntStateOf(0)
     private set
 
-    init {
-        if (FirebaseAuth.getInstance().currentUser != null) {
-            loadNotes()
-        }
-    }
+
     // Загружаем заметки
     fun loadNotes() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -56,6 +52,11 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
+    }
+
+    fun clearAll() {
+        notes.clear()
+        totalCoins = 0
     }
 
     // Обновляем заметку

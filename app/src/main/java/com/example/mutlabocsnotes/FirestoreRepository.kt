@@ -1,40 +1,34 @@
 package com.example.mutlabocsnotes
 
+import android.app.Application
 import com.example.mutlabocsnotes.network.NotesApi
 import com.example.mutlabocsnotes.network.toDomain
 import com.example.mutlabocsnotes.network.toUpsertRequestDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 
 /**
- * Переходная реализация для этапа 5.
- *
- * Имя класса оставлено прежним, чтобы не ломать NotesViewModel и экранный слой.
- * Внутри вместо Firestore теперь используется backend Notes API.
+ * Реализация этапа 9:
+ * Notes API теперь авторизуется через JWT Bearer token,
+ * который OkHttp interceptor берёт из SessionManager.
  */
 class FirestoreRepository(
+    application: Application,
     baseUrl: String = ApiConfig.BASE_URL,
-    private val firebaseUidProvider: FirebaseUidProvider = FirebaseUidProvider(),
-    private val api: NotesApi = createNotesApi(baseUrl),
+    private val api: NotesApi = createNotesApi(application, baseUrl),
 ) {
 
     suspend fun getAllNotes(): List<Note> = withContext(Dispatchers.IO) {
-        val uid = firebaseUidProvider.getUidOrNull() ?: return@withContext emptyList()
         return@withContext try {
-            api.getNotes(uid).map { it.toDomain() }
+            api.getNotes().map { it.toDomain() }
         } catch (_: Exception) {
             emptyList()
         }
     }
 
     suspend fun insert(note: Note): String? = withContext(Dispatchers.IO) {
-        val uid = firebaseUidProvider.getUidOrNull() ?: return@withContext null
         return@withContext try {
-            val created = api.createNote(uid, note.toUpsertRequestDto())
+            val created = api.createNote(note.toUpsertRequestDto())
             created.id
         } catch (_: Exception) {
             null
@@ -43,9 +37,9 @@ class FirestoreRepository(
 
     suspend fun update(note: Note): Boolean = withContext(Dispatchers.IO) {
         if (note.id.isBlank()) return@withContext false
-        val uid = firebaseUidProvider.getUidOrNull() ?: return@withContext false
+
         return@withContext try {
-            api.updateNote(uid, note.id, note.toUpsertRequestDto())
+            api.updateNote(note.id, note.toUpsertRequestDto())
             true
         } catch (_: Exception) {
             false
@@ -54,9 +48,9 @@ class FirestoreRepository(
 
     suspend fun delete(noteId: String): Boolean = withContext(Dispatchers.IO) {
         if (noteId.isBlank()) return@withContext false
-        val uid = firebaseUidProvider.getUidOrNull() ?: return@withContext false
+
         return@withContext try {
-            api.deleteNote(uid, noteId)
+            api.deleteNote(noteId)
             true
         } catch (_: Exception) {
             false
@@ -64,18 +58,12 @@ class FirestoreRepository(
     }
 
     companion object {
-        private fun createNotesApi(baseUrl: String): NotesApi {
-            val client = OkHttpClient.Builder()
-                .connectTimeout(15, TimeUnit.SECONDS)
-                .readTimeout(15, TimeUnit.SECONDS)
-                .writeTimeout(15, TimeUnit.SECONDS)
-                .build()
-
-            return Retrofit.Builder()
-                .baseUrl(baseUrl)
-                .client(client)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build()
+        private fun createNotesApi(
+            application: Application,
+            baseUrl: String
+        ): NotesApi {
+            return AuthenticatedApiFactory
+                .createRetrofit(application, baseUrl)
                 .create(NotesApi::class.java)
         }
     }
