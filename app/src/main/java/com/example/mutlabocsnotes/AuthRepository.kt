@@ -3,9 +3,11 @@ package com.example.mutlabocsnotes
 import com.example.mutlabocsnotes.network.AuthApi
 import com.example.mutlabocsnotes.network.AuthCredentialsDto
 import com.example.mutlabocsnotes.network.AuthResponseDto
+import com.example.mutlabocsnotes.network.RefreshTokenRequestDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import retrofit2.HttpException
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
@@ -34,19 +36,36 @@ class AuthRepository(
     }
 
     suspend fun restoreSession(): Result<AuthorizedSession> = withContext(Dispatchers.IO) {
-        val token = sessionManager.getAccessToken()
+        val accessToken = sessionManager.getAccessToken()
             ?: return@withContext Result.failure(IllegalStateException("No saved access token"))
+        val refreshToken = sessionManager.getRefreshToken()
+            ?: return@withContext Result.failure(IllegalStateException("No saved refresh token"))
 
         return@withContext runCatching {
-            val me = api.me("Bearer $token")
-            val email = me.email
+            try {
+                val me = api.me("Bearer $accessToken")
+                sessionManager.saveSession(
+                    accessToken = accessToken,
+                    refreshToken = refreshToken,
+                    email = me.email
+                )
+                AuthorizedSession(email = me.email)
+            } catch (e: HttpException) {
+                if (e.code() != 401) throw e
 
-            sessionManager.saveSession(
-                accessToken = token,
-                email = email
-            )
+                val refreshed = api.refresh(RefreshTokenRequestDto(refreshToken))
+                val newAccessToken = refreshed.accessToken
+                val newRefreshToken = refreshed.refreshToken
+                val me = api.me("Bearer $newAccessToken")
 
-            AuthorizedSession(email = email)
+                sessionManager.saveSession(
+                    accessToken = newAccessToken,
+                    refreshToken = newRefreshToken,
+                    email = me.email
+                )
+
+                AuthorizedSession(email = me.email)
+            }
         }.onFailure {
             sessionManager.clear()
         }
@@ -62,11 +81,15 @@ class AuthRepository(
         return@withContext runCatching {
             val response = block()
             val token = response.accessToken
+            val refreshToken = response.refreshToken
             val me = api.me("Bearer $token")
-            val email = me.email
+            val email = me.email.ifBlank {
+                response.resolvedEmail().orEmpty()
+            }
 
             sessionManager.saveSession(
                 accessToken = token,
+                refreshToken = refreshToken,
                 email = email
             )
 

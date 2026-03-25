@@ -17,6 +17,11 @@ interface AuthApi {
         @Body request: AuthCredentialsDto
     ): AuthResponseDto
 
+    @POST("auth/refresh")
+    suspend fun refresh(
+        @Body request: RefreshTokenRequestDto
+    ): AuthResponseDto
+
     @GET("auth/me")
     suspend fun me(
         @Header("Authorization") authorization: String

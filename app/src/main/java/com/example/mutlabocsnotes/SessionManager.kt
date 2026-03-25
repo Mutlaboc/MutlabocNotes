@@ -22,15 +22,19 @@ class SessionManager(context: Context) {
 
     fun saveSession(
         accessToken: String,
+        refreshToken: String,
         email: String?
     ) {
         prefs.edit()
             .putString(KEY_ACCESS_TOKEN, accessToken)
+            .putString(KEY_REFRESH_TOKEN, refreshToken)
             .putString(KEY_EMAIL, email)
             .apply()
     }
 
     fun getAccessToken(): String? = prefs.getString(KEY_ACCESS_TOKEN, null)
+
+    fun getRefreshToken(): String? = prefs.getString(KEY_REFRESH_TOKEN, null)
 
     fun getEmail(): String? = prefs.getString(KEY_EMAIL, null)
 
@@ -43,6 +47,7 @@ class SessionManager(context: Context) {
     private companion object {
         const val FILE_NAME = "secure_session"
         const val KEY_ACCESS_TOKEN = "access_token"
+        const val KEY_REFRESH_TOKEN = "refresh_token"
         const val KEY_EMAIL = "email"
     }
 }

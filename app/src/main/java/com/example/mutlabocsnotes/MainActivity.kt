@@ -14,6 +14,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.darkColors
 import androidx.compose.material.lightColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -27,6 +28,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import kotlinx.coroutines.flow.collectLatest
+import androidx.navigation.NavGraph.Companion.findStartDestination
 
 class MainActivity : ComponentActivity() {
 
@@ -82,6 +85,22 @@ fun MyApp(
     val navController = rememberNavController()
     val authState = authViewModel.uiState
     var isDarkTheme by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        SessionEventBus.events.collectLatest { event ->
+            when (event) {
+                SessionEvent.SessionExpired -> {
+                    authViewModel.handleSessionExpired()
+                    notesViewModel.clearAll()
+                    homeInfoViewModel.clearAll()
+
+                    navController.navigate("auth") {
+                        popUpTo(0)
+                    }
+                }
+            }
+        }
+    }
 
     if (authState.isCheckingSession) {
         MaterialTheme(colors = if (isDarkTheme) darkColors() else lightColors()) {
@@ -140,7 +159,10 @@ fun MyApp(
                         homeInfoViewModel.clearAll()
 
                         navController.navigate("auth") {
-                            popUpTo(0)
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                inclusive = true
+                            }
+                            launchSingleTop = true
                         }
                     },
                     onOpenSettings = {
@@ -181,7 +203,7 @@ fun MyApp(
             }
 
             composable("home_info") {
-                androidx.compose.runtime.LaunchedEffect(Unit) {
+                LaunchedEffect(Unit) {
                     homeInfoViewModel.loadCards()
                 }
                 HomeInfoScreen(

@@ -112,6 +112,15 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
+    fun handleSessionExpired() {
+        repository.logout()
+        uiState = AuthUiState(
+            isCheckingSession = false,
+            isAuthenticated = false,
+            errorMessage = "Сессия истекла. Войдите снова."
+        )
+    }
+
     fun clearError() {
         uiState = uiState.copy(errorMessage = null)
     }
