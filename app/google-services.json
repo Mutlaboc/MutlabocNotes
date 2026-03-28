@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "822837772778",
+    "project_id": "mutlaboc-notes",
+    "storage_bucket": "mutlaboc-notes.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:822837772778:android:f9fc9448e1174ebd373293",
+        "android_client_info": {
+          "package_name": "com.example.mutlabocsnotes"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "822837772778-1j2uc64ipes40nbkj3l80j5k3pgmhgss.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.mutlabocsnotes",
+            "certificate_hash": "a496096ca9e8983af790158c33156ec9adcec207"
+          }
+        },
+        {
+          "client_id": "822837772778-5n786au0om93mkhg8o9fu7hbrl5hq2iv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.mutlabocsnotes",
+            "certificate_hash": "c42f30856ebc3d9371eafb6648ab14d5a8a3e58e"
+          }
+        },
+        {
+          "client_id": "822837772778-f7lc8b9nnbpn1u65njf7agkj392dub8c.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDuUsgs7v7-iC62Y9XZCsm4LlcUFknzKPM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "822837772778-f7lc8b9nnbpn1u65njf7agkj392dub8c.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

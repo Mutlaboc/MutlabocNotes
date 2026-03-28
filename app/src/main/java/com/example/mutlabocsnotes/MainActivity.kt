@@ -8,19 +8,18 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.padding
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
 import androidx.compose.material.darkColors
 import androidx.compose.material.lightColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -28,19 +27,19 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import kotlinx.coroutines.flow.collectLatest
-import androidx.navigation.NavGraph.Companion.findStartDestination
+import com.example.mutlabocsnotes.auth.SessionManager
+import com.google.firebase.FirebaseApp
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : ComponentActivity() {
-
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FirebaseApp.initializeApp(this)
         createNotificationChannel()
         requestNotificationPermissionIfNeeded()
-
         setContent {
             MyApp()
         }
@@ -55,9 +54,7 @@ class MainActivity : ComponentActivity() {
                 .apply {
                     description = descriptionText
                 }
-
-            val notificationManager: NotificationManager? =
-                getSystemService(NotificationManager::class.java)
+            val notificationManager: NotificationManager? = getSystemService(NotificationManager::class.java)
             notificationManager?.createNotificationChannel(channel)
         }
     }
@@ -68,7 +65,6 @@ class MainActivity : ComponentActivity() {
                 this,
                 Manifest.permission.POST_NOTIFICATIONS
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-
             if (!granted) {
                 requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
@@ -78,64 +74,41 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MyApp(
-    authViewModel: AuthViewModel = viewModel(),
     notesViewModel: NotesViewModel = viewModel(),
     homeInfoViewModel: HomeInfoViewModel = viewModel()
 ) {
     val navController = rememberNavController()
-    val authState = authViewModel.uiState
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+
+    val startDestination = remember {
+        if (sessionManager.isLoggedIn() || FirebaseAuth.getInstance().currentUser != null) "home" else "auth"
+    }
+
     var isDarkTheme by rememberSaveable { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        SessionEventBus.events.collectLatest { event ->
-            when (event) {
-                SessionEvent.SessionExpired -> {
-                    authViewModel.handleSessionExpired()
-                    notesViewModel.clearAll()
-                    homeInfoViewModel.clearAll()
-
-                    navController.navigate("auth") {
-                        popUpTo(0)
-                    }
-                }
-            }
-        }
-    }
-
-    if (authState.isCheckingSession) {
-        MaterialTheme(colors = if (isDarkTheme) darkColors() else lightColors()) {
-            Text(
-                text = "Проверка сессии...",
-                modifier = Modifier.padding(16.dp)
-            )
-        }
-        return
-    }
-
-    val startDestination = if (authState.isAuthenticated) "home" else "auth"
 
     MaterialTheme(colors = if (isDarkTheme) darkColors() else lightColors()) {
         NavHost(
             navController = navController,
             startDestination = startDestination
         ) {
+
             composable("auth") {
-                AuthScreen(
-                    authViewModel = authViewModel,
-                    onAuthenticated = {
-                        notesViewModel.loadNotes()
-                        navController.navigate("home") {
-                            popUpTo("auth") { inclusive = true }
-                        }
+                AuthScreen {
+                    notesViewModel.loadNotes()
+                    navController.navigate("home") {
+                        popUpTo("auth") { inclusive = true }
                     }
-                )
+                }
             }
 
             composable("home") {
                 HomeScreen(
                     notes = notesViewModel.notes,
                     totalCoins = notesViewModel.totalCoins,
-                    userEmail = authState.currentEmail,
+                    userEmail = sessionManager.getUserEmail().ifBlank {
+                        FirebaseAuth.getInstance().currentUser?.email ?: ""
+                    },
                     onAddNoteClick = {
                         navController.navigate("edit")
                     },
@@ -154,15 +127,10 @@ fun MyApp(
                         notesViewModel.setNoteCompletion(noteId, isCompleted)
                     },
                     onSwitchUser = {
-                        authViewModel.logout()
-                        notesViewModel.clearAll()
-                        homeInfoViewModel.clearAll()
-
+                        sessionManager.clearSession()
+                        FirebaseAuth.getInstance().signOut()
                         navController.navigate("auth") {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                inclusive = true
-                            }
-                            launchSingleTop = true
+                            popUpTo("home") { inclusive = true }
                         }
                     },
                     onOpenSettings = {
@@ -176,7 +144,20 @@ fun MyApp(
                     isDarkTheme = isDarkTheme,
                     onThemeChange = { isDarkTheme = it },
                     onDeleteAccount = {
-                        // TODO: перевести на backend endpoint удаления аккаунта
+                        sessionManager.clearSession()
+                        val user = FirebaseAuth.getInstance().currentUser
+                        if (user != null) {
+                            user.delete().addOnCompleteListener {
+                                FirebaseAuth.getInstance().signOut()
+                                navController.navigate("auth") {
+                                    popUpTo("home") { inclusive = true }
+                                }
+                            }
+                        } else {
+                            navController.navigate("auth") {
+                                popUpTo("home") { inclusive = true }
+                            }
+                        }
                     },
                     onBack = {
                         navController.popBackStack()
@@ -236,7 +217,6 @@ fun MyApp(
             ) { backStackEntry ->
                 val cardId = backStackEntry.arguments?.getString("cardId") ?: ""
                 val card = homeInfoViewModel.cards.find { it.id == cardId }
-
                 EditHomeInfoCardScreen(
                     card = card,
                     onSaveClick = { updatedCard ->
@@ -267,7 +247,6 @@ fun MyApp(
             ) { backStackEntry ->
                 val noteId = backStackEntry.arguments!!.getString("noteId") ?: ""
                 val note = notesViewModel.notes.find { it.id == noteId }
-
                 EditNoteScreen(
                     note = note,
                     onSaveClick = { updatedNote ->

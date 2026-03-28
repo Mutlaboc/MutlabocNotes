@@ -1,11 +1,16 @@
 package com.example.mutlabocsnotes
 
+import android.app.Activity
+import android.util.Log
+import android.widget.Toast
+import android.widget.Toast.LENGTH_SHORT
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Button
-import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
@@ -14,93 +19,250 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mutlabocsnotes.auth.BackendAuthRepository
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.OAuthProvider
+import kotlinx.coroutines.launch
 
 @Composable
-fun AuthScreen(
-    authViewModel: AuthViewModel = viewModel(),
-    onAuthenticated: () -> Unit
-) {
-    val uiState = authViewModel.uiState
-
+fun AuthScreen(onAuthenticated: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    LaunchedEffect(uiState.isAuthenticated) {
-        if (uiState.isAuthenticated) {
-            onAuthenticated()
+    val isPreview = LocalInspectionMode.current
+    val auth = if (isPreview) null else FirebaseAuth.getInstance()
+    val context = LocalContext.current
+    val activity = context as? Activity
+    val defaultWebClientId = stringResource(id = R.string.default_web_client_id)
+    val backendAuthRepository = remember(context) { BackendAuthRepository(context) }
+    val scope = rememberCoroutineScope()
+
+    val googleSignInClient = remember {
+        if (isPreview) null else {
+            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(defaultWebClientId)
+                .requestEmail()
+                .build()
+            GoogleSignIn.getClient(context, gso)
+        }
+    }
+
+    LaunchedEffect(auth) {
+        if (!isPreview) {
+            auth?.pendingAuthResult
+                ?.addOnSuccessListener { onAuthenticated() }
+                ?.addOnFailureListener {
+                    Log.e("Auth", "Pending Yandex sign-in failed", it)
+                    Toast.makeText(
+                        context,
+                        it.localizedMessage ?: "Не удалось завершить вход через Яндекс",
+                        LENGTH_SHORT
+                    ).show()
+                }
+        }
+    }
+
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (!isPreview) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            if (task.isSuccessful) {
+                val idToken = task.result.idToken
+                if (!idToken.isNullOrBlank()) {
+                    scope.launch {
+                        runCatching {
+                            backendAuthRepository.signInWithGoogle(idToken)
+                        }.onSuccess {
+                            // Transitional dual-login:
+                            // backend session is now saved, then we keep Firebase login
+                            // only to avoid breaking current Firestore-based screens.
+                            val credential = GoogleAuthProvider.getCredential(idToken, null)
+                            auth?.signInWithCredential(credential)
+                                ?.addOnCompleteListener { firebaseTask ->
+                                    if (firebaseTask.isSuccessful) {
+                                        onAuthenticated()
+                                    } else {
+                                        Log.e("Auth", "Firebase legacy Google sign-in failed", firebaseTask.exception)
+                                        Toast.makeText(
+                                            context,
+                                            firebaseTask.exception?.localizedMessage
+                                                ?: "Backend login ок, но Firebase legacy login не удалось завершить",
+                                            LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                        }.onFailure { error ->
+                            Log.e("Auth", "Backend Google sign-in failed", error)
+                            Toast.makeText(
+                                context,
+                                error.localizedMessage ?: "Ошибка входа через backend",
+                                LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                } else {
+                    Toast.makeText(context, "Google idToken is empty", LENGTH_SHORT).show()
+                }
+            } else {
+                Log.e("Auth", "Google sign-in failed", task.exception)
+                Toast.makeText(
+                    context,
+                    task.exception?.localizedMessage ?: "Ошибка входа через Google",
+                    LENGTH_SHORT
+                ).show()
+            }
         }
     }
 
     Column(modifier = Modifier.padding(16.dp)) {
         OutlinedTextField(
             value = email,
-            onValueChange = {
-                email = it
-                if (uiState.errorMessage != null) authViewModel.clearError()
-            },
+            onValueChange = { email = it },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Email") }
         )
-
         Spacer(Modifier.padding(6.dp))
-
         OutlinedTextField(
             value = password,
-            onValueChange = {
-                password = it
-                if (uiState.errorMessage != null) authViewModel.clearError()
-            },
+            onValueChange = { password = it },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Password") }
         )
-
         Spacer(Modifier.padding(6.dp))
-
         Button(
-            onClick = { authViewModel.signIn(email, password) },
-            enabled = !uiState.isLoading,
+            onClick = {
+                if (email.isBlank() || password.length < 6) {
+                    Toast.makeText(context, "Введите корректный e-mail и пароль больше 6 символов", LENGTH_SHORT).show()
+                    return@Button
+                }
+                if (!isPreview) {
+                    auth?.signInWithEmailAndPassword(email.trim(), password)
+                        ?.addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                onAuthenticated()
+                            } else {
+                                Log.e("Auth", "Sign-in error", task.exception)
+                                Toast.makeText(
+                                    context,
+                                    task.exception?.localizedMessage ?: "Ошибка входа",
+                                    LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
-            if (uiState.isLoading) {
-                CircularProgressIndicator()
-            } else {
-                Text("Sign In")
-            }
+            Text("Sign In")
         }
 
         Spacer(Modifier.padding(6.dp))
 
         Button(
-            onClick = { authViewModel.signUp(email, password) },
-            enabled = !uiState.isLoading,
+            onClick = {
+                if (email.isBlank() || password.length < 6) {
+                    Toast.makeText(context, "Введите корректный e-mail и больше 6 символов", LENGTH_SHORT).show()
+                    return@Button
+                }
+                if (!isPreview) {
+                    auth?.createUserWithEmailAndPassword(email.trim(), password)
+                        ?.addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                onAuthenticated()
+                            } else {
+                                Log.e("Auth", "Sign-up error", task.exception)
+                                Toast.makeText(
+                                    context,
+                                    task.exception?.localizedMessage ?: "Ошибка регистрации",
+                                    LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Sign Up")
         }
 
-        Spacer(Modifier.padding(12.dp))
+        Spacer(Modifier.padding(6.dp))
 
-        Text(
-            text = "Google/Yandex вход будет позже",
-            style = MaterialTheme.typography.body2
-        )
+        Button(
+            onClick = {
+                if (!isPreview) {
+                    launcher.launch(googleSignInClient?.signInIntent)
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Sign in with Google")
+        }
 
-        uiState.errorMessage?.let { error ->
-            Spacer(Modifier.padding(8.dp))
-            Text(
-                text = error,
-                color = MaterialTheme.colors.error
-            )
+        Spacer(Modifier.padding(6.dp))
+
+        Button(
+            onClick = {
+                if (isPreview) {
+                    return@Button
+                }
+                if (activity == null) {
+                    Toast.makeText(
+                        context,
+                        "Не удалось получить Activity для запуска входа",
+                        LENGTH_SHORT
+                    ).show()
+                    return@Button
+                }
+                val pendingResult = auth?.pendingAuthResult
+                if (pendingResult != null) {
+                    pendingResult
+                        .addOnSuccessListener { onAuthenticated() }
+                        .addOnFailureListener {
+                            Log.e("Auth", "Pending Yandex sign-in failed", it)
+                            Toast.makeText(
+                                context,
+                                it.localizedMessage ?: "Ошибка входа через Яндекс",
+                                LENGTH_SHORT
+                            ).show()
+                        }
+                    return@Button
+                }
+                val provider = OAuthProvider.newBuilder("oidc.yandex").apply {
+                    scopes = listOf("openid", "email", "profile")
+                }
+                auth?.startActivityForSignInWithProvider(activity, provider.build())
+                    ?.addOnSuccessListener { onAuthenticated() }
+                    ?.addOnFailureListener {
+                        Log.e("Auth", "Yandex sign-in failed", it)
+                        Toast.makeText(
+                            context,
+                            it.localizedMessage ?: "Ошибка входа через Яндекс",
+                            LENGTH_SHORT
+                        ).show()
+                    }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Sign in with Yandex")
         }
     }
 }
 
-@Preview(showBackground = true)
+@Preview(
+    name = "Auth screen (light)",
+    showBackground = true,
+    backgroundColor = 0xFFFFFF
+)
 @Composable
 fun AuthScreenPreview() {
     MaterialTheme {

@@ -7,5 +7,5 @@ package com.example.mutlabocsnotes
  * Для реального устройства нужно указать IP компьютера в локальной сети или домен сервера.
  */
 object ApiConfig {
-    const val BASE_URL = "http://188.120.245.56:8080/"
+    const val BASE_URL = "https://homenoteapp.ru/"
 }
