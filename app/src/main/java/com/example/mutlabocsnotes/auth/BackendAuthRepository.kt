@@ -1,6 +1,7 @@
 package com.example.mutlabocsnotes.auth
 
 import android.content.Context
+import com.example.mutlabocsnotes.SessionManager as AppSessionManager
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -8,7 +9,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 class BackendAuthRepository(context: Context) {
 
-    private val sessionManager = SessionManager(context)
+    private val sessionManager: AppSessionManager = AppSessionManager(context)
 
     private val authApi: AuthApi by lazy {
         val logging = HttpLoggingInterceptor().apply {
@@ -31,15 +32,21 @@ class BackendAuthRepository(context: Context) {
         val response = authApi.loginWithGoogle(
             GoogleSocialLoginRequestDto(idToken = idToken)
         )
-        sessionManager.saveSession(response)
+
+        sessionManager.saveSession(
+            accessToken = response.accessToken,
+            refreshToken = response.refreshToken,
+            email = response.user.email
+        )
+
         return response
     }
 
-    fun isLoggedIn(): Boolean = sessionManager.isLoggedIn()
+    fun isLoggedIn(): Boolean = sessionManager.hasSession()
 
-    fun getUserEmail(): String = sessionManager.getUserEmail()
+    fun getUserEmail(): String = sessionManager.getEmail().orEmpty()
 
     fun logout() {
-        sessionManager.clearSession()
+        sessionManager.clear()
     }
 }

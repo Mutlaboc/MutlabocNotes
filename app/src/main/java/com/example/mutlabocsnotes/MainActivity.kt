@@ -27,9 +27,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.mutlabocsnotes.auth.SessionManager
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
+import com.example.mutlabocsnotes.SessionManager
 
 class MainActivity : ComponentActivity() {
     private val requestNotificationPermission =
@@ -82,7 +82,7 @@ fun MyApp(
     val sessionManager = remember { SessionManager(context) }
 
     val startDestination = remember {
-        if (sessionManager.isLoggedIn() || FirebaseAuth.getInstance().currentUser != null) "home" else "auth"
+        if (sessionManager.hasSession()|| FirebaseAuth.getInstance().currentUser != null) "home" else "auth"
     }
 
     var isDarkTheme by rememberSaveable { mutableStateOf(false) }
@@ -106,7 +106,7 @@ fun MyApp(
                 HomeScreen(
                     notes = notesViewModel.notes,
                     totalCoins = notesViewModel.totalCoins,
-                    userEmail = sessionManager.getUserEmail().ifBlank {
+                    userEmail = sessionManager.getEmail().orEmpty().ifBlank {
                         FirebaseAuth.getInstance().currentUser?.email ?: ""
                     },
                     onAddNoteClick = {
@@ -127,7 +127,7 @@ fun MyApp(
                         notesViewModel.setNoteCompletion(noteId, isCompleted)
                     },
                     onSwitchUser = {
-                        sessionManager.clearSession()
+                        sessionManager.clear()
                         FirebaseAuth.getInstance().signOut()
                         navController.navigate("auth") {
                             popUpTo("home") { inclusive = true }
@@ -144,7 +144,7 @@ fun MyApp(
                     isDarkTheme = isDarkTheme,
                     onThemeChange = { isDarkTheme = it },
                     onDeleteAccount = {
-                        sessionManager.clearSession()
+                        sessionManager.clear()
                         val user = FirebaseAuth.getInstance().currentUser
                         if (user != null) {
                             user.delete().addOnCompleteListener {
