@@ -28,17 +28,46 @@ class BackendAuthRepository(context: Context) {
             .create(AuthApi::class.java)
     }
 
-    suspend fun signInWithGoogle(idToken: String): AuthResponseDto {
-        val response = authApi.loginWithGoogle(
-            GoogleSocialLoginRequestDto(idToken = idToken)
-        )
-
+    private fun persistSession(response: AuthResponseDto) {
         sessionManager.saveSession(
             accessToken = response.accessToken,
             refreshToken = response.refreshToken,
             email = response.user.email
         )
+    }
 
+    suspend fun signInWithEmail(email: String, password: String): AuthResponseDto {
+        val response = authApi.login(
+            LoginRequestDto(
+                email = email,
+                password = password
+            )
+        )
+        persistSession(response)
+        return response
+    }
+
+    suspend fun signUpWithEmail(
+        email: String,
+        password: String,
+        displayName: String? = null
+    ): AuthResponseDto {
+        val response = authApi.register(
+            RegisterRequestDto(
+                email = email,
+                password = password,
+                displayName = displayName
+            )
+        )
+        persistSession(response)
+        return response
+    }
+
+    suspend fun signInWithGoogle(idToken: String): AuthResponseDto {
+        val response = authApi.loginWithGoogle(
+            GoogleSocialLoginRequestDto(idToken = idToken)
+        )
+        persistSession(response)
         return response
     }
 

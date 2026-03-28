@@ -83,9 +83,6 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
                         runCatching {
                             backendAuthRepository.signInWithGoogle(idToken)
                         }.onSuccess {
-                            // Transitional dual-login:
-                            // backend session is now saved, then we keep Firebase login
-                            // only to avoid breaking current Firestore-based screens.
                             val credential = GoogleAuthProvider.getCredential(idToken, null)
                             auth?.signInWithCredential(credential)
                                 ?.addOnCompleteListener { firebaseTask ->
@@ -142,23 +139,32 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
         Button(
             onClick = {
                 if (email.isBlank() || password.length < 6) {
-                    Toast.makeText(context, "Введите корректный e-mail и пароль больше 6 символов", LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "Введите корректный e-mail и пароль больше 6 символов",
+                        LENGTH_SHORT
+                    ).show()
                     return@Button
                 }
+
                 if (!isPreview) {
-                    auth?.signInWithEmailAndPassword(email.trim(), password)
-                        ?.addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                onAuthenticated()
-                            } else {
-                                Log.e("Auth", "Sign-in error", task.exception)
-                                Toast.makeText(
-                                    context,
-                                    task.exception?.localizedMessage ?: "Ошибка входа",
-                                    LENGTH_SHORT
-                                ).show()
-                            }
+                    scope.launch {
+                        runCatching {
+                            backendAuthRepository.signInWithEmail(
+                                email = email.trim(),
+                                password = password
+                            )
+                        }.onSuccess {
+                            onAuthenticated()
+                        }.onFailure { error ->
+                            Log.e("Auth", "Backend email sign-in failed", error)
+                            Toast.makeText(
+                                context,
+                                error.localizedMessage ?: "Ошибка входа",
+                                LENGTH_SHORT
+                            ).show()
                         }
+                    }
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -171,23 +177,32 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
         Button(
             onClick = {
                 if (email.isBlank() || password.length < 6) {
-                    Toast.makeText(context, "Введите корректный e-mail и больше 6 символов", LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "Введите корректный e-mail и больше 6 символов",
+                        LENGTH_SHORT
+                    ).show()
                     return@Button
                 }
+
                 if (!isPreview) {
-                    auth?.createUserWithEmailAndPassword(email.trim(), password)
-                        ?.addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                onAuthenticated()
-                            } else {
-                                Log.e("Auth", "Sign-up error", task.exception)
-                                Toast.makeText(
-                                    context,
-                                    task.exception?.localizedMessage ?: "Ошибка регистрации",
-                                    LENGTH_SHORT
-                                ).show()
-                            }
+                    scope.launch {
+                        runCatching {
+                            backendAuthRepository.signUpWithEmail(
+                                email = email.trim(),
+                                password = password
+                            )
+                        }.onSuccess {
+                            onAuthenticated()
+                        }.onFailure { error ->
+                            Log.e("Auth", "Backend email sign-up failed", error)
+                            Toast.makeText(
+                                context,
+                                error.localizedMessage ?: "Ошибка регистрации",
+                                LENGTH_SHORT
+                            ).show()
                         }
+                    }
                 }
             },
             modifier = Modifier.fillMaxWidth()

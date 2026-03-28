@@ -1,5 +1,16 @@
 package com.example.mutlabocsnotes.auth
 
+data class LoginRequestDto(
+    val email: String,
+    val password: String
+)
+
+data class RegisterRequestDto(
+    val email: String,
+    val password: String,
+    val displayName: String? = null
+)
+
 data class GoogleSocialLoginRequestDto(
     val idToken: String
 )
