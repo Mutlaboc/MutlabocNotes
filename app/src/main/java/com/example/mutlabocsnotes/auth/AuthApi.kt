@@ -18,4 +18,9 @@ interface AuthApi {
     suspend fun loginWithGoogle(
         @Body request: GoogleSocialLoginRequestDto
     ): AuthResponseDto
+
+    @POST("auth/social/yandex")
+    suspend fun loginWithYandex(
+        @Body request: YandexSocialLoginRequestDto
+    ): AuthResponseDto
 }

@@ -19,8 +19,12 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        manifestPlaceholders["YANDEX_CLIENT_ID"] =
+
+        val yandexClientId =
             (project.findProperty("YANDEX_CLIENT_ID") as String?) ?: "776676c1ec6c4097ba260b05824f3a39"
+
+        manifestPlaceholders["YANDEX_CLIENT_ID"] = yandexClientId
+        buildConfigField("String", "YANDEX_CLIENT_ID", "\"$yandexClientId\"")
     }
 
     buildTypes {

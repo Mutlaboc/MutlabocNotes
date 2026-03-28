@@ -1,6 +1,5 @@
 package com.example.mutlabocsnotes
 
-import android.app.Activity
 import android.util.Log
 import android.widget.Toast
 import android.widget.Toast.LENGTH_SHORT
@@ -15,7 +14,6 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,7 +30,10 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.auth.OAuthProvider
+import com.yandex.authsdk.YandexAuthLoginOptions
+import com.yandex.authsdk.YandexAuthOptions
+import com.yandex.authsdk.YandexAuthResult
+import com.yandex.authsdk.YandexAuthSdk
 import kotlinx.coroutines.launch
 
 @Composable
@@ -43,7 +44,6 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
     val isPreview = LocalInspectionMode.current
     val auth = if (isPreview) null else FirebaseAuth.getInstance()
     val context = LocalContext.current
-    val activity = context as? Activity
     val defaultWebClientId = stringResource(id = R.string.default_web_client_id)
     val backendAuthRepository = remember(context) { BackendAuthRepository(context) }
     val scope = rememberCoroutineScope()
@@ -58,22 +58,22 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
         }
     }
 
-    LaunchedEffect(auth) {
-        if (!isPreview) {
-            auth?.pendingAuthResult
-                ?.addOnSuccessListener { onAuthenticated() }
-                ?.addOnFailureListener {
-                    Log.e("Auth", "Pending Yandex sign-in failed", it)
-                    Toast.makeText(
-                        context,
-                        it.localizedMessage ?: "Не удалось завершить вход через Яндекс",
-                        LENGTH_SHORT
-                    ).show()
-                }
+    val yandexAuthSdk = remember(context, isPreview) {
+        if (isPreview) {
+            null
+        } else {
+            YandexAuthSdk.create(
+                YandexAuthOptions(
+                    context,
+                    true
+                )
+            )
         }
     }
 
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+    val googleLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
         if (!isPreview) {
             val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
             if (task.isSuccessful) {
@@ -119,6 +119,50 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
                 ).show()
             }
         }
+    }
+
+    val yandexLauncher = if (!isPreview && yandexAuthSdk != null) {
+        rememberLauncherForActivityResult(yandexAuthSdk.contract) { result ->
+            when (result) {
+                is YandexAuthResult.Success -> {
+                    val accessToken = result.token.value.trim()
+                    if (accessToken.isBlank()) {
+                        Toast.makeText(context, "Yandex access token is empty", LENGTH_SHORT).show()
+                        return@rememberLauncherForActivityResult
+                    }
+
+                    scope.launch {
+                        runCatching {
+                            backendAuthRepository.signInWithYandex(accessToken)
+                        }.onSuccess {
+                            onAuthenticated()
+                        }.onFailure { error ->
+                            Log.e("Auth", "Backend Yandex sign-in failed", error)
+                            Toast.makeText(
+                                context,
+                                error.localizedMessage ?: "Ошибка входа через Яндекс",
+                                LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
+
+                is YandexAuthResult.Failure -> {
+                    Log.e("Auth", "Yandex SDK sign-in failed", result.exception)
+                    Toast.makeText(
+                        context,
+                        result.exception.localizedMessage ?: "Ошибка входа через Яндекс",
+                        LENGTH_SHORT
+                    ).show()
+                }
+
+                YandexAuthResult.Cancelled -> {
+                    Toast.makeText(context, "Вход через Яндекс отменён", LENGTH_SHORT).show()
+                }
+            }
+        }
+    } else {
+        null
     }
 
     Column(modifier = Modifier.padding(16.dp)) {
@@ -215,7 +259,7 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
         Button(
             onClick = {
                 if (!isPreview) {
-                    launcher.launch(googleSignInClient?.signInIntent)
+                    googleLauncher.launch(googleSignInClient?.signInIntent)
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -227,44 +271,9 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
 
         Button(
             onClick = {
-                if (isPreview) {
-                    return@Button
+                if (!isPreview) {
+                    yandexLauncher?.launch(YandexAuthLoginOptions())
                 }
-                if (activity == null) {
-                    Toast.makeText(
-                        context,
-                        "Не удалось получить Activity для запуска входа",
-                        LENGTH_SHORT
-                    ).show()
-                    return@Button
-                }
-                val pendingResult = auth?.pendingAuthResult
-                if (pendingResult != null) {
-                    pendingResult
-                        .addOnSuccessListener { onAuthenticated() }
-                        .addOnFailureListener {
-                            Log.e("Auth", "Pending Yandex sign-in failed", it)
-                            Toast.makeText(
-                                context,
-                                it.localizedMessage ?: "Ошибка входа через Яндекс",
-                                LENGTH_SHORT
-                            ).show()
-                        }
-                    return@Button
-                }
-                val provider = OAuthProvider.newBuilder("oidc.yandex").apply {
-                    scopes = listOf("openid", "email", "profile")
-                }
-                auth?.startActivityForSignInWithProvider(activity, provider.build())
-                    ?.addOnSuccessListener { onAuthenticated() }
-                    ?.addOnFailureListener {
-                        Log.e("Auth", "Yandex sign-in failed", it)
-                        Toast.makeText(
-                            context,
-                            it.localizedMessage ?: "Ошибка входа через Яндекс",
-                            LENGTH_SHORT
-                        ).show()
-                    }
             },
             modifier = Modifier.fillMaxWidth()
         ) {

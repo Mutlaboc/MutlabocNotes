@@ -15,6 +15,10 @@ data class GoogleSocialLoginRequestDto(
     val idToken: String
 )
 
+data class YandexSocialLoginRequestDto(
+    val accessToken: String
+)
+
 data class AuthUserResponseDto(
     val id: String,
     val email: String,

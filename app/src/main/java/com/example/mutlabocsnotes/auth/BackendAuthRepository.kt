@@ -71,6 +71,14 @@ class BackendAuthRepository(context: Context) {
         return response
     }
 
+    suspend fun signInWithYandex(accessToken: String): AuthResponseDto {
+        val response = authApi.loginWithYandex(
+            YandexSocialLoginRequestDto(accessToken = accessToken)
+        )
+        persistSession(response)
+        return response
+    }
+
     fun isLoggedIn(): Boolean = sessionManager.hasSession()
 
     fun getUserEmail(): String = sessionManager.getEmail().orEmpty()
