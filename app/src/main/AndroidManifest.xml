@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"
-        tools:targetApi = "tiramisu" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission
+        android:name="android.permission.POST_NOTIFICATIONS"
+        tools:targetApi="tiramisu" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
+        android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -16,30 +20,36 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MutlabocsNotes"
         tools:targetApi="31">
+
+        <meta-data
+            android:name="com.yandex.auth.CLIENT_ID"
+            android:value="${YANDEX_CLIENT_ID}" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:theme="@style/Theme.MutlabocsNotes">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
-
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-
                 <data
-                    android:value="${YANDEX_CLIENT_ID}"
-                    android:scheme="yandexauth" />
+                    android:scheme="yandexauth"
+                    android:host="${YANDEX_CLIENT_ID}" />
             </intent-filter>
         </activity>
+
         <meta-data
             android:name="com.yandex.auth.CLIENT_ID"
             android:value="${YANDEX_CLIENT_ID}" />
-        <receiver android:name=".DeadlineNotificationReceiver"
+
+        <receiver
+            android:name=".DeadlineNotificationReceiver"
             android:exported="false" />
     </application>
 

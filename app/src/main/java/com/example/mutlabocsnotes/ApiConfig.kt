@@ -1,0 +1,11 @@
+package com.example.mutlabocsnotes
+
+/**
+ * Временный конфиг для этапа 5.
+ *
+ * Для Android-эмулятора локальный backend на машине разработчика доступен как 10.0.2.2.
+ * Для реального устройства нужно указать IP компьютера в локальной сети или домен сервера.
+ */
+object ApiConfig {
+    const val BASE_URL = "https://homenoteapp.ru/"
+}
