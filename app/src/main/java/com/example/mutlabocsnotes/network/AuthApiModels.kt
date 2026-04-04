@@ -14,7 +14,6 @@ data class RefreshTokenRequestDto(
 data class AuthUserDto(
     val id: String? = null,
     val email: String? = null,
-    val firebaseUid: String? = null,
     val bridgeUserKey: String? = null
 )
 
@@ -25,7 +24,6 @@ data class AuthResponseDto(
     val expiresInSeconds: Long? = null,
     val refreshExpiresInSeconds: Long? = null,
     val email: String? = null,
-    val firebaseUid: String? = null,
     val bridgeUserKey: String? = null,
     val user: AuthUserDto? = null
 ) {
@@ -35,6 +33,5 @@ data class AuthResponseDto(
 data class MeResponseDto(
     val id: String,
     val email: String,
-    val firebaseUid: String? = null,
     val bridgeUserKey: String? = null
 )

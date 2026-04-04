@@ -2,7 +2,6 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id ("kotlin-kapt")
-    id("com.google.gms.google-services")
     id("org.jetbrains.kotlin.plugin.compose")
 
 }
@@ -62,11 +61,6 @@ dependencies {
     testImplementation(composeBom)
     androidTestImplementation(composeBom)
 
-    implementation(platform("com.google.firebase:firebase-bom:33.16.0"))
-    implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-firestore-ktx")
-
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
     implementation("com.google.android.gms:play-services-auth:21.3.0")

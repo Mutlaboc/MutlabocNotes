@@ -28,8 +28,6 @@ import androidx.compose.ui.unit.dp
 import com.example.mutlabocsnotes.auth.BackendAuthRepository
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
 import com.yandex.authsdk.YandexAuthLoginOptions
 import com.yandex.authsdk.YandexAuthOptions
 import com.yandex.authsdk.YandexAuthResult
@@ -42,16 +40,15 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
     var password by remember { mutableStateOf("") }
 
     val isPreview = LocalInspectionMode.current
-    val auth = if (isPreview) null else FirebaseAuth.getInstance()
     val context = LocalContext.current
-    val defaultWebClientId = stringResource(id = R.string.default_web_client_id)
+    val googleWebClientId = stringResource(id = R.string.google_web_client_id)
     val backendAuthRepository = remember(context) { BackendAuthRepository(context) }
     val scope = rememberCoroutineScope()
 
     val googleSignInClient = remember {
         if (isPreview) null else {
             val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(defaultWebClientId)
+                .requestIdToken(googleWebClientId)
                 .requestEmail()
                 .build()
             GoogleSignIn.getClient(context, gso)
@@ -83,21 +80,7 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
                         runCatching {
                             backendAuthRepository.signInWithGoogle(idToken)
                         }.onSuccess {
-                            val credential = GoogleAuthProvider.getCredential(idToken, null)
-                            auth?.signInWithCredential(credential)
-                                ?.addOnCompleteListener { firebaseTask ->
-                                    if (firebaseTask.isSuccessful) {
-                                        onAuthenticated()
-                                    } else {
-                                        Log.e("Auth", "Firebase legacy Google sign-in failed", firebaseTask.exception)
-                                        Toast.makeText(
-                                            context,
-                                            firebaseTask.exception?.localizedMessage
-                                                ?: "Backend login ок, но Firebase legacy login не удалось завершить",
-                                            LENGTH_SHORT
-                                        ).show()
-                                    }
-                                }
+                            onAuthenticated()
                         }.onFailure { error ->
                             Log.e("Auth", "Backend Google sign-in failed", error)
                             Toast.makeText(

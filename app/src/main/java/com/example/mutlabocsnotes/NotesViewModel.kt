@@ -16,7 +16,7 @@ import androidx.compose.runtime.setValue
 
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = FirestoreRepository(application)
+    private val repository = NotesRepository(application)
     private val notificationScheduler = DeadlineNotificationScheduler(application)
 
     // Локальный кэш заметок, можно сделать LiveData или StateFlow для наблюдения за изменениями
@@ -59,7 +59,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // Обновляем заметку
-    // TODO Надо бы сделать защиту от сбоя одновления в FireStore
+    // TODO Надо бы сделать защиту от сбоя одновления
     fun updateNote(note: Note) {
         if (note.id.isEmpty()) return
         viewModelScope.launch(Dispatchers.IO) {
@@ -121,3 +121,4 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         totalCoins = notes.sumOf { if (it.isCompleted) it.coinCount else 0 }
     }
 }
+

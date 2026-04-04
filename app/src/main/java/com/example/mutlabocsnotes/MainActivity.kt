@@ -27,8 +27,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.google.firebase.FirebaseApp
-import com.google.firebase.auth.FirebaseAuth
 import com.example.mutlabocsnotes.SessionManager
 
 class MainActivity : ComponentActivity() {
@@ -37,14 +35,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        FirebaseApp.initializeApp(this)
+
         createNotificationChannel()
+
         requestNotificationPermissionIfNeeded()
         setContent {
             MyApp()
         }
     }
 
+    // Создает канал для уведомлений.
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = getString(R.string.deadline_notification_channel_name)
@@ -59,6 +59,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+
+     // Запрашивает разрешение на уведомления у пользователя, если это необходимо.
     private fun requestNotificationPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val granted = ContextCompat.checkSelfPermission(
@@ -74,25 +76,31 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MyApp(
+    // ViewModel для работы с заметками (хранит состояние списка заметок)
     notesViewModel: NotesViewModel = viewModel(),
     homeInfoViewModel: HomeInfoViewModel = viewModel()
 ) {
+    // Контроллер навигации для переключения между экранами
     val navController = rememberNavController()
     val context = LocalContext.current
+    // Менеджер сессий (хранит данные о вошедшем пользователе локально)
     val sessionManager = remember { SessionManager(context) }
 
+    // Определение начального экрана: если пользователь залогинен - идем на "home", иначе на "auth"
     val startDestination = remember {
-        if (sessionManager.hasSession()|| FirebaseAuth.getInstance().currentUser != null) "home" else "auth"
+        if (sessionManager.hasSession()) "home" else "auth"
     }
 
     var isDarkTheme by rememberSaveable { mutableStateOf(false) }
 
     MaterialTheme(colors = if (isDarkTheme) darkColors() else lightColors()) {
+        // Контейнер для навигации
         NavHost(
             navController = navController,
             startDestination = startDestination
         ) {
 
+            // Экран авторизации
             composable("auth") {
                 AuthScreen {
                     notesViewModel.loadNotes()
@@ -102,13 +110,12 @@ fun MyApp(
                 }
             }
 
+            // Главный экран со списком заметок
             composable("home") {
                 HomeScreen(
                     notes = notesViewModel.notes,
                     totalCoins = notesViewModel.totalCoins,
-                    userEmail = sessionManager.getEmail().orEmpty().ifBlank {
-                        FirebaseAuth.getInstance().currentUser?.email ?: ""
-                    },
+                    userEmail = sessionManager.getEmail().orEmpty(),
                     onAddNoteClick = {
                         navController.navigate("edit")
                     },
@@ -128,7 +135,6 @@ fun MyApp(
                     },
                     onSwitchUser = {
                         sessionManager.clear()
-                        FirebaseAuth.getInstance().signOut()
                         navController.navigate("auth") {
                             popUpTo("home") { inclusive = true }
                         }
@@ -139,24 +145,15 @@ fun MyApp(
                 )
             }
 
+            // Экран настроек
             composable("settings") {
                 SettingsScreen(
                     isDarkTheme = isDarkTheme,
                     onThemeChange = { isDarkTheme = it },
                     onDeleteAccount = {
                         sessionManager.clear()
-                        val user = FirebaseAuth.getInstance().currentUser
-                        if (user != null) {
-                            user.delete().addOnCompleteListener {
-                                FirebaseAuth.getInstance().signOut()
-                                navController.navigate("auth") {
-                                    popUpTo("home") { inclusive = true }
-                                }
-                            }
-                        } else {
-                            navController.navigate("auth") {
-                                popUpTo("home") { inclusive = true }
-                            }
+                        navController.navigate("auth") {
+                            popUpTo("home") { inclusive = true }
                         }
                     },
                     onBack = {
@@ -165,6 +162,7 @@ fun MyApp(
                 )
             }
 
+            // Экран завершенных заметок
             composable("completed") {
                 CompletedNotesScreen(
                     notes = notesViewModel.notes,
@@ -183,6 +181,7 @@ fun MyApp(
                 )
             }
 
+            // Экран карточек (Home Info)
             composable("home_info") {
                 LaunchedEffect(Unit) {
                     homeInfoViewModel.loadCards()
@@ -199,6 +198,7 @@ fun MyApp(
                 )
             }
 
+            // Экран создания карточки инфо
             composable("home_info_edit") {
                 EditHomeInfoCardScreen(
                     card = null,
@@ -211,6 +211,7 @@ fun MyApp(
                 )
             }
 
+            // Экран редактирования карточки инфо (с ID)
             composable(
                 route = "home_info_edit/{cardId}",
                 arguments = listOf(navArgument("cardId") { type = NavType.StringType })
@@ -231,6 +232,7 @@ fun MyApp(
                 )
             }
 
+            // Экран создания заметки
             composable("edit") {
                 EditNoteScreen(
                     note = null,
@@ -241,6 +243,7 @@ fun MyApp(
                 )
             }
 
+            // Экран редактирования заметки (с ID)
             composable(
                 route = "edit/{noteId}",
                 arguments = listOf(navArgument("noteId") { type = NavType.StringType })
@@ -266,3 +269,4 @@ fun MyApp(
         }
     }
 }
+
