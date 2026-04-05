@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
+// Composable that renders settings screen.
 @Composable
 fun SettingsScreen (
     isDarkTheme: Boolean,
@@ -124,6 +125,7 @@ fun SettingsScreen (
     }
 }
 
+// Preview composable for design-time inspection in Android Studio.
 @Preview
 @Composable
 fun SettingsScreenPreview () {

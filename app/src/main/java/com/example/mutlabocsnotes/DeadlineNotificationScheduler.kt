@@ -9,10 +9,12 @@ import com.example.mutlabocsnotes.Note
 import com.example.mutlabocsnotes.NoteCategory
 import java.util.Calendar
 
+// Schedules and cancels background notification tasks.
 class DeadlineNotificationScheduler(private val context: Context) {
 
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
 
+    // Schedules deadline notifications for note data.
     fun schedule(note: Note) {
         if (alarmManager == null || note.id.isBlank()) return
 
@@ -68,6 +70,7 @@ class DeadlineNotificationScheduler(private val context: Context) {
         }
     }
 
+    // Cancels previously scheduled deadline notifications.
     fun cancel(noteId: String) {
         if (alarmManager == null || noteId.isBlank()) return
         val pendingIntent = PendingIntent.getBroadcast(
@@ -82,10 +85,12 @@ class DeadlineNotificationScheduler(private val context: Context) {
         }
     }
 
+    // Schedules deadline notifications for note data.
     fun scheduleAll(notes: List<Note>) {
         notes.forEach { schedule(it) }
     }
 
+    // Adds immutable flag on supported Android versions for PendingIntent safety.
     private fun immutableFlag(): Int =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
 }

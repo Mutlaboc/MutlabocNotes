@@ -16,12 +16,14 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
+// HTTP interceptor that enriches outgoing requests.
 class AuthorizationInterceptor(
     context: Context
 ) : Interceptor {
 
     private val sessionManager = SessionManager(context.applicationContext)
 
+    // Adds authorization data before sending the request.
     override fun intercept(chain: Interceptor.Chain): Response {
         val token = sessionManager.getAccessToken()
 
@@ -38,6 +40,7 @@ class AuthorizationInterceptor(
     }
 }
 
+// HTTP authenticator that refreshes expired credentials.
 class RefreshTokenAuthenticator(
     context: Context
 ) : Authenticator {
@@ -46,7 +49,9 @@ class RefreshTokenAuthenticator(
     private val sessionManager = SessionManager(appContext)
     private val gson = Gson()
 
+    // Attempts token refresh when the backend returns unauthorized.
     override fun authenticate(route: Route?, response: Response): Request? {
+        // Stop after a limited number of attempts to avoid retry loops.
         if (responseCount(response) >= 2) {
             clearSessionAndNotify()
             return null
@@ -64,12 +69,14 @@ class RefreshTokenAuthenticator(
                 ?.removePrefix("Bearer ")
                 ?.trim()
 
+            // If another request already refreshed the token, reuse it immediately.
             if (!currentAccessToken.isNullOrBlank() && currentAccessToken != requestAccessToken) {
                 return response.request.newBuilder()
                     .header("Authorization", "Bearer $currentAccessToken")
                     .build()
             }
 
+            // Otherwise refresh tokens and persist them before retrying the original request.
             val refreshResponse = refreshTokens(storedRefreshToken)
                 ?: run {
                     clearSessionAndNotify()
@@ -89,6 +96,7 @@ class RefreshTokenAuthenticator(
         }
     }
 
+    // Calls refresh endpoint and parses a fresh token pair.
     private fun refreshTokens(refreshToken: String): AuthResponseDto? {
         val requestBody = gson.toJson(
             RefreshTokenRequestDto(refreshToken = refreshToken)
@@ -117,11 +125,13 @@ class RefreshTokenAuthenticator(
         }.getOrNull()
     }
 
+    // Clears temporary or persisted state values.
     private fun clearSessionAndNotify() {
         sessionManager.clear()
         SessionEventBus.emit(SessionEvent.SessionExpired)
     }
 
+    // Counts prior responses chained by OkHttp to control retry depth.
     private fun responseCount(response: Response): Int {
         var currentResponse: Response? = response
         var count = 1
@@ -135,8 +145,10 @@ class RefreshTokenAuthenticator(
     }
 }
 
+// Creates configured clients and dependencies for networking.
 object AuthenticatedApiFactory {
 
+    // Creates and returns a configured instance.
     fun createOkHttpClient(context: Context): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor(AuthorizationInterceptor(context.applicationContext))
@@ -147,6 +159,7 @@ object AuthenticatedApiFactory {
             .build()
     }
 
+    // Creates and returns a configured instance.
     fun createRetrofit(
         context: Context,
         baseUrl: String = ApiConfig.BASE_URL

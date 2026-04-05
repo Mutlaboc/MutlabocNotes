@@ -34,6 +34,7 @@ import com.yandex.authsdk.YandexAuthResult
 import com.yandex.authsdk.YandexAuthSdk
 import kotlinx.coroutines.launch
 
+// Composable that renders auth screen.
 @Composable
 fun AuthScreen(onAuthenticated: () -> Unit) {
     var email by remember { mutableStateOf("") }
@@ -270,6 +271,7 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
     showBackground = true,
     backgroundColor = 0xFFFFFF
 )
+// Preview composable for design-time inspection in Android Studio.
 @Composable
 fun AuthScreenPreview() {
     MaterialTheme {

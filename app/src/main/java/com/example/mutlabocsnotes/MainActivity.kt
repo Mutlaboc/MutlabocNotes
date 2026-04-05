@@ -29,10 +29,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.mutlabocsnotes.SessionManager
 
+// Activity entry point that bootstraps app-level setup.
 class MainActivity : ComponentActivity() {
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
+    // Initializes activity resources and launches app content.
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -74,6 +76,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+// Composable that renders my app.
 @Composable
 fun MyApp(
     // ViewModel для работы с заметками (хранит состояние списка заметок)

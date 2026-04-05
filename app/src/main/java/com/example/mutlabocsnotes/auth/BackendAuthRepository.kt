@@ -7,6 +7,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
+// Encapsulates data access and business-oriented operations.
 class BackendAuthRepository(context: Context) {
 
     private val sessionManager: AppSessionManager = AppSessionManager(context)
@@ -28,6 +29,7 @@ class BackendAuthRepository(context: Context) {
             .create(AuthApi::class.java)
     }
 
+    // Persists token pair and resolved email in the local session store.
     private fun persistSession(response: AuthResponseDto) {
         sessionManager.saveSession(
             accessToken = response.accessToken,
@@ -36,6 +38,7 @@ class BackendAuthRepository(context: Context) {
         )
     }
 
+    // Authenticates the user and updates local auth state.
     suspend fun signInWithEmail(email: String, password: String): AuthResponseDto {
         val response = authApi.login(
             LoginRequestDto(
@@ -47,6 +50,7 @@ class BackendAuthRepository(context: Context) {
         return response
     }
 
+    // Registers a user and updates local auth state.
     suspend fun signUpWithEmail(
         email: String,
         password: String,
@@ -63,6 +67,7 @@ class BackendAuthRepository(context: Context) {
         return response
     }
 
+    // Authenticates the user and updates local auth state.
     suspend fun signInWithGoogle(idToken: String): AuthResponseDto {
         val response = authApi.loginWithGoogle(
             GoogleSocialLoginRequestDto(idToken = idToken)
@@ -71,6 +76,7 @@ class BackendAuthRepository(context: Context) {
         return response
     }
 
+    // Authenticates the user and updates local auth state.
     suspend fun signInWithYandex(accessToken: String): AuthResponseDto {
         val response = authApi.loginWithYandex(
             YandexSocialLoginRequestDto(accessToken = accessToken)
@@ -79,10 +85,13 @@ class BackendAuthRepository(context: Context) {
         return response
     }
 
+    // Returns whether the required condition is currently true.
     fun isLoggedIn(): Boolean = sessionManager.hasSession()
 
+    // Returns data from the current source.
     fun getUserEmail(): String = sessionManager.getEmail().orEmpty()
 
+    // Ends the current session and clears auth data.
     fun logout() {
         sessionManager.clear()
     }

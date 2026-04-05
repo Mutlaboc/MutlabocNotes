@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+// Holds UI state and handles user-driven actions.
 class HomeInfoViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = HomeInfoRepository(application)
@@ -18,6 +19,7 @@ class HomeInfoViewModel(application: Application) : AndroidViewModel(application
     var isLoading by mutableStateOf(false)
     var errorMessage by mutableStateOf<String?>(null)
 
+    // Loads data required by the current screen or feature.
     fun loadCards() {
         viewModelScope.launch(Dispatchers.IO) {
             launch(Dispatchers.Main) {
@@ -37,6 +39,7 @@ class HomeInfoViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    // Adds a card through the repository and refreshes local state.
     fun addCard(card: HomeInfoCard) {
         viewModelScope.launch(Dispatchers.IO) {
             val result = repository.insert(card)
@@ -52,6 +55,7 @@ class HomeInfoViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    // Updates existing data with new values.
     fun updateCard(card: HomeInfoCard) {
         if (card.id.isEmpty()) return
         viewModelScope.launch(Dispatchers.IO) {
@@ -70,6 +74,7 @@ class HomeInfoViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+        // Deletes the target entity from storage or backend.
         fun deleteCard(cardId: String) {
             viewModelScope.launch(Dispatchers.IO) {
                 val result = repository.delete(cardId)
@@ -86,6 +91,7 @@ class HomeInfoViewModel(application: Application) : AndroidViewModel(application
             }
         }
 
+    // Clears temporary or persisted state values.
     fun clearAll() {
         cards.clear()
         errorMessage = null

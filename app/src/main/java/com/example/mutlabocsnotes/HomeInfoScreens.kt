@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.tooling.preview.Preview
 
+// Composable that renders home info screen.
 @Composable
 fun HomeInfoScreen(
     cards: List<HomeInfoCard>,
@@ -164,6 +165,7 @@ fun HomeInfoScreen(
     }
 }
 
+// Composable that renders home info card item.
 @Composable
 private fun HomeInfoCardItem(card: HomeInfoCard, onClick: () -> Unit) {
     val previewFields = card.fields
@@ -197,6 +199,7 @@ private fun HomeInfoCardItem(card: HomeInfoCard, onClick: () -> Unit) {
     }
 }
 
+// Composable that renders edit home info card screen.
 @Composable
 fun EditHomeInfoCardScreen(
     card: HomeInfoCard?,
@@ -414,6 +417,7 @@ fun EditHomeInfoCardScreen(
     }
 }
 
+// Provides a user-facing title for each home information section.
 private fun HomeSection.displayName(): String = when (this) {
     HomeSection.METERS -> "Счётчики"
     HomeSection.APPLIANCES -> "Техника"
@@ -424,6 +428,7 @@ private fun HomeSection.displayName(): String = when (this) {
 }
 
 
+// Preview composable for design-time inspection in Android Studio.
 @Preview(showBackground = true)
 @Composable
 fun HomeInfoScreenPreview() {

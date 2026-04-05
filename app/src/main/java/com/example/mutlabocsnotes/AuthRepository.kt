@@ -12,10 +12,12 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
+// Data model shared between layers of this module.
 data class AuthorizedSession(
     val email: String
 )
 
+// Encapsulates data access and business-oriented operations.
 class AuthRepository(
     context: android.content.Context,
     baseUrl: String = ApiConfig.BASE_URL,
@@ -23,18 +25,21 @@ class AuthRepository(
     private val api: AuthApi = createAuthApi(baseUrl),
 ) {
 
+    // Authenticates the user and updates local auth state.
     suspend fun login(email: String, password: String): Result<AuthorizedSession> {
         return authenticate {
             api.login(AuthCredentialsDto(email.trim(), password))
         }
     }
 
+    // Registers a user and updates local auth state.
     suspend fun register(email: String, password: String): Result<AuthorizedSession> {
         return authenticate {
             api.register(AuthCredentialsDto(email.trim(), password))
         }
     }
 
+    // Restores persisted session and user information.
     suspend fun restoreSession(): Result<AuthorizedSession> = withContext(Dispatchers.IO) {
         val accessToken = sessionManager.getAccessToken()
             ?: return@withContext Result.failure(IllegalStateException("No saved access token"))
@@ -71,10 +76,12 @@ class AuthRepository(
         }
     }
 
+    // Ends the current session and clears auth data.
     fun logout() {
         sessionManager.clear()
     }
 
+    // Attempts token refresh when the backend returns unauthorized.
     private suspend fun authenticate(
         block: suspend () -> AuthResponseDto
     ): Result<AuthorizedSession> = withContext(Dispatchers.IO) {
@@ -98,6 +105,7 @@ class AuthRepository(
     }
 
     private companion object {
+        // Creates and returns a configured instance.
         private fun createAuthApi(baseUrl: String): AuthApi {
             val client = OkHttpClient.Builder()
                 .connectTimeout(15, TimeUnit.SECONDS)

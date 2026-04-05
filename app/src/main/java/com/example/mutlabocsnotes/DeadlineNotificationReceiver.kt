@@ -11,18 +11,22 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.TaskStackBuilder
 import androidx.core.content.ContextCompat
 
+// Singleton object with shared feature logic.
 object DeadlineNotification {
     const val CHANNEL_ID = "deadline_notification"
     const val EXTRA_NOTE_ID = "extra_note_id"
     const val EXTRA_NOTE_TITLE = "extra_note_title"
 
+    // Builds a stable notification request code for a note id.
     fun requestCodeForId(noteId: String): Int {
         if (noteId.isBlank()) return 0
         val hash = noteId.hashCode()
         return if (hash == Int.MIN_VALUE) 0 else kotlin.math.abs(hash)
     }
 }
+// Broadcast receiver that reacts to system events.
 class DeadlineNotificationReceiver: BroadcastReceiver() {
+    // Handles incoming broadcast events and shows a notification.
     override fun onReceive(context: Context, intent: Intent) {
         val noteId = intent.getStringExtra(DeadlineNotification.EXTRA_NOTE_ID).orEmpty()
         val noteTitle = intent.getStringExtra(DeadlineNotification.EXTRA_NOTE_TITLE)
@@ -60,6 +64,7 @@ class DeadlineNotificationReceiver: BroadcastReceiver() {
         }
     }
 
+    // Adds immutable flag on supported Android versions for PendingIntent safety.
     private fun immutableFlag(): Int =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
 

@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 
+// Holds UI state and handles user-driven actions.
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = AuthRepository(application)
@@ -19,6 +20,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         checkExistingSession()
     }
 
+    // Checks prerequisites before continuing the flow.
     fun checkExistingSession() {
         viewModelScope.launch {
             uiState = uiState.copy(
@@ -44,6 +46,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Authenticates the user and updates local auth state.
     fun signIn(email: String, password: String) {
         if (email.isBlank() || password.length < 6) {
             uiState = uiState.copy(
@@ -74,6 +77,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Registers a user and updates local auth state.
     fun signUp(email: String, password: String) {
         if (email.isBlank() || password.length < 6) {
             uiState = uiState.copy(
@@ -104,6 +108,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Ends the current session and clears auth data.
     fun logout() {
         repository.logout()
         uiState = AuthUiState(
@@ -112,6 +117,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
+    // Handles an incoming event and updates state accordingly.
     fun handleSessionExpired() {
         repository.logout()
         uiState = AuthUiState(
@@ -121,6 +127,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
+    // Clears temporary or persisted state values.
     fun clearError() {
         uiState = uiState.copy(errorMessage = null)
     }

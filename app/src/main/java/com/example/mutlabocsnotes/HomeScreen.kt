@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 
+// Composable that renders home screen.
 @Composable
 fun HomeScreen(
     notes: List<Note>,
@@ -204,6 +205,7 @@ private enum class  BuildingStage {
     Lively
 }
 
+// Maps total collected coins to the current house-building progression stage.
 private fun stageForCoins(totalCoins: Int): BuildingStage = when {
     totalCoins >= 400 -> BuildingStage.Lively
     totalCoins >= 300 -> BuildingStage.Details
@@ -214,6 +216,7 @@ private fun stageForCoins(totalCoins: Int): BuildingStage = when {
 
 
 
+// Composable that renders completed notes screen.
 @Composable
 fun CompletedNotesScreen (
     notes: List<Note>,
@@ -324,6 +327,7 @@ fun NoteItem(
                             .padding(start = 8.dp)
                     ) {
                         Text(text = note.title, style = MaterialTheme.typography.subtitle1)
+                        // Render note details differently depending on note category.
                         when (note.category) {
                             NoteCategory.SHOPPING -> {
                                 if (note.checklist.isNotEmpty()) {
@@ -401,6 +405,7 @@ fun NoteItem(
     }
 }
 
+        // Formats raw values into a user-friendly string.
         private fun formatDeadline(millis: Long): String {
             val calendar = Calendar.getInstance().apply {
                 timeInMillis = millis
@@ -412,6 +417,7 @@ fun NoteItem(
             )
         }
 
+        // Composable that renders bottom row with five cells.
         @Composable
         fun BottomRowWithFiveCells(
             selectedIndex: Int,
@@ -488,6 +494,7 @@ fun NoteItem(
                     }
                 }
             }
+            // Composable that renders search row.
             @Composable
             fun SearchRow(
                 query: String,
@@ -514,6 +521,7 @@ fun NoteItem(
             }
         }
 
+        // Preview composable for design-time inspection in Android Studio.
         @Preview(showBackground = true)
         @Composable
         fun HomeScreenPreview() {

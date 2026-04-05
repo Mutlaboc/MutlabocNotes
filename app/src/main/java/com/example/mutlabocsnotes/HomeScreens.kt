@@ -47,6 +47,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 
+// Composable that renders home screen.
 @Composable
 fun HomeScreen (
     cards: List<HomeInfoCard>,
