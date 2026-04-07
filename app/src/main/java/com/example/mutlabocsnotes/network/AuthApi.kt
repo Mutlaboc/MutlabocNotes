@@ -5,28 +5,28 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 
-// Retrofit contract with backend endpoints for this feature.
+// Retrofit-контракт с backend-эндпоинтами этой функциональности.
 interface AuthApi {
 
-    // Registers a user and updates local auth state.
+    // Регистрирует пользователя и обновляет локальное состояние авторизации.
     @POST("auth/register")
     suspend fun register(
         @Body request: AuthCredentialsDto
     ): AuthResponseDto
 
-    // Authenticates the user and updates local auth state.
+    // Выполняет аутентификацию пользователя и обновляет локальное состояние авторизации.
     @POST("auth/login")
     suspend fun login(
         @Body request: AuthCredentialsDto
     ): AuthResponseDto
 
-    // Requests a new access token pair using a refresh token.
+    // Запрашивает новую пару access/refresh токенов по refresh token.
     @POST("auth/refresh")
     suspend fun refresh(
         @Body request: RefreshTokenRequestDto
     ): AuthResponseDto
 
-    // Fetches profile information for the current authenticated user.
+    // Запрашивает профиль текущего аутентифицированного пользователя.
     @GET("auth/me")
     suspend fun me(
         @Header("Authorization") authorization: String

@@ -1,29 +1,29 @@
 package com.example.mutlabocsnotes.auth
 
-// Data model for request payloads sent to the backend.
+// Модель данных для request payload, отправляемого в backend.
 data class LoginRequestDto(
     val email: String,
     val password: String
 )
 
-// Data model for request payloads sent to the backend.
+// Модель данных для request payload, отправляемого в backend.
 data class RegisterRequestDto(
     val email: String,
     val password: String,
     val displayName: String? = null
 )
 
-// Data model for request payloads sent to the backend.
+// Модель данных для request payload, отправляемого в backend.
 data class GoogleSocialLoginRequestDto(
     val idToken: String
 )
 
-// Data model for request payloads sent to the backend.
+// Модель данных для request payload, отправляемого в backend.
 data class YandexSocialLoginRequestDto(
     val accessToken: String
 )
 
-// Data model for responses returned by the backend.
+// Модель данных для ответов, возвращаемых backend.
 data class AuthUserResponseDto(
     val id: String,
     val email: String,
@@ -31,7 +31,7 @@ data class AuthUserResponseDto(
     val bridgeUserKey: String? = null
 )
 
-// Data model for responses returned by the backend.
+// Модель данных для ответов, возвращаемых backend.
 data class AuthResponseDto(
     val accessToken: String,
     val refreshToken: String,

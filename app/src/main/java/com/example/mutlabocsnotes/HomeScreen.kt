@@ -52,7 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 
-// Composable that renders home screen.
+// Composable-функция для отображения главного экрана.
 @Composable
 fun HomeScreen(
     notes: List<Note>,
@@ -205,7 +205,7 @@ private enum class  BuildingStage {
     Lively
 }
 
-// Maps total collected coins to the current house-building progression stage.
+// Сопоставляет общее количество собранных монет со стадией прогресса строительства дома.
 private fun stageForCoins(totalCoins: Int): BuildingStage = when {
     totalCoins >= 400 -> BuildingStage.Lively
     totalCoins >= 300 -> BuildingStage.Details
@@ -216,7 +216,7 @@ private fun stageForCoins(totalCoins: Int): BuildingStage = when {
 
 
 
-// Composable that renders completed notes screen.
+// Composable-функция для отображения экрана выполненных заметок.
 @Composable
 fun CompletedNotesScreen (
     notes: List<Note>,
@@ -235,7 +235,7 @@ fun CompletedNotesScreen (
                 onCellClick = { index ->
                     when (index) {
                         0 -> onNavigateHome()
-                        2 -> { /* already on completed screen */ }
+                        2 -> { /* уже на экране выполненных заметок */ }
                     }
 
                 }
@@ -327,7 +327,7 @@ fun NoteItem(
                             .padding(start = 8.dp)
                     ) {
                         Text(text = note.title, style = MaterialTheme.typography.subtitle1)
-                        // Render note details differently depending on note category.
+                        // Отображает детали заметки по-разному в зависимости от категории.
                         when (note.category) {
                             NoteCategory.SHOPPING -> {
                                 if (note.checklist.isNotEmpty()) {
@@ -405,7 +405,7 @@ fun NoteItem(
     }
 }
 
-        // Formats raw values into a user-friendly string.
+        // Преобразует исходные значения в строку, понятную пользователю.
         private fun formatDeadline(millis: Long): String {
             val calendar = Calendar.getInstance().apply {
                 timeInMillis = millis
@@ -417,7 +417,7 @@ fun NoteItem(
             )
         }
 
-        // Composable that renders bottom row with five cells.
+        // Composable-функция для отображения нижней строки из пяти ячеек.
         @Composable
         fun BottomRowWithFiveCells(
             selectedIndex: Int,
@@ -494,7 +494,7 @@ fun NoteItem(
                     }
                 }
             }
-            // Composable that renders search row.
+            // Composable-функция для отображения строки поиска.
             @Composable
             fun SearchRow(
                 query: String,
@@ -521,7 +521,7 @@ fun NoteItem(
             }
         }
 
-        // Preview composable for design-time inspection in Android Studio.
+        // Preview-composable для предпросмотра в Android Studio.
         @Preview(showBackground = true)
         @Composable
         fun HomeScreenPreview() {

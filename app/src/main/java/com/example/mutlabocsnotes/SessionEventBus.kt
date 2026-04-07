@@ -4,13 +4,13 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
-// Interface that defines a contract for this module.
+// Интерфейс, задающий контракт этого модуля.
 sealed interface SessionEvent {
-    // Data model shared between layers of this module.
+    // Модель данных, общая для слоёв этого модуля.
     data object SessionExpired : SessionEvent
 }
 
-// Singleton event bus for cross-layer session events.
+// Event bus-одиночка для межслойных событий сессии.
 object SessionEventBus {
     private val _events = MutableSharedFlow<SessionEvent>(
         extraBufferCapacity = 1
@@ -18,7 +18,7 @@ object SessionEventBus {
 
     val events: SharedFlow<SessionEvent> = _events.asSharedFlow()
 
-    // Publishes an event to interested subscribers.
+    // Публикует событие для заинтересованных подписчиков.
     fun emit(event: SessionEvent) {
         _events.tryEmit(event)
     }

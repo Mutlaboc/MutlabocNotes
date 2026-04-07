@@ -10,7 +10,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// Holds UI state and handles user-driven actions.
+// Хранит UI-состояние и обрабатывает действия пользователя.
 class HomeInfoViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = HomeInfoRepository(application)
@@ -19,7 +19,7 @@ class HomeInfoViewModel(application: Application) : AndroidViewModel(application
     var isLoading by mutableStateOf(false)
     var errorMessage by mutableStateOf<String?>(null)
 
-    // Loads data required by the current screen or feature.
+    // Загружает данные, необходимые текущему экрану или функциональности.
     fun loadCards() {
         viewModelScope.launch(Dispatchers.IO) {
             launch(Dispatchers.Main) {
@@ -39,7 +39,7 @@ class HomeInfoViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    // Adds a card through the repository and refreshes local state.
+    // Добавляет карточку через репозиторий и обновляет локальное состояние.
     fun addCard(card: HomeInfoCard) {
         viewModelScope.launch(Dispatchers.IO) {
             val result = repository.insert(card)
@@ -55,7 +55,7 @@ class HomeInfoViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    // Updates existing data with new values.
+    // Обновляет существующие данные новыми значениями.
     fun updateCard(card: HomeInfoCard) {
         if (card.id.isEmpty()) return
         viewModelScope.launch(Dispatchers.IO) {
@@ -74,7 +74,7 @@ class HomeInfoViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-        // Deletes the target entity from storage or backend.
+        // Удаляет целевую сущность из хранилища или backend.
         fun deleteCard(cardId: String) {
             viewModelScope.launch(Dispatchers.IO) {
                 val result = repository.delete(cardId)
@@ -91,7 +91,7 @@ class HomeInfoViewModel(application: Application) : AndroidViewModel(application
             }
         }
 
-    // Clears temporary or persisted state values.
+    // Очищает временные и сохранённые данные состояния.
     fun clearAll() {
         cards.clear()
         errorMessage = null

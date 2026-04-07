@@ -16,14 +16,14 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
-// HTTP interceptor that enriches outgoing requests.
+// HTTP-интерсептор, дополняющий исходящие запросы.
 class AuthorizationInterceptor(
     context: Context
 ) : Interceptor {
 
     private val sessionManager = SessionManager(context.applicationContext)
 
-    // Adds authorization data before sending the request.
+    // Добавляет данные авторизации перед отправкой запроса.
     override fun intercept(chain: Interceptor.Chain): Response {
         val token = sessionManager.getAccessToken()
 
@@ -40,7 +40,7 @@ class AuthorizationInterceptor(
     }
 }
 
-// HTTP authenticator that refreshes expired credentials.
+// HTTP-аутентификатор, обновляющий истекшие учётные данные.
 class RefreshTokenAuthenticator(
     context: Context
 ) : Authenticator {
@@ -49,9 +49,9 @@ class RefreshTokenAuthenticator(
     private val sessionManager = SessionManager(appContext)
     private val gson = Gson()
 
-    // Attempts token refresh when the backend returns unauthorized.
+    // Пытается обновить токен, когда backend возвращает unauthorized.
     override fun authenticate(route: Route?, response: Response): Request? {
-        // Stop after a limited number of attempts to avoid retry loops.
+        // Останавливается после ограниченного числа попыток, чтобы избежать циклов повторов.
         if (responseCount(response) >= 2) {
             clearSessionAndNotify()
             return null
@@ -69,14 +69,14 @@ class RefreshTokenAuthenticator(
                 ?.removePrefix("Bearer ")
                 ?.trim()
 
-            // If another request already refreshed the token, reuse it immediately.
+            // Если другой запрос уже обновил токен, сразу используем его.
             if (!currentAccessToken.isNullOrBlank() && currentAccessToken != requestAccessToken) {
                 return response.request.newBuilder()
                     .header("Authorization", "Bearer $currentAccessToken")
                     .build()
             }
 
-            // Otherwise refresh tokens and persist them before retrying the original request.
+            // Иначе обновляем токены, сохраняем их и повторяем исходный запрос.
             val refreshResponse = refreshTokens(storedRefreshToken)
                 ?: run {
                     clearSessionAndNotify()
@@ -96,7 +96,7 @@ class RefreshTokenAuthenticator(
         }
     }
 
-    // Calls refresh endpoint and parses a fresh token pair.
+    // Вызывает endpoint обновления и разбирает новую пару токенов.
     private fun refreshTokens(refreshToken: String): AuthResponseDto? {
         val requestBody = gson.toJson(
             RefreshTokenRequestDto(refreshToken = refreshToken)
@@ -125,13 +125,13 @@ class RefreshTokenAuthenticator(
         }.getOrNull()
     }
 
-    // Clears temporary or persisted state values.
+    // Очищает временные и сохранённые данные состояния.
     private fun clearSessionAndNotify() {
         sessionManager.clear()
         SessionEventBus.emit(SessionEvent.SessionExpired)
     }
 
-    // Counts prior responses chained by OkHttp to control retry depth.
+    // Подсчитывает предыдущие ответы, связанные через OkHttp, чтобы контролировать глубину повторов.
     private fun responseCount(response: Response): Int {
         var currentResponse: Response? = response
         var count = 1
@@ -145,10 +145,10 @@ class RefreshTokenAuthenticator(
     }
 }
 
-// Creates configured clients and dependencies for networking.
+// Создаёт настроенные клиенты и зависимости для сетевого слоя.
 object AuthenticatedApiFactory {
 
-    // Creates and returns a configured instance.
+    // Создаёт и возвращает настроенный экземпляр.
     fun createOkHttpClient(context: Context): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor(AuthorizationInterceptor(context.applicationContext))
@@ -159,7 +159,7 @@ object AuthenticatedApiFactory {
             .build()
     }
 
-    // Creates and returns a configured instance.
+    // Создаёт и возвращает настроенный экземпляр.
     fun createRetrofit(
         context: Context,
         baseUrl: String = ApiConfig.BASE_URL

@@ -1,6 +1,6 @@
 package com.example.mutlabocsnotes
 
-// Enum that defines available options for this feature.
+// Enum, определяющий доступные варианты для этой функциональности.
 enum class HomeSection {
     METERS,
     APPLIANCES,
@@ -10,13 +10,13 @@ enum class HomeSection {
     OTHER
 }
 
-// Data model shared between layers of this module.
+// Модель данных, общая для слоёв этого модуля.
 data class HomeField(
     val key: String = "",
     val value: String = ""
 )
 
-// Data model shared between layers of this module.
+// Модель данных, общая для слоёв этого модуля.
 data class HomeInfoCard(
     val id: String = "",
     val title: String = "",

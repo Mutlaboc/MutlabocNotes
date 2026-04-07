@@ -45,7 +45,7 @@ import androidx.compose.ui.text.input.KeyboardType
 
 @OptIn(ExperimentalMaterial3Api::class)
 
-// Composable that renders edit note screen.
+// Composable-функция для отображения экрана редактирования заметки.
 @Composable
 fun EditNoteScreen(
     note: Note?,
@@ -365,7 +365,7 @@ fun EditNoteScreen(
     }
 }
 
-// Preview composable for design-time inspection in Android Studio.
+// Preview-composable для предпросмотра в Android Studio.
 @Preview(showBackground = true)
 @Composable
 fun EditNoteScreenPreview() {

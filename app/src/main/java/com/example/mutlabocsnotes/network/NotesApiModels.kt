@@ -4,13 +4,13 @@ import com.example.mutlabocsnotes.ChecklistItem
 import com.example.mutlabocsnotes.Note
 import com.example.mutlabocsnotes.NoteCategory
 
-// Data model shared between layers of this module.
+// Модель данных, общая для слоёв этого модуля.
 data class ChecklistItemDto(
     val text: String,
     val isChecked: Boolean
 )
 
-// Data model shared between layers of this module.
+// Модель данных, общая для слоёв этого модуля.
 data class NoteDto(
     val id: String,
     val title: String,
@@ -23,7 +23,7 @@ data class NoteDto(
     val isCompleted: Boolean,
 )
 
-// Data model for request payloads sent to the backend.
+// Модель данных для request payload, отправляемого в backend.
 data class NoteUpsertRequestDto(
     val title: String,
     val content: String,
@@ -35,25 +35,25 @@ data class NoteUpsertRequestDto(
     val isCompleted: Boolean,
 )
 
-// Parses backend category strings into the domain enum with safe fallback.
+// Преобразует строку категории из backend в enum доменной модели с безопасным fallback.
 private fun String.toNoteCategory(): NoteCategory {
     return runCatching { NoteCategory.valueOf(this) }
         .getOrDefault(NoteCategory.NOTES)
 }
 
-// Converts a domain model to its DTO representation.
+// Преобразует доменную модель в её DTO-представление.
 fun ChecklistItem.toDto(): ChecklistItemDto = ChecklistItemDto(
     text = text,
     isChecked = isChecked
 )
 
-// Converts DTO data to a domain model.
+// Преобразует данные DTO в доменную модель.
 fun ChecklistItemDto.toDomain(): ChecklistItem = ChecklistItem(
     text = text,
     isChecked = isChecked
 )
 
-// Converts DTO data to a domain model.
+// Преобразует данные DTO в доменную модель.
 fun NoteDto.toDomain(): Note = Note(
     id = id,
     title = title,
@@ -66,7 +66,7 @@ fun NoteDto.toDomain(): Note = Note(
     isCompleted = isCompleted
 )
 
-// Builds an upsert request DTO from domain data.
+// Формирует DTO upsert-запроса из данных доменной модели.
 fun Note.toUpsertRequestDto(): NoteUpsertRequestDto = NoteUpsertRequestDto(
     title = title,
     content = content,

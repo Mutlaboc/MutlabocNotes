@@ -8,7 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 
-// Holds UI state and handles user-driven actions.
+// Хранит UI-состояние и обрабатывает действия пользователя.
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = AuthRepository(application)
@@ -20,7 +20,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         checkExistingSession()
     }
 
-    // Checks prerequisites before continuing the flow.
+    // Проверяет предусловия перед продолжением сценария.
     fun checkExistingSession() {
         viewModelScope.launch {
             uiState = uiState.copy(
@@ -46,7 +46,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // Authenticates the user and updates local auth state.
+    // Выполняет аутентификацию пользователя и обновляет локальное состояние авторизации.
     fun signIn(email: String, password: String) {
         if (email.isBlank() || password.length < 6) {
             uiState = uiState.copy(
@@ -77,7 +77,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // Registers a user and updates local auth state.
+    // Регистрирует пользователя и обновляет локальное состояние авторизации.
     fun signUp(email: String, password: String) {
         if (email.isBlank() || password.length < 6) {
             uiState = uiState.copy(
@@ -108,7 +108,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // Ends the current session and clears auth data.
+    // Завершает текущую сессию и очищает данные авторизации.
     fun logout() {
         repository.logout()
         uiState = AuthUiState(
@@ -117,7 +117,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    // Handles an incoming event and updates state accordingly.
+    // Обрабатывает входящее событие и соответствующим образом обновляет состояние.
     fun handleSessionExpired() {
         repository.logout()
         uiState = AuthUiState(
@@ -127,7 +127,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    // Clears temporary or persisted state values.
+    // Очищает временные и сохранённые данные состояния.
     fun clearError() {
         uiState = uiState.copy(errorMessage = null)
     }

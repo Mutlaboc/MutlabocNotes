@@ -1,4 +1,4 @@
-// Plugin set for Android app, Kotlin, annotation processing, and Compose.
+// Набор плагинов для Android-приложения, Kotlin, обработки аннотаций и Compose.
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -7,7 +7,7 @@ plugins {
 
 }
 
-// Android module configuration: package id, SDK targets, build types, and Compose.
+// Конфигурация Android-модуля: id пакета, версии SDK, типы сборок и Compose.
 android {
     namespace = "com.example.mutlabocsnotes"
     compileSdk = 34
@@ -21,7 +21,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Pull OAuth client id from local/CI properties, with a development fallback.
+        // Берём идентификатор OAuth-клиента из локальных/CI-свойств, с резервным значением для разработки.
         val yandexClientId =
             (project.findProperty("YANDEX_CLIENT_ID") as String?) ?: "776676c1ec6c4097ba260b05824f3a39"
 
@@ -56,7 +56,7 @@ android {
 
 }
 
-// Feature dependencies grouped by platform, networking, persistence, and testing.
+// Зависимости функциональности, сгруппированные по платформе, сети, хранению и тестам.
 dependencies {
 
     implementation(libs.androidx.material3.android)

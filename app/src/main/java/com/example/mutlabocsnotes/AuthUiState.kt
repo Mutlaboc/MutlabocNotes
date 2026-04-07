@@ -1,6 +1,6 @@
 package com.example.mutlabocsnotes
 
-// Immutable UI state model for this screen.
+// Неизменяемая модель UI-состояния для этого экрана.
 data class AuthUiState(
     val isCheckingSession: Boolean = true,
     val isLoading: Boolean = false,

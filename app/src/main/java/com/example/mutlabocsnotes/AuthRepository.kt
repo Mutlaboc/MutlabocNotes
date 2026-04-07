@@ -12,12 +12,12 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
-// Data model shared between layers of this module.
+// Модель данных, общая для слоёв этого модуля.
 data class AuthorizedSession(
     val email: String
 )
 
-// Encapsulates data access and business-oriented operations.
+// Инкапсулирует доступ к данным и бизнес-операции.
 class AuthRepository(
     context: android.content.Context,
     baseUrl: String = ApiConfig.BASE_URL,
@@ -25,21 +25,21 @@ class AuthRepository(
     private val api: AuthApi = createAuthApi(baseUrl),
 ) {
 
-    // Authenticates the user and updates local auth state.
+    // Выполняет аутентификацию пользователя и обновляет локальное состояние авторизации.
     suspend fun login(email: String, password: String): Result<AuthorizedSession> {
         return authenticate {
             api.login(AuthCredentialsDto(email.trim(), password))
         }
     }
 
-    // Registers a user and updates local auth state.
+    // Регистрирует пользователя и обновляет локальное состояние авторизации.
     suspend fun register(email: String, password: String): Result<AuthorizedSession> {
         return authenticate {
             api.register(AuthCredentialsDto(email.trim(), password))
         }
     }
 
-    // Restores persisted session and user information.
+    // Восстанавливает сохранённую сессию и данные пользователя.
     suspend fun restoreSession(): Result<AuthorizedSession> = withContext(Dispatchers.IO) {
         val accessToken = sessionManager.getAccessToken()
             ?: return@withContext Result.failure(IllegalStateException("No saved access token"))
@@ -76,12 +76,12 @@ class AuthRepository(
         }
     }
 
-    // Ends the current session and clears auth data.
+    // Завершает текущую сессию и очищает данные авторизации.
     fun logout() {
         sessionManager.clear()
     }
 
-    // Attempts token refresh when the backend returns unauthorized.
+    // Пытается обновить токен, когда backend возвращает unauthorized.
     private suspend fun authenticate(
         block: suspend () -> AuthResponseDto
     ): Result<AuthorizedSession> = withContext(Dispatchers.IO) {
@@ -105,7 +105,7 @@ class AuthRepository(
     }
 
     private companion object {
-        // Creates and returns a configured instance.
+        // Создаёт и возвращает настроенный экземпляр.
         private fun createAuthApi(baseUrl: String): AuthApi {
             val client = OkHttpClient.Builder()
                 .connectTimeout(15, TimeUnit.SECONDS)

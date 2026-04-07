@@ -1,7 +1,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+    <!-- Базовая тема приложения. -->
     <style name="Base.Theme.MutlabocsNotes" parent="Theme.Material3.Light.NoActionBar">
-        <!-- Customize your light theme here. -->
+        <!-- Настройка светлой темы. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
     </style>
 

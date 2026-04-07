@@ -14,7 +14,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
-// Holds UI state and handles user-driven actions.
+// Хранит UI-состояние и обрабатывает действия пользователя.
 class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = NotesRepository(application)
@@ -54,7 +54,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // Clears temporary or persisted state values.
+    // Очищает временные и сохранённые данные состояния.
     fun clearAll() {
         notes.clear()
         totalCoins = 0
@@ -119,7 +119,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    // Recomputes earned coins using only notes marked as completed.
+    // Пересчитывает заработанные монеты, учитывая только помеченные как выполненные заметки.
     private fun recalculateTotalCoins() {
         totalCoins = notes.sumOf { if (it.isCompleted) it.coinCount else 0 }
     }

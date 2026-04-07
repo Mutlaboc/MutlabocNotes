@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
-// Manages shared local state used across the app.
+// Управляет общим локальным состоянием, используемым во всём приложении.
 class SessionManager(context: Context) {
 
     private val appContext = context.applicationContext
@@ -21,7 +21,7 @@ class SessionManager(context: Context) {
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
 
-    // Saves current data and persists changes.
+    // Сохраняет текущие данные и фиксирует изменения.
     fun saveSession(
         accessToken: String,
         refreshToken: String,
@@ -34,19 +34,19 @@ class SessionManager(context: Context) {
             .apply()
     }
 
-    // Returns data from the current source.
+    // Возвращает данные из текущего источника.
     fun getAccessToken(): String? = prefs.getString(KEY_ACCESS_TOKEN, null)
 
-    // Returns data from the current source.
+    // Возвращает данные из текущего источника.
     fun getRefreshToken(): String? = prefs.getString(KEY_REFRESH_TOKEN, null)
 
-    // Returns data from the current source.
+    // Возвращает данные из текущего источника.
     fun getEmail(): String? = prefs.getString(KEY_EMAIL, null)
 
-    // Returns true when a non-empty access token exists in storage.
+    // Возвращает true, если в хранилище есть непустой access token.
     fun hasSession(): Boolean = !getAccessToken().isNullOrBlank()
 
-    // Clears temporary or persisted state values.
+    // Очищает временные и сохранённые данные состояния.
     fun clear() {
         prefs.edit().clear().apply()
     }

@@ -8,7 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Notes API repository that uses JWT Bearer authorization from SessionManager.
+ * Репозиторий Notes API, использующий JWT Bearer-авторизацию из SessionManager.
  */
 class NotesRepository(
     application: Application,
@@ -16,7 +16,7 @@ class NotesRepository(
     private val api: NotesApi = createNotesApi(application, baseUrl),
 ) {
 
-    // Returns data from the current source.
+    // Возвращает данные из текущего источника.
     suspend fun getAllNotes(): List<Note> = withContext(Dispatchers.IO) {
         return@withContext try {
             api.getNotes().map { it.toDomain() }
@@ -25,7 +25,7 @@ class NotesRepository(
         }
     }
 
-    // Inserts a new entity into storage or backend.
+    // Добавляет новую сущность в хранилище или backend.
     suspend fun insert(note: Note): String? = withContext(Dispatchers.IO) {
         return@withContext try {
             val created = api.createNote(note.toUpsertRequestDto())
@@ -35,7 +35,7 @@ class NotesRepository(
         }
     }
 
-    // Updates existing data with new values.
+    // Обновляет существующие данные новыми значениями.
     suspend fun update(note: Note): Boolean = withContext(Dispatchers.IO) {
         if (note.id.isBlank()) return@withContext false
 
@@ -47,7 +47,7 @@ class NotesRepository(
         }
     }
 
-    // Deletes the target entity from storage or backend.
+    // Удаляет целевую сущность из хранилища или backend.
     suspend fun delete(noteId: String): Boolean = withContext(Dispatchers.IO) {
         if (noteId.isBlank()) return@withContext false
 
@@ -60,7 +60,7 @@ class NotesRepository(
     }
 
     companion object {
-        // Creates and returns a configured instance.
+        // Создаёт и возвращает настроенный экземпляр.
         private fun createNotesApi(
             application: Application,
             baseUrl: String

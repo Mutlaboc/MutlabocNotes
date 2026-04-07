@@ -1,5 +1,5 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
-// Version declarations live here so modules share a single plugin baseline.
+// Корневой файл сборки, где задаются общие параметры для всех модулей.
+// Объявления версий находятся здесь, чтобы модули использовали единый набор плагинов.
 plugins {
     id("com.android.application") version "8.11.1" apply false
     kotlin("android")            version "2.1.20" apply false
