@@ -1,6 +1,6 @@
 package com.example.mutlabocsnotes
 
-// Enum, определяющий доступные варианты для этой функциональности.
+// Enum, определяющий доступные варианты разделов.
 enum class HomeSection {
     METERS,
     APPLIANCES,
