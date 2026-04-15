@@ -8,13 +8,13 @@ import retrofit2.http.POST
 // Retrofit-контракт с backend-эндпоинтами этой функциональности.
 interface AuthApi {
 
-    // Регистрирует пользователя и обновляет локальное состояние авторизации.
+    // Сетевой контракт на регистрацию пользователя.
     @POST("auth/register")
     suspend fun register(
         @Body request: AuthCredentialsDto
     ): AuthResponseDto
 
-    // Выполняет аутентификацию пользователя и обновляет локальное состояние авторизации.
+    // Сетевой контракт на аутентификацию пользователя.
     @POST("auth/login")
     suspend fun login(
         @Body request: AuthCredentialsDto
