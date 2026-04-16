@@ -7,32 +7,32 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 
-// Retrofit-контракт с backend-эндпоинтами этой функциональности.
+// Retrofit-контракт с backend-эндпоинтами.
 interface HomeCardsApi {
-    // Возвращает данные из текущего источника.
+    // Получение карточки дома.
     @GET("home-cards")
     suspend fun getHomeCards(): List<HomeCardDto>
 
-    // Возвращает данные из текущего источника.
+    // Получение карточки дома.
     @GET("home-cards/{id}")
     suspend fun getHomeCardById(
         @Path("id") cardId: String,
     ): HomeCardDto
 
-    // Создаёт и возвращает настроенный экземпляр.
+    // Создание карточки дома.
     @POST("home-cards")
     suspend fun createHomeCard(
         @Body request: HomeCardUpsertRequestDto,
     ): HomeCardDto
 
-    // Обновляет существующие данные новыми значениями.
+    // Обновление карточки дома.
     @PUT("home-cards/{id}")
     suspend fun updateHomeCard(
         @Path("id") cardId: String,
         @Body request: HomeCardUpsertRequestDto,
     ): HomeCardDto
 
-    // Удаляет целевую сущность из хранилища или backend.
+    // Удаление карточки дома.
     @DELETE("home-cards/{id}")
     suspend fun deleteHomeCard(
         @Path("id") cardId: String,

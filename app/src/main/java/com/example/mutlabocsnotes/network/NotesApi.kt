@@ -7,32 +7,32 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 
-// Retrofit-контракт с backend-эндпоинтами этой функциональности.
+// Retrofit-контракт с backend-эндпоинтами.
 interface NotesApi {
-    // Возвращает данные из текущего источника.
+    // Получение списка заметок.
     @GET("notes")
     suspend fun getNotes(): List<NoteDto>
 
-    // Возвращает данные из текущего источника.
+    // Получение заметки по ID.
     @GET("notes/{id}")
     suspend fun getNoteById(
         @Path("id") noteId: String,
     ): NoteDto
 
-    // Создаёт и возвращает настроенный экземпляр.
+    // Создание заметки.
     @POST("notes")
     suspend fun createNote(
         @Body request: NoteUpsertRequestDto,
     ): NoteDto
 
-    // Обновляет существующие данные новыми значениями.
+    // Обновление заметки.
     @PUT("notes/{id}")
     suspend fun updateNote(
         @Path("id") noteId: String,
         @Body request: NoteUpsertRequestDto,
     ): NoteDto
 
-    // Удаляет целевую сущность из хранилища или backend.
+    // Удаление заметки.
     @DELETE("notes/{id}")
     suspend fun deleteNote(
         @Path("id") noteId: String,
