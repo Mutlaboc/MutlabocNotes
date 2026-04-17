@@ -12,7 +12,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
-// Модель данных, общая для слоёв этого модуля.
+// Класс данных авторизации.
 data class AuthorizedSession(
     val email: String
 )

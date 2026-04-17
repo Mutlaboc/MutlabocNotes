@@ -4,13 +4,13 @@ import com.example.mutlabocsnotes.HomeField
 import com.example.mutlabocsnotes.HomeInfoCard
 import com.example.mutlabocsnotes.HomeSection
 
-// Модель данных, общая для слоёв этого модуля.
+// Модель данных поля карточки дома.
 data class HomeFieldDto(
     val key: String,
     val value: String,
 )
 
-// Модель данных, общая для слоёв этого модуля.
+// Модель данных для карточки дома.
 data class HomeCardDto(
     val id: String,
     val title: String,
