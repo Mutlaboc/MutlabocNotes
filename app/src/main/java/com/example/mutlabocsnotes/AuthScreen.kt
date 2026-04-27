@@ -68,7 +68,7 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
             )
         }
     }
-
+        // Аутентификация через гугл
     val googleLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -92,7 +92,7 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
                         }
                     }
                 } else {
-                    Toast.makeText(context, "Google idToken is empty", LENGTH_SHORT).show()
+                    Toast.makeText(context, "Google id Token is empty", LENGTH_SHORT).show()
                 }
             } else {
                 Log.e("Auth", "Google sign-in failed", task.exception)
@@ -104,7 +104,7 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
             }
         }
     }
-
+    // Аутентификация через яндекс
     val yandexLauncher = if (!isPreview && yandexAuthSdk != null) {
         rememberLauncherForActivityResult(yandexAuthSdk.contract) { result ->
             when (result) {
@@ -148,7 +148,7 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
     } else {
         null
     }
-
+        // UI часть
     Column(modifier = Modifier.padding(16.dp)) {
         OutlinedTextField(
             value = email,

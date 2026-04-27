@@ -1,17 +1,13 @@
 package com.example.mutlabocsnotes
 
-import DeadlineNotificationScheduler
 import androidx.compose.runtime.mutableStateListOf
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 // Хранит UI-состояние и обрабатывает действия пользователя.

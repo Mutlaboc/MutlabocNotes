@@ -1,12 +1,10 @@
+package com.example.mutlabocsnotes
+
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import com.example.mutlabocsnotes.DeadlineNotification
-import com.example.mutlabocsnotes.DeadlineNotificationReceiver
-import com.example.mutlabocsnotes.Note
-import com.example.mutlabocsnotes.NoteCategory
 import java.util.Calendar
 
 // Планирует и отменяет фоновые задачи уведомлений.

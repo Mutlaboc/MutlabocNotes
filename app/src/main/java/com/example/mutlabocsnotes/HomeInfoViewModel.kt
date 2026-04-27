@@ -19,7 +19,7 @@ class HomeInfoViewModel(application: Application) : AndroidViewModel(application
     var isLoading by mutableStateOf(false)
     var errorMessage by mutableStateOf<String?>(null)
 
-    // Загружает данные, необходимые текущему экрану или функциональности.
+    // Загружает карточку.
     fun loadCards() {
         viewModelScope.launch(Dispatchers.IO) {
             launch(Dispatchers.Main) {
@@ -55,7 +55,7 @@ class HomeInfoViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    // Обновляет существующие данные новыми значениями.
+    // Обновляет карточку.
     fun updateCard(card: HomeInfoCard) {
         if (card.id.isEmpty()) return
         viewModelScope.launch(Dispatchers.IO) {
@@ -74,7 +74,7 @@ class HomeInfoViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-        // Удаляет целевую сущность из хранилища или backend.
+        // Удаляет карточку.
         fun deleteCard(cardId: String) {
             viewModelScope.launch(Dispatchers.IO) {
                 val result = repository.delete(cardId)
