@@ -8,127 +8,144 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 
-// Хранит UI-состояние и обрабатывает действия пользователя.
-class AuthViewModel(application: Application) : AndroidViewModel(application) {
+class AuthViewModel(
+    application: Application,
+    private val repository: AuthSessionRepository,
+    autoRestore: Boolean
+) : AndroidViewModel(application) {
 
-    private val repository = AuthRepository(application)
+    constructor(application: Application) : this(
+        application = application,
+        repository = AuthRepository(application),
+        autoRestore = true
+    )
 
     var uiState by mutableStateOf(AuthUiState())
         private set
 
     init {
-        checkExistingSession()
+        if (autoRestore) {
+            restoreSession()
+        }
     }
 
-    // Проверяет предусловия перед продолжением сценария.
-    fun checkExistingSession() {
+    fun restoreSession() {
         viewModelScope.launch {
-            uiState = uiState.copy(
-                isCheckingSession = true,
-                errorMessage = null
-            )
+            uiState = AuthUiState(authState = AuthState.Checking)
 
             repository.restoreSession()
                 .onSuccess { session ->
-                    uiState = uiState.copy(
-                        isCheckingSession = false,
-                        isAuthenticated = true,
-                        currentEmail = session.email,
-                        errorMessage = null
+                    uiState = AuthUiState(
+                        authState = AuthState.Authenticated(session.email)
                     )
                 }
                 .onFailure {
                     uiState = AuthUiState(
-                        isCheckingSession = false,
-                        isAuthenticated = false
+                        authState = AuthState.Unauthenticated()
                     )
                 }
         }
     }
 
-    // Выполняет аутентификацию пользователя и обновляет локальное состояние авторизации.
     fun signIn(email: String, password: String) {
-        if (email.isBlank() || password.length < 6) {
-            uiState = uiState.copy(
-                errorMessage = "Введите корректный e-mail и пароль не короче 6 символов"
-            )
-            return
-        }
+        if (!validateCredentials(email, password)) return
 
-        viewModelScope.launch {
-            uiState = uiState.copy(isLoading = true, errorMessage = null)
-
+        submitAuth {
             repository.login(email, password)
-                .onSuccess { session ->
-                    uiState = uiState.copy(
-                        isLoading = false,
-                        isAuthenticated = true,
-                        currentEmail = session.email,
-                        errorMessage = null
-                    )
-                }
-                .onFailure { error ->
-                    uiState = uiState.copy(
-                        isLoading = false,
-                        isAuthenticated = false,
-                        errorMessage = error.message ?: "Ошибка входа"
-                    )
-                }
         }
     }
 
-    // Регистрирует пользователя и обновляет локальное состояние авторизации.
     fun signUp(email: String, password: String) {
-        if (email.isBlank() || password.length < 6) {
-            uiState = uiState.copy(
-                errorMessage = "Введите корректный e-mail и пароль не короче 6 символов"
-            )
+        if (!validateCredentials(email, password)) return
+
+        submitAuth {
+            repository.register(email, password)
+        }
+    }
+
+    fun signInWithGoogle(idToken: String) {
+        if (idToken.isBlank()) {
+            showAuthError("Google id token is empty")
             return
         }
 
-        viewModelScope.launch {
-            uiState = uiState.copy(isLoading = true, errorMessage = null)
-
-            repository.register(email, password)
-                .onSuccess { session ->
-                    uiState = uiState.copy(
-                        isLoading = false,
-                        isAuthenticated = true,
-                        currentEmail = session.email,
-                        errorMessage = null
-                    )
-                }
-                .onFailure { error ->
-                    uiState = uiState.copy(
-                        isLoading = false,
-                        isAuthenticated = false,
-                        errorMessage = error.message ?: "Ошибка регистрации"
-                    )
-                }
+        submitAuth {
+            repository.loginWithGoogle(idToken)
         }
     }
 
-    // Завершает текущую сессию и очищает данные авторизации.
+    fun signInWithYandex(accessToken: String) {
+        if (accessToken.isBlank()) {
+            showAuthError("Yandex access token is empty")
+            return
+        }
+
+        submitAuth {
+            repository.loginWithYandex(accessToken)
+        }
+    }
+
     fun logout() {
         repository.logout()
         uiState = AuthUiState(
-            isCheckingSession = false,
-            isAuthenticated = false
+            authState = AuthState.Unauthenticated()
         )
     }
 
-    // Обрабатывает входящее событие и соответствующим образом обновляет состояние.
     fun handleSessionExpired() {
         repository.logout()
         uiState = AuthUiState(
-            isCheckingSession = false,
-            isAuthenticated = false,
-            errorMessage = "Сессия истекла. Войдите снова."
+            authState = AuthState.Unauthenticated(
+                errorMessage = "Session expired. Please sign in again."
+            )
         )
     }
 
-    // Очищает временные и сохранённые данные состояния.
     fun clearError() {
-        uiState = uiState.copy(errorMessage = null)
+        if (uiState.authState is AuthState.Unauthenticated) {
+            uiState = uiState.copy(
+                authState = AuthState.Unauthenticated()
+            )
+        }
+    }
+
+    private fun validateCredentials(email: String, password: String): Boolean {
+        if (email.isBlank() || password.length < 6) {
+            showAuthError("Enter a valid email and a password of at least 6 characters")
+            return false
+        }
+
+        return true
+    }
+
+    private fun submitAuth(block: suspend () -> Result<AuthorizedSession>) {
+        viewModelScope.launch {
+            uiState = AuthUiState(
+                authState = AuthState.Unauthenticated(),
+                isLoading = true
+            )
+
+            block()
+                .onSuccess { session ->
+                    uiState = AuthUiState(
+                        authState = AuthState.Authenticated(session.email)
+                    )
+                }
+                .onFailure { error ->
+                    uiState = AuthUiState(
+                        authState = AuthState.Unauthenticated(
+                            errorMessage = error.message ?: "Authentication failed"
+                        ),
+                        isLoading = false
+                    )
+                }
+        }
+    }
+
+    private fun showAuthError(message: String) {
+        uiState = AuthUiState(
+            authState = AuthState.Unauthenticated(message),
+            isLoading = false
+        )
     }
 }

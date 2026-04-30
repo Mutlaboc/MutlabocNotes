@@ -14,10 +14,10 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -25,29 +25,39 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.mutlabocsnotes.auth.BackendAuthRepository
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.yandex.authsdk.YandexAuthLoginOptions
 import com.yandex.authsdk.YandexAuthOptions
 import com.yandex.authsdk.YandexAuthResult
 import com.yandex.authsdk.YandexAuthSdk
-import kotlinx.coroutines.launch
 
-// Composable-функция для отображения экрана авторизации.
 @Composable
-fun AuthScreen(onAuthenticated: () -> Unit) {
+fun AuthScreen(
+    uiState: AuthUiState,
+    onSignIn: (email: String, password: String) -> Unit,
+    onSignUp: (email: String, password: String) -> Unit,
+    onGoogleIdToken: (String) -> Unit,
+    onYandexAccessToken: (String) -> Unit,
+    onClearError: () -> Unit
+) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
     val isPreview = LocalInspectionMode.current
     val context = LocalContext.current
     val googleWebClientId = stringResource(id = R.string.google_web_client_id)
-    val backendAuthRepository = remember(context) { BackendAuthRepository(context) }
-    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(uiState.errorMessage) {
+        val message = uiState.errorMessage ?: return@LaunchedEffect
+        Toast.makeText(context, message, LENGTH_SHORT).show()
+        onClearError()
+    }
 
     val googleSignInClient = remember {
-        if (isPreview) null else {
+        if (isPreview) {
+            null
+        } else {
             val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(googleWebClientId)
                 .requestEmail()
@@ -60,15 +70,10 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
         if (isPreview) {
             null
         } else {
-            YandexAuthSdk.create(
-                YandexAuthOptions(
-                    context,
-                    true
-                )
-            )
+            YandexAuthSdk.create(YandexAuthOptions(context, true))
         }
     }
-        // Аутентификация через гугл
+
     val googleLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -77,34 +82,21 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
             if (task.isSuccessful) {
                 val idToken = task.result.idToken
                 if (!idToken.isNullOrBlank()) {
-                    scope.launch {
-                        runCatching {
-                            backendAuthRepository.signInWithGoogle(idToken)
-                        }.onSuccess {
-                            onAuthenticated()
-                        }.onFailure { error ->
-                            Log.e("Auth", "Backend Google sign-in failed", error)
-                            Toast.makeText(
-                                context,
-                                error.localizedMessage ?: "Ошибка входа через backend",
-                                LENGTH_SHORT
-                            ).show()
-                        }
-                    }
+                    onGoogleIdToken(idToken)
                 } else {
-                    Toast.makeText(context, "Google id Token is empty", LENGTH_SHORT).show()
+                    Toast.makeText(context, "Google id token is empty", LENGTH_SHORT).show()
                 }
             } else {
                 Log.e("Auth", "Google sign-in failed", task.exception)
                 Toast.makeText(
                     context,
-                    task.exception?.localizedMessage ?: "Ошибка входа через Google",
+                    task.exception?.localizedMessage ?: "Google sign-in failed",
                     LENGTH_SHORT
                 ).show()
             }
         }
     }
-    // Аутентификация через яндекс
+
     val yandexLauncher = if (!isPreview && yandexAuthSdk != null) {
         rememberLauncherForActivityResult(yandexAuthSdk.contract) { result ->
             when (result) {
@@ -112,22 +104,8 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
                     val accessToken = result.token.value.trim()
                     if (accessToken.isBlank()) {
                         Toast.makeText(context, "Yandex access token is empty", LENGTH_SHORT).show()
-                        return@rememberLauncherForActivityResult
-                    }
-
-                    scope.launch {
-                        runCatching {
-                            backendAuthRepository.signInWithYandex(accessToken)
-                        }.onSuccess {
-                            onAuthenticated()
-                        }.onFailure { error ->
-                            Log.e("Auth", "Backend Yandex sign-in failed", error)
-                            Toast.makeText(
-                                context,
-                                error.localizedMessage ?: "Ошибка входа через Яндекс",
-                                LENGTH_SHORT
-                            ).show()
-                        }
+                    } else {
+                        onYandexAccessToken(accessToken)
                     }
                 }
 
@@ -135,105 +113,51 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
                     Log.e("Auth", "Yandex SDK sign-in failed", result.exception)
                     Toast.makeText(
                         context,
-                        result.exception.localizedMessage ?: "Ошибка входа через Яндекс",
+                        result.exception.localizedMessage ?: "Yandex sign-in failed",
                         LENGTH_SHORT
                     ).show()
                 }
 
                 YandexAuthResult.Cancelled -> {
-                    Toast.makeText(context, "Вход через Яндекс отменён", LENGTH_SHORT).show()
+                    Toast.makeText(context, "Yandex sign-in cancelled", LENGTH_SHORT).show()
                 }
             }
         }
     } else {
         null
     }
-        // UI часть
+
     Column(modifier = Modifier.padding(16.dp)) {
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Email") }
+            label = { Text("Email") },
+            enabled = !uiState.isLoading
         )
         Spacer(Modifier.padding(6.dp))
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Password") }
+            label = { Text("Password") },
+            enabled = !uiState.isLoading
         )
         Spacer(Modifier.padding(6.dp))
         Button(
-            onClick = {
-                if (email.isBlank() || password.length < 6) {
-                    Toast.makeText(
-                        context,
-                        "Введите корректный e-mail и пароль больше 6 символов",
-                        LENGTH_SHORT
-                    ).show()
-                    return@Button
-                }
-
-                if (!isPreview) {
-                    scope.launch {
-                        runCatching {
-                            backendAuthRepository.signInWithEmail(
-                                email = email.trim(),
-                                password = password
-                            )
-                        }.onSuccess {
-                            onAuthenticated()
-                        }.onFailure { error ->
-                            Log.e("Auth", "Backend email sign-in failed", error)
-                            Toast.makeText(
-                                context,
-                                error.localizedMessage ?: "Ошибка входа",
-                                LENGTH_SHORT
-                            ).show()
-                        }
-                    }
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
+            onClick = { onSignIn(email.trim(), password) },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !uiState.isLoading
         ) {
-            Text("Sign In")
+            Text(if (uiState.isLoading) "Signing in..." else "Sign In")
         }
 
         Spacer(Modifier.padding(6.dp))
 
         Button(
-            onClick = {
-                if (email.isBlank() || password.length < 6) {
-                    Toast.makeText(
-                        context,
-                        "Введите корректный e-mail и больше 6 символов",
-                        LENGTH_SHORT
-                    ).show()
-                    return@Button
-                }
-
-                if (!isPreview) {
-                    scope.launch {
-                        runCatching {
-                            backendAuthRepository.signUpWithEmail(
-                                email = email.trim(),
-                                password = password
-                            )
-                        }.onSuccess {
-                            onAuthenticated()
-                        }.onFailure { error ->
-                            Log.e("Auth", "Backend email sign-up failed", error)
-                            Toast.makeText(
-                                context,
-                                error.localizedMessage ?: "Ошибка регистрации",
-                                LENGTH_SHORT
-                            ).show()
-                        }
-                    }
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
+            onClick = { onSignUp(email.trim(), password) },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !uiState.isLoading
         ) {
             Text("Sign Up")
         }
@@ -243,10 +167,11 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
         Button(
             onClick = {
                 if (!isPreview) {
-                    googleLauncher.launch(googleSignInClient?.signInIntent)
+                    googleSignInClient?.signInIntent?.let(googleLauncher::launch)
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !uiState.isLoading
         ) {
             Text("Sign in with Google")
         }
@@ -259,7 +184,8 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
                     yandexLauncher?.launch(YandexAuthLoginOptions())
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !uiState.isLoading
         ) {
             Text("Sign in with Yandex")
         }
@@ -271,10 +197,16 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
     showBackground = true,
     backgroundColor = 0xFFFFFF
 )
-// Preview-composable для предпросмотра в Android Studio.
 @Composable
 fun AuthScreenPreview() {
     MaterialTheme {
-        AuthScreen(onAuthenticated = {})
+        AuthScreen(
+            uiState = AuthUiState(authState = AuthState.Unauthenticated()),
+            onSignIn = { _, _ -> },
+            onSignUp = { _, _ -> },
+            onGoogleIdToken = {},
+            onYandexAccessToken = {},
+            onClearError = {}
+        )
     }
 }

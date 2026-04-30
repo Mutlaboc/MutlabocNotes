@@ -8,18 +8,20 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.darkColors
 import androidx.compose.material.lightColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -27,26 +29,22 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.mutlabocsnotes.SessionManager
 
-// Точка входа Activity, выполняющая базовую инициализацию приложения.
 class MainActivity : ComponentActivity() {
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
-    // Инициализирует ресурсы Activity и запускает содержимое приложения.
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         createNotificationChannel()
-
         requestNotificationPermissionIfNeeded()
+
         setContent {
             MyApp()
         }
     }
 
-    // Создает канал для уведомлений.
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = getString(R.string.deadline_notification_channel_name)
@@ -61,8 +59,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-
-     // Запрашивает разрешение на уведомления у пользователя, если это необходимо.
     private fun requestNotificationPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val granted = ContextCompat.checkSelfPermission(
@@ -76,49 +72,77 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Composable-функция, отображающая приложение.
 @Composable
 fun MyApp(
-    // ViewModel для работы с заметками (хранит состояние списка заметок)
+    authViewModel: AuthViewModel = viewModel(),
     notesViewModel: NotesViewModel = viewModel(),
     homeInfoViewModel: HomeInfoViewModel = viewModel()
 ) {
-    // Контроллер навигации для переключения между экранами
     val navController = rememberNavController()
-    val context = LocalContext.current
-    // Менеджер сессий (хранит данные о вошедшем пользователе локально)
-    val sessionManager = remember { SessionManager(context) }
+    val authUiState = authViewModel.uiState
+    val authState = authUiState.authState
 
-    // Определение начального экрана: если пользователь залогинен - идем на "home", иначе на "auth"
-    val startDestination = remember {
-        if (sessionManager.hasSession()) "home" else "auth"
+    LaunchedEffect(Unit) {
+        SessionEventBus.events.collect { event ->
+            when (event) {
+                SessionEvent.SessionExpired -> authViewModel.handleSessionExpired()
+            }
+        }
+    }
+
+    LaunchedEffect(authState) {
+        when (authState) {
+            is AuthState.Authenticated -> {
+                notesViewModel.loadNotes()
+                navController.navigate("home") {
+                    popUpTo("bootstrap") { inclusive = false }
+                    launchSingleTop = true
+                }
+            }
+
+            is AuthState.Unauthenticated -> {
+                navController.navigate("auth") {
+                    popUpTo("bootstrap") { inclusive = false }
+                    launchSingleTop = true
+                }
+            }
+
+            AuthState.Checking -> Unit
+        }
     }
 
     var isDarkTheme by rememberSaveable { mutableStateOf(false) }
 
     MaterialTheme(colors = if (isDarkTheme) darkColors() else lightColors()) {
-        // Контейнер для навигации
         NavHost(
             navController = navController,
-            startDestination = startDestination
+            startDestination = "bootstrap"
         ) {
-
-            // Экран авторизации
-            composable("auth") {
-                AuthScreen {
-                    notesViewModel.loadNotes()
-                    navController.navigate("home") {
-                        popUpTo("auth") { inclusive = true }
-                    }
+            composable("bootstrap") {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
                 }
             }
 
-            // Главный экран со списком заметок
+            composable("auth") {
+                AuthScreen(
+                    uiState = authUiState,
+                    onSignIn = authViewModel::signIn,
+                    onSignUp = authViewModel::signUp,
+                    onGoogleIdToken = authViewModel::signInWithGoogle,
+                    onYandexAccessToken = authViewModel::signInWithYandex,
+                    onClearError = authViewModel::clearError
+                )
+            }
+
             composable("home") {
                 HomeScreen(
                     notes = notesViewModel.notes,
                     totalCoins = notesViewModel.totalCoins,
-                    userEmail = sessionManager.getEmail().orEmpty(),
+                    userEmail = authUiState.currentEmail,
                     onAddNoteClick = {
                         navController.navigate("edit")
                     },
@@ -136,36 +160,24 @@ fun MyApp(
                     onCompletionChange = { noteId, isCompleted ->
                         notesViewModel.setNoteCompletion(noteId, isCompleted)
                     },
-                    onSwitchUser = {
-                        sessionManager.clear()
-                        navController.navigate("auth") {
-                            popUpTo("home") { inclusive = true }
-                        }
-                    },
+                    onSwitchUser = authViewModel::logout,
                     onOpenSettings = {
                         navController.navigate("settings")
                     }
                 )
             }
 
-            // Экран настроек
             composable("settings") {
                 SettingsScreen(
                     isDarkTheme = isDarkTheme,
                     onThemeChange = { isDarkTheme = it },
-                    onDeleteAccount = {
-                        sessionManager.clear()
-                        navController.navigate("auth") {
-                            popUpTo("home") { inclusive = true }
-                        }
-                    },
+                    onDeleteAccount = authViewModel::logout,
                     onBack = {
                         navController.popBackStack()
                     }
                 )
             }
 
-            // Экран завершенных заметок
             composable("completed") {
                 CompletedNotesScreen(
                     notes = notesViewModel.notes,
@@ -184,7 +196,6 @@ fun MyApp(
                 )
             }
 
-            // Экран карточек (Home Info)
             composable("home_info") {
                 LaunchedEffect(Unit) {
                     homeInfoViewModel.loadCards()
@@ -201,7 +212,6 @@ fun MyApp(
                 )
             }
 
-            // Экран создания карточки инфо
             composable("home_info_edit") {
                 EditHomeInfoCardScreen(
                     card = null,
@@ -214,7 +224,6 @@ fun MyApp(
                 )
             }
 
-            // Экран редактирования карточки инфо (с ID)
             composable(
                 route = "home_info_edit/{cardId}",
                 arguments = listOf(navArgument("cardId") { type = NavType.StringType })
@@ -235,7 +244,6 @@ fun MyApp(
                 )
             }
 
-            // Экран создания заметки
             composable("edit") {
                 EditNoteScreen(
                     note = null,
@@ -246,7 +254,6 @@ fun MyApp(
                 )
             }
 
-            // Экран редактирования заметки (с ID)
             composable(
                 route = "edit/{noteId}",
                 arguments = listOf(navArgument("noteId") { type = NavType.StringType })
@@ -272,4 +279,3 @@ fun MyApp(
         }
     }
 }
-
