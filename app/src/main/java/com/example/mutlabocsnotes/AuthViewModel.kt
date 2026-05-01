@@ -110,8 +110,8 @@ class AuthViewModel(
     }
 
     private fun validateCredentials(email: String, password: String): Boolean {
-        if (email.isBlank() || password.length < 6) {
-            showAuthError("Enter a valid email and a password of at least 6 characters")
+        if (email.isBlank() || password.length < 8) {
+            showAuthError("Enter a valid email and a password of at least 8 characters")
             return false
         }
 

@@ -84,25 +84,139 @@ class AuthViewModelTest {
             viewModel.uiState.authState
         )
     }
+
+    @Test
+    fun signIn_shortPassword_doesNotCallRepositoryAndShowsError() = runTest(mainDispatcherRule.dispatcher) {
+        viewModel.signIn("user@example.com", "1234567")
+        advanceUntilIdle()
+
+        assertEquals(0, repository.loginCalls)
+        assertEquals(
+            AuthState.Unauthenticated("Enter a valid email and a password of at least 8 characters"),
+            viewModel.uiState.authState
+        )
+    }
+
+    @Test
+    fun signUp_shortPassword_doesNotCallRepositoryAndShowsError() = runTest(mainDispatcherRule.dispatcher) {
+        viewModel.signUp("user@example.com", "1234567")
+        advanceUntilIdle()
+
+        assertEquals(0, repository.registerCalls)
+        assertEquals(
+            AuthState.Unauthenticated("Enter a valid email and a password of at least 8 characters"),
+            viewModel.uiState.authState
+        )
+    }
+
+    @Test
+    fun signIn_validCredentials_callsRepositoryAndSetsAuthenticatedState() = runTest(mainDispatcherRule.dispatcher) {
+        viewModel.signIn("user@example.com", "12345678")
+        advanceUntilIdle()
+
+        assertEquals(1, repository.loginCalls)
+        assertEquals("user@example.com", repository.lastLoginEmail)
+        assertEquals("12345678", repository.lastLoginPassword)
+        assertEquals(AuthState.Authenticated("user@example.com"), viewModel.uiState.authState)
+        assertFalse(viewModel.uiState.isLoading)
+    }
+
+    @Test
+    fun signUp_validCredentials_callsRepositoryAndSetsAuthenticatedState() = runTest(mainDispatcherRule.dispatcher) {
+        viewModel.signUp("new@example.com", "12345678")
+        advanceUntilIdle()
+
+        assertEquals(1, repository.registerCalls)
+        assertEquals("new@example.com", repository.lastRegisterEmail)
+        assertEquals("12345678", repository.lastRegisterPassword)
+        assertEquals(AuthState.Authenticated("new@example.com"), viewModel.uiState.authState)
+        assertFalse(viewModel.uiState.isLoading)
+    }
+
+    @Test
+    fun signInWithGoogle_validToken_callsRepositoryAndSetsAuthenticatedState() = runTest(mainDispatcherRule.dispatcher) {
+        viewModel.signInWithGoogle("google-token")
+        advanceUntilIdle()
+
+        assertEquals(1, repository.googleCalls)
+        assertEquals("google-token", repository.lastGoogleToken)
+        assertEquals(AuthState.Authenticated("google@example.com"), viewModel.uiState.authState)
+        assertFalse(viewModel.uiState.isLoading)
+    }
+
+    @Test
+    fun signInWithYandex_validToken_callsRepositoryAndSetsAuthenticatedState() = runTest(mainDispatcherRule.dispatcher) {
+        viewModel.signInWithYandex("yandex-token")
+        advanceUntilIdle()
+
+        assertEquals(1, repository.yandexCalls)
+        assertEquals("yandex-token", repository.lastYandexToken)
+        assertEquals(AuthState.Authenticated("yandex@example.com"), viewModel.uiState.authState)
+        assertFalse(viewModel.uiState.isLoading)
+    }
+
+    @Test
+    fun signInWithGoogle_blankToken_doesNotCallRepositoryAndShowsError() = runTest(mainDispatcherRule.dispatcher) {
+        viewModel.signInWithGoogle(" ")
+        advanceUntilIdle()
+
+        assertEquals(0, repository.googleCalls)
+        assertEquals(
+            AuthState.Unauthenticated("Google id token is empty"),
+            viewModel.uiState.authState
+        )
+    }
+
+    @Test
+    fun signInWithYandex_blankToken_doesNotCallRepositoryAndShowsError() = runTest(mainDispatcherRule.dispatcher) {
+        viewModel.signInWithYandex(" ")
+        advanceUntilIdle()
+
+        assertEquals(0, repository.yandexCalls)
+        assertEquals(
+            AuthState.Unauthenticated("Yandex access token is empty"),
+            viewModel.uiState.authState
+        )
+    }
 }
 
 private class FakeAuthSessionRepository : AuthSessionRepository {
     var restoreResult: Result<AuthorizedSession> = Result.failure(IllegalStateException("not set"))
     var logoutCalled: Boolean = false
+    var loginCalls: Int = 0
+    var registerCalls: Int = 0
+    var googleCalls: Int = 0
+    var yandexCalls: Int = 0
+    var lastLoginEmail: String? = null
+    var lastLoginPassword: String? = null
+    var lastRegisterEmail: String? = null
+    var lastRegisterPassword: String? = null
+    var lastGoogleToken: String? = null
+    var lastYandexToken: String? = null
 
     override suspend fun login(email: String, password: String): Result<AuthorizedSession> {
+        loginCalls++
+        lastLoginEmail = email
+        lastLoginPassword = password
         return Result.success(AuthorizedSession(email))
     }
 
     override suspend fun register(email: String, password: String): Result<AuthorizedSession> {
+        registerCalls++
+        lastRegisterEmail = email
+        lastRegisterPassword = password
         return Result.success(AuthorizedSession(email))
     }
 
     override suspend fun loginWithGoogle(idToken: String): Result<AuthorizedSession> {
+        googleCalls++
+        lastGoogleToken = idToken
         return Result.success(AuthorizedSession("google@example.com"))
     }
 
     override suspend fun loginWithYandex(accessToken: String): Result<AuthorizedSession> {
+        yandexCalls++
+        lastYandexToken = accessToken
         return Result.success(AuthorizedSession("yandex@example.com"))
     }
 
