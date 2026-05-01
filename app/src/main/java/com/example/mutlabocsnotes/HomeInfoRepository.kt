@@ -1,20 +1,18 @@
 package com.example.mutlabocsnotes
 
-import android.app.Application
 import com.example.mutlabocsnotes.network.HomeCardsApi
 import com.example.mutlabocsnotes.network.toDomain
 import com.example.mutlabocsnotes.network.toUpsertRequestDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-// Инкапсулирует доступ к данным и бизнес-операции.
+// Репозиторий для карточек домашнего экрана.
+// API передаётся снаружи, чтобы общий Retrofit создавался в AppContainer.
 class HomeInfoRepository(
-    application: Application,
-    baseUrl: String = ApiConfig.BASE_URL,
-    private val api: HomeCardsApi = createHomeCardsApi(application, baseUrl),
+    private val api: HomeCardsApi,
 ) {
 
-    // Возвращает данные из текущего источника.
+    // Загружает все карточки и отдаёт ошибку наружу, чтобы экран мог показать сообщение.
     suspend fun getAllCards(): Result<List<HomeInfoCard>> = withContext(Dispatchers.IO) {
         return@withContext try {
             Result.success(api.getHomeCards().map { it.toDomain() })
@@ -23,7 +21,7 @@ class HomeInfoRepository(
         }
     }
 
-    // Добавляет новую сущность в хранилище или backend.
+    // Создаёт карточку и возвращает id, который назначил backend.
     suspend fun insert(card: HomeInfoCard): Result<String> = withContext(Dispatchers.IO) {
         return@withContext try {
             val created = api.createHomeCard(card.toUpsertRequestDto())
@@ -33,7 +31,7 @@ class HomeInfoRepository(
         }
     }
 
-    // Обновляет существующие данные новыми значениями.
+    // Обновляет карточку только если у неё уже есть серверный id.
     suspend fun update(card: HomeInfoCard): Result<Unit> = withContext(Dispatchers.IO) {
         if (card.id.isBlank()) {
             return@withContext Result.failure(IllegalArgumentException("Пустой идентификатор карточки"))
@@ -47,7 +45,7 @@ class HomeInfoRepository(
         }
     }
 
-    // Удаляет целевую сущность из хранилища или backend.
+    // Удаляет карточку на backend и возвращает результат операции во ViewModel.
     suspend fun delete(cardId: String): Result<Unit> = withContext(Dispatchers.IO) {
         if (cardId.isBlank()) {
             return@withContext Result.failure(IllegalArgumentException("Пустой идентификатор карточки"))
@@ -58,18 +56,6 @@ class HomeInfoRepository(
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
-        }
-    }
-
-    companion object {
-        // Создаёт и возвращает настроенный экземпляр.
-        private fun createHomeCardsApi(
-            application: Application,
-            baseUrl: String
-        ): HomeCardsApi {
-            return AuthenticatedApiFactory
-                .createRetrofit(application, baseUrl)
-                .create(HomeCardsApi::class.java)
         }
     }
 }

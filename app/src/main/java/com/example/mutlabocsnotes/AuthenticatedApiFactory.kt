@@ -1,6 +1,5 @@
 package com.example.mutlabocsnotes
 
-import android.content.Context
 import com.example.mutlabocsnotes.network.AuthResponseDto
 import com.example.mutlabocsnotes.network.RefreshTokenRequestDto
 import com.google.gson.Gson
@@ -16,14 +15,12 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
-// HTTP-интерсептор, дополняющий исходящие запросы.
+// HTTP-интерсептор добавляет access token из общего SessionManager в защищённые запросы.
 class AuthorizationInterceptor(
-    context: Context
+    private val sessionManager: SessionManager
 ) : Interceptor {
 
-    private val sessionManager = SessionManager(context.applicationContext)
-
-    // Добавляет данные авторизации перед отправкой запроса.
+    // Если токена нет, запрос уходит без заголовка Authorization.
     override fun intercept(chain: Interceptor.Chain): Response {
         val token = sessionManager.getAccessToken()
 
@@ -40,18 +37,17 @@ class AuthorizationInterceptor(
     }
 }
 
-// HTTP-аутентификатор, обновляющий истекшие учётные данные.
+// HTTP-аутентификатор обновляет истёкший access token и повторяет исходный запрос.
 class RefreshTokenAuthenticator(
-    context: Context
+    private val sessionManager: SessionManager,
+    private val baseUrl: String = ApiConfig.BASE_URL
 ) : Authenticator {
 
-    private val appContext = context.applicationContext
-    private val sessionManager = SessionManager(appContext)
     private val gson = Gson()
 
-    // Пытается обновить токен, когда backend возвращает unauthorized.
+    // Вызывается OkHttp, когда backend возвращает unauthorized.
     override fun authenticate(route: Route?, response: Response): Request? {
-        // Останавливается после ограниченного числа попыток, чтобы избежать циклов повторов.
+        // Останавливаемся после ограниченного числа попыток, чтобы избежать циклов повтора.
         if (responseCount(response) >= 2) {
             clearSessionAndNotify()
             return null
@@ -69,14 +65,14 @@ class RefreshTokenAuthenticator(
                 ?.removePrefix("Bearer ")
                 ?.trim()
 
-            // Если другой запрос уже обновил токен, сразу используем его.
+            // Если другой запрос уже обновил токен, используем свежий токен без повторного refresh.
             if (!currentAccessToken.isNullOrBlank() && currentAccessToken != requestAccessToken) {
                 return response.request.newBuilder()
                     .header("Authorization", "Bearer $currentAccessToken")
                     .build()
             }
 
-            // Иначе обновляем токены, сохраняем их и повторяем исходный запрос.
+            // Иначе обновляем пару токенов, сохраняем её и повторяем исходный запрос.
             val refreshResponse = refreshTokens(storedRefreshToken)
                 ?: run {
                     clearSessionAndNotify()
@@ -103,7 +99,7 @@ class RefreshTokenAuthenticator(
         ).toRequestBody("application/json".toMediaType())
 
         val request = Request.Builder()
-            .url("${ApiConfig.BASE_URL}auth/refresh")
+            .url("${baseUrl}auth/refresh")
             .post(requestBody)
             .build()
 
@@ -125,13 +121,13 @@ class RefreshTokenAuthenticator(
         }.getOrNull()
     }
 
-    // Очищает временные и сохранённые данные состояния.
+    // Очищает сохранённую сессию и сообщает UI, что нужно вернуться к авторизации.
     private fun clearSessionAndNotify() {
         sessionManager.clear()
         SessionEventBus.emit(SessionEvent.SessionExpired)
     }
 
-    // Подсчитывает предыдущие ответы, связанные через OkHttp, чтобы контролировать глубину повторов.
+    // Считает цепочку повторов OkHttp, чтобы контролировать глубину retry.
     private fun responseCount(response: Response): Int {
         var currentResponse: Response? = response
         var count = 1
@@ -145,28 +141,31 @@ class RefreshTokenAuthenticator(
     }
 }
 
-// Создаёт настроенные клиенты и зависимости для сетевого слоя.
+// Создаёт настроенные клиенты и зависимости для защищённого сетевого слоя.
 object AuthenticatedApiFactory {
 
-    // Создаёт и возвращает настроенный экземпляр.
-    fun createOkHttpClient(context: Context): OkHttpClient {
+    // OkHttpClient получает общий SessionManager, чтобы не создавать новое хранилище токенов.
+    fun createOkHttpClient(
+        sessionManager: SessionManager,
+        baseUrl: String = ApiConfig.BASE_URL
+    ): OkHttpClient {
         return OkHttpClient.Builder()
-            .addInterceptor(AuthorizationInterceptor(context.applicationContext))
-            .authenticator(RefreshTokenAuthenticator(context.applicationContext))
+            .addInterceptor(AuthorizationInterceptor(sessionManager))
+            .authenticator(RefreshTokenAuthenticator(sessionManager, baseUrl))
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .writeTimeout(15, TimeUnit.SECONDS)
             .build()
     }
 
-    // Создаёт и возвращает настроенный экземпляр.
+    // Retrofit для API, которым нужна авторизация через текущую сессию.
     fun createRetrofit(
-        context: Context,
+        sessionManager: SessionManager,
         baseUrl: String = ApiConfig.BASE_URL
     ): Retrofit {
         return Retrofit.Builder()
             .baseUrl(baseUrl)
-            .client(createOkHttpClient(context))
+            .client(createOkHttpClient(sessionManager, baseUrl))
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }

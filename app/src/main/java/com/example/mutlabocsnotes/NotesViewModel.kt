@@ -1,28 +1,29 @@
 package com.example.mutlabocsnotes
 
-import androidx.compose.runtime.mutableStateListOf
 import android.app.Application
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.setValue
 
-// Хранит UI-состояние и обрабатывает действия пользователя.
-class NotesViewModel(application: Application) : AndroidViewModel(application) {
+// Хранит UI-состояние заметок и обрабатывает действия пользователя.
+// Репозиторий и планировщик приходят из AppContainer, а не создаются внутри ViewModel.
+class NotesViewModel(
+    application: Application,
+    private val repository: NotesRepository,
+    private val notificationScheduler: DeadlineNotificationScheduler
+) : AndroidViewModel(application) {
 
-    private val repository = NotesRepository(application)
-    private val notificationScheduler = DeadlineNotificationScheduler(application)
-
-    // Локальный кэш заметок, можно сделать LiveData или StateFlow для наблюдения за изменениями
+    // Локальный Compose-кэш заметок, который читают экраны.
     val notes = mutableStateListOf<Note>()
     var totalCoins by mutableIntStateOf(0)
-    private set
+        private set
 
-
-    // Загружаем заметки
+    // Загружает заметки и пересоздаёт расписание напоминаний для актуального списка.
     fun loadNotes() {
         viewModelScope.launch(Dispatchers.IO) {
             val loadNotes = repository.getAllNotes()
@@ -35,7 +36,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-// Добавляем заметку
+    // Добавляет заметку на backend, затем обновляет локальный список и уведомления.
     fun addNote(note: Note) {
         viewModelScope.launch(Dispatchers.IO) {
             val id = repository.insert(note)
@@ -50,14 +51,13 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // Очищает временные и сохранённые данные состояния.
+    // Очищает локальное состояние, например после выхода пользователя.
     fun clearAll() {
         notes.clear()
         totalCoins = 0
     }
 
-    // Обновляем заметку
-    // TODO Надо бы сделать защиту от сбоя одновления
+    // Обновляет заметку на backend и синхронизирует локальное состояние при успехе.
     fun updateNote(note: Note) {
         if (note.id.isEmpty()) return
         viewModelScope.launch(Dispatchers.IO) {
@@ -75,7 +75,8 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
 
         }
     }
-    // Помечаем заметку как выполненную (с защитой от сбоя)
+
+    // Оптимистично меняет статус выполнения и откатывает изменение, если backend не принял обновление.
     fun setNoteCompletion(noteId: String, isCompleted: Boolean) {
         val index = notes.indexOfFirst { it.id == noteId }
         if (index == -1) return
@@ -99,7 +100,7 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // Удаление заметки
+    // Удаляет заметку и отменяет связанное с ней напоминание.
     fun deleteNote(noteId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val success = repository.delete(noteId)
@@ -115,9 +116,9 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    // Пересчитывает заработанные монеты, учитывая только помеченные как выполненные заметки.
+
+    // Пересчитывает заработанные монеты только по выполненным заметкам.
     private fun recalculateTotalCoins() {
         totalCoins = notes.sumOf { if (it.isCompleted) it.coinCount else 0 }
     }
 }
-

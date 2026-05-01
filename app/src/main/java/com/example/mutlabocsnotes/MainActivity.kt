@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -40,8 +41,10 @@ class MainActivity : ComponentActivity() {
         createNotificationChannel()
         requestNotificationPermissionIfNeeded()
 
+        // Activity получает готовую фабрику из Application и передаёт её в Compose-root.
+        val appContainer = (application as MutlabocNotesApplication).appContainer
         setContent {
-            MyApp()
+            MyApp(viewModelFactory = appContainer.viewModelFactory)
         }
     }
 
@@ -74,9 +77,11 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MyApp(
-    authViewModel: AuthViewModel = viewModel(),
-    notesViewModel: NotesViewModel = viewModel(),
-    homeInfoViewModel: HomeInfoViewModel = viewModel()
+    viewModelFactory: ViewModelProvider.Factory,
+    // Все root ViewModel создаются одной фабрикой, чтобы зависимости не собирались внутри UI.
+    authViewModel: AuthViewModel = viewModel(factory = viewModelFactory),
+    notesViewModel: NotesViewModel = viewModel(factory = viewModelFactory),
+    homeInfoViewModel: HomeInfoViewModel = viewModel(factory = viewModelFactory)
 ) {
     val navController = rememberNavController()
     val authUiState = authViewModel.uiState

@@ -8,17 +8,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 
+// ViewModel авторизации получает репозиторий снаружи, чтобы не создавать сетевой слой внутри себя.
 class AuthViewModel(
     application: Application,
     private val repository: AuthSessionRepository,
     autoRestore: Boolean
 ) : AndroidViewModel(application) {
-
-    constructor(application: Application) : this(
-        application = application,
-        repository = AuthRepository(application),
-        autoRestore = true
-    )
 
     var uiState by mutableStateOf(AuthUiState())
         private set

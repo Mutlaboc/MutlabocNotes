@@ -27,11 +27,11 @@ interface AuthSessionRepository {
     fun logout()
 }
 
+// Репозиторий авторизации работает с готовыми SessionManager и AuthApi из AppContainer.
+// Так root ViewModel не создаёт общие зависимости самостоятельно.
 class AuthRepository(
-    context: android.content.Context,
-    baseUrl: String = ApiConfig.BASE_URL,
-    private val sessionManager: SessionManager = SessionManager(context),
-    private val api: AuthApi = createAuthApi(baseUrl),
+    private val sessionManager: SessionManager,
+    private val api: AuthApi,
 ) : AuthSessionRepository {
 
     override suspend fun login(email: String, password: String): Result<AuthorizedSession> {
@@ -120,8 +120,9 @@ class AuthRepository(
         }
     }
 
-    private companion object {
-        private fun createAuthApi(baseUrl: String): AuthApi {
+    companion object {
+        // Отдельный AuthApi нужен без авторизационного interceptor, чтобы логин и refresh не зависели от Bearer-токена.
+        fun createAuthApi(baseUrl: String): AuthApi {
             val client = OkHttpClient.Builder()
                 .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(15, TimeUnit.SECONDS)
