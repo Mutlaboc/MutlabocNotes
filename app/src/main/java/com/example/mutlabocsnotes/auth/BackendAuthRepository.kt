@@ -1,6 +1,7 @@
 package com.example.mutlabocsnotes.auth
 
 import android.content.Context
+import com.example.mutlabocsnotes.BuildConfig
 import com.example.mutlabocsnotes.SessionManager as AppSessionManager
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -14,7 +15,11 @@ class BackendAuthRepository(context: Context) {
 
     private val authApi: AuthApi by lazy {
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BODY
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
         }
 
         val client = OkHttpClient.Builder()

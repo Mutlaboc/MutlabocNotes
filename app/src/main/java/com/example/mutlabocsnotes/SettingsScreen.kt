@@ -32,20 +32,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
-// Composable-функция для отображения экрана настроек.
 @Composable
-fun SettingsScreen (
+fun SettingsScreen(
     isDarkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit,
-    onDeleteAccount: () -> Unit,
+    onLogout: () -> Unit,
     onBack: () -> Unit,
 ) {
-    // TODO реализовать бы смену языков...
     val languages = listOf("Русский", "English", "Deutsch")
     var isLanguageMenuExpanded by remember { mutableStateOf(false) }
     var selectedLanguage by rememberSaveable { mutableStateOf(languages.first()) }
 
-    Scaffold (
+    Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Настройки") },
@@ -56,7 +54,7 @@ fun SettingsScreen (
                 }
             )
         }
-    ) {paddingValues ->
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -70,10 +68,10 @@ fun SettingsScreen (
             )
             Spacer(modifier = Modifier.height(8.dp))
             Button(
-                onClick = onDeleteAccount,
+                onClick = onLogout,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Удалить аккаунт")
+                Text("Выйти")
             }
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -109,7 +107,7 @@ fun SettingsScreen (
             }
             DropdownMenu(
                 expanded = isLanguageMenuExpanded,
-                onDismissRequest = {isLanguageMenuExpanded = false}
+                onDismissRequest = { isLanguageMenuExpanded = false }
             ) {
                 languages.forEach { language ->
                     DropdownMenuItem(onClick = {
@@ -121,18 +119,16 @@ fun SettingsScreen (
                 }
             }
         }
-
     }
 }
 
-// Preview-composable для предпросмотра в Android Studio.
 @Preview
 @Composable
-fun SettingsScreenPreview () {
+fun SettingsScreenPreview() {
     SettingsScreen(
         isDarkTheme = false,
         onThemeChange = {},
-        onDeleteAccount = {},
+        onLogout = {},
         onBack = {}
     )
 }

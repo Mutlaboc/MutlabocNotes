@@ -171,7 +171,7 @@ fun MyApp(
                 SettingsScreen(
                     isDarkTheme = isDarkTheme,
                     onThemeChange = { isDarkTheme = it },
-                    onDeleteAccount = authViewModel::logout,
+                    onLogout = authViewModel::logout,
                     onBack = {
                         navController.popBackStack()
                     }
