@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -14,7 +15,8 @@ import kotlinx.coroutines.launch
 // Репозиторий передаётся из AppContainer, поэтому экран не занимается созданием зависимостей.
 class HomeInfoViewModel(
     application: Application,
-    private val repository: HomeInfoRepository
+    private val repository: HomeInfoDataSource,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : AndroidViewModel(application) {
 
     val cards = mutableStateListOf<HomeInfoCard>()
@@ -23,7 +25,7 @@ class HomeInfoViewModel(
 
     // Загружает карточки и сортирует их по времени обновления.
     fun loadCards() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             launch(Dispatchers.Main) {
                 isLoading = true
                 errorMessage = null
@@ -43,7 +45,7 @@ class HomeInfoViewModel(
 
     // Создаёт карточку через репозиторий и добавляет её в локальный список.
     fun addCard(card: HomeInfoCard) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val result = repository.insert(card)
             launch(Dispatchers.Main) {
                 result.onSuccess { id ->
@@ -60,7 +62,7 @@ class HomeInfoViewModel(
     // Обновляет карточку и сохраняет сортировку после успешного ответа backend.
     fun updateCard(card: HomeInfoCard) {
         if (card.id.isEmpty()) return
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val result = repository.update(card)
             launch(Dispatchers.Main) {
                 result.onSuccess {
@@ -78,7 +80,7 @@ class HomeInfoViewModel(
 
     // Удаляет карточку на backend и затем из локального списка.
     fun deleteCard(cardId: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val result = repository.delete(cardId)
             launch(Dispatchers.Main) {
                 result.onSuccess {

@@ -7,13 +7,19 @@ import android.content.Intent
 import android.os.Build
 import java.util.Calendar
 
+interface DeadlineScheduler {
+    fun schedule(note: Note)
+    fun cancel(noteId: String)
+    fun scheduleAll(notes: List<Note>)
+}
+
 // Планирует и отменяет фоновые задачи уведомлений.
-class DeadlineNotificationScheduler(private val context: Context) {
+class DeadlineNotificationScheduler(private val context: Context) : DeadlineScheduler {
 
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
 
     // Планирует уведомления о дедлайне для данных заметки.
-    fun schedule(note: Note) {
+    override fun schedule(note: Note) {
         if (alarmManager == null || note.id.isBlank()) return
 
         cancel(note.id)
@@ -69,7 +75,7 @@ class DeadlineNotificationScheduler(private val context: Context) {
     }
 
     // Отменяет ранее запланированные уведомления о дедлайне.
-    fun cancel(noteId: String) {
+    override fun cancel(noteId: String) {
         if (alarmManager == null || noteId.isBlank()) return
         val pendingIntent = PendingIntent.getBroadcast(
             context,
@@ -84,7 +90,7 @@ class DeadlineNotificationScheduler(private val context: Context) {
     }
 
     // Планирует уведомления о дедлайне для данных заметки.
-    fun scheduleAll(notes: List<Note>) {
+    override fun scheduleAll(notes: List<Note>) {
         notes.forEach { schedule(it) }
     }
 

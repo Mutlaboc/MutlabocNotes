@@ -37,19 +37,19 @@ class AppContainer(
         )
     }
 
-    val notesRepository: NotesRepository by lazy {
+    val notesRepository: NotesDataSource by lazy {
         NotesRepository(
             api = authenticatedRetrofit.create(NotesApi::class.java)
         )
     }
 
-    val homeInfoRepository: HomeInfoRepository by lazy {
+    val homeInfoRepository: HomeInfoDataSource by lazy {
         HomeInfoRepository(
             api = authenticatedRetrofit.create(HomeCardsApi::class.java)
         )
     }
 
-    val deadlineNotificationScheduler: DeadlineNotificationScheduler by lazy {
+    val deadlineNotificationScheduler: DeadlineScheduler by lazy {
         DeadlineNotificationScheduler(application)
     }
 
@@ -69,9 +69,9 @@ class AppContainer(
 class MutlabocNotesViewModelFactory(
     private val application: Application,
     private val authRepository: AuthSessionRepository,
-    private val notesRepository: NotesRepository,
-    private val homeInfoRepository: HomeInfoRepository,
-    private val deadlineNotificationScheduler: DeadlineNotificationScheduler
+    private val notesRepository: NotesDataSource,
+    private val homeInfoRepository: HomeInfoDataSource,
+    private val deadlineNotificationScheduler: DeadlineScheduler
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")

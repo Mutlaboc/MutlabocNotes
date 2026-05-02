@@ -1,12 +1,22 @@
 package com.example.mutlabocsnotes
 
+import android.app.Application
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import java.io.File
 
 // Регрессионные проверки DI-wiring без Robolectric: читаем исходники и манифест как обычные файлы.
+@OptIn(ExperimentalCoroutinesApi::class)
 class AppContainerWiringTest {
+
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
 
     @Test
     fun manifest_registersCustomApplication() {
@@ -25,10 +35,26 @@ class AppContainerWiringTest {
 
         assertTrue(appContainer.contains("val sessionManager: SessionManager by lazy"))
         assertTrue(appContainer.contains("val authRepository: AuthSessionRepository by lazy"))
-        assertTrue(appContainer.contains("val notesRepository: NotesRepository by lazy"))
-        assertTrue(appContainer.contains("val homeInfoRepository: HomeInfoRepository by lazy"))
-        assertTrue(appContainer.contains("val deadlineNotificationScheduler: DeadlineNotificationScheduler by lazy"))
+        assertTrue(appContainer.contains("val notesRepository: NotesDataSource by lazy"))
+        assertTrue(appContainer.contains("val homeInfoRepository: HomeInfoDataSource by lazy"))
+        assertTrue(appContainer.contains("val deadlineNotificationScheduler: DeadlineScheduler by lazy"))
         assertTrue(appContainer.contains("class MutlabocNotesViewModelFactory"))
+    }
+
+    @Test
+    fun viewModelFactory_createsRootViewModels() = runTest(mainDispatcherRule.dispatcher) {
+        val factory = MutlabocNotesViewModelFactory(
+            application = Application(),
+            authRepository = WiringFakeAuthSessionRepository(),
+            notesRepository = WiringFakeNotesDataSource(),
+            homeInfoRepository = WiringFakeHomeInfoDataSource(),
+            deadlineNotificationScheduler = WiringFakeDeadlineScheduler()
+        )
+
+        assertNotNull(factory.create(AuthViewModel::class.java))
+        assertNotNull(factory.create(NotesViewModel::class.java))
+        assertNotNull(factory.create(HomeInfoViewModel::class.java))
+        advanceUntilIdle()
     }
 
     @Test
@@ -55,4 +81,43 @@ class AppContainerWiringTest {
         }
         return File(directory, path)
     }
+}
+
+private class WiringFakeAuthSessionRepository : AuthSessionRepository {
+    override suspend fun login(email: String, password: String): Result<AuthorizedSession> =
+        Result.success(AuthorizedSession(email))
+
+    override suspend fun register(email: String, password: String): Result<AuthorizedSession> =
+        Result.success(AuthorizedSession(email))
+
+    override suspend fun loginWithGoogle(idToken: String): Result<AuthorizedSession> =
+        Result.success(AuthorizedSession("google@example.com"))
+
+    override suspend fun loginWithYandex(accessToken: String): Result<AuthorizedSession> =
+        Result.success(AuthorizedSession("yandex@example.com"))
+
+    override suspend fun restoreSession(): Result<AuthorizedSession> =
+        Result.failure(IllegalStateException("No saved access token"))
+
+    override fun logout() = Unit
+}
+
+private class WiringFakeNotesDataSource : NotesDataSource {
+    override suspend fun getAllNotes(): List<Note> = emptyList()
+    override suspend fun insert(note: Note): String? = note.id.ifBlank { "note-id" }
+    override suspend fun update(note: Note): Boolean = true
+    override suspend fun delete(noteId: String): Boolean = true
+}
+
+private class WiringFakeHomeInfoDataSource : HomeInfoDataSource {
+    override suspend fun getAllCards(): Result<List<HomeInfoCard>> = Result.success(emptyList())
+    override suspend fun insert(card: HomeInfoCard): Result<String> = Result.success("card-id")
+    override suspend fun update(card: HomeInfoCard): Result<Unit> = Result.success(Unit)
+    override suspend fun delete(cardId: String): Result<Unit> = Result.success(Unit)
+}
+
+private class WiringFakeDeadlineScheduler : DeadlineScheduler {
+    override fun schedule(note: Note) = Unit
+    override fun cancel(noteId: String) = Unit
+    override fun scheduleAll(notes: List<Note>) = Unit
 }

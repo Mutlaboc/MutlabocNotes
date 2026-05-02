@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -14,8 +15,9 @@ import kotlinx.coroutines.launch
 // Репозиторий и планировщик приходят из AppContainer, а не создаются внутри ViewModel.
 class NotesViewModel(
     application: Application,
-    private val repository: NotesRepository,
-    private val notificationScheduler: DeadlineNotificationScheduler
+    private val repository: NotesDataSource,
+    private val notificationScheduler: DeadlineScheduler,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : AndroidViewModel(application) {
 
     // Локальный Compose-кэш заметок, который читают экраны.
@@ -25,7 +27,7 @@ class NotesViewModel(
 
     // Загружает заметки и пересоздаёт расписание напоминаний для актуального списка.
     fun loadNotes() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val loadNotes = repository.getAllNotes()
             launch(Dispatchers.Main) {
                 notes.clear()
@@ -38,7 +40,7 @@ class NotesViewModel(
 
     // Добавляет заметку на backend, затем обновляет локальный список и уведомления.
     fun addNote(note: Note) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val id = repository.insert(note)
             if (id != null) {
                 val noteWithId = note.copy(id = id)
@@ -60,7 +62,7 @@ class NotesViewModel(
     // Обновляет заметку на backend и синхронизирует локальное состояние при успехе.
     fun updateNote(note: Note) {
         if (note.id.isEmpty()) return
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val success = repository.update(note)
             if (success) {
                 val index = notes.indexOfFirst { it.id == note.id }
@@ -85,7 +87,7 @@ class NotesViewModel(
         notes[index] = updatedNote
         notificationScheduler.schedule(updatedNote)
         recalculateTotalCoins()
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val success = repository.update(updatedNote)
             if (!success) {
                 launch(Dispatchers.Main) {
@@ -102,7 +104,7 @@ class NotesViewModel(
 
     // Удаляет заметку и отменяет связанное с ней напоминание.
     fun deleteNote(noteId: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val success = repository.delete(noteId)
             if (success) {
                 val note = notes.find { it.id == noteId }
