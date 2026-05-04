@@ -15,9 +15,9 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
-// HTTP-интерсептор добавляет access token из общего SessionManager в защищённые запросы.
+// HTTP-интерсептор добавляет access token из общего AuthSessionStore в защищённые запросы.
 class AuthorizationInterceptor(
-    private val sessionManager: SessionManager
+    private val sessionManager: AuthSessionStore
 ) : Interceptor {
 
     // Если токена нет, запрос уходит без заголовка Authorization.
@@ -37,9 +37,9 @@ class AuthorizationInterceptor(
     }
 }
 
-// HTTP-аутентификатор обновляет истёкший access token и повторяет исходный запрос.
+// HTTP-аутентификатор обновляет истёкший access token через то же хранилище, что и AuthRepository.
 class RefreshTokenAuthenticator(
-    private val sessionManager: SessionManager,
+    private val sessionManager: AuthSessionStore,
     private val baseUrl: String = ApiConfig.BASE_URL
 ) : Authenticator {
 
@@ -144,9 +144,9 @@ class RefreshTokenAuthenticator(
 // Создаёт настроенные клиенты и зависимости для защищённого сетевого слоя.
 object AuthenticatedApiFactory {
 
-    // OkHttpClient получает общий SessionManager, чтобы не создавать новое хранилище токенов.
+    // OkHttpClient получает общий AuthSessionStore, чтобы не создавать новое хранилище токенов.
     fun createOkHttpClient(
-        sessionManager: SessionManager,
+        sessionManager: AuthSessionStore,
         baseUrl: String = ApiConfig.BASE_URL
     ): OkHttpClient {
         return OkHttpClient.Builder()
@@ -160,7 +160,7 @@ object AuthenticatedApiFactory {
 
     // Retrofit для API, которым нужна авторизация через текущую сессию.
     fun createRetrofit(
-        sessionManager: SessionManager,
+        sessionManager: AuthSessionStore,
         baseUrl: String = ApiConfig.BASE_URL
     ): Retrofit {
         return Retrofit.Builder()

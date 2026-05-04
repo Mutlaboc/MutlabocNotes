@@ -33,7 +33,7 @@ class AppContainerWiringTest {
             "app/src/main/java/com/example/mutlabocsnotes/AppContainer.kt"
         ).readText()
 
-        assertTrue(appContainer.contains("val sessionManager: SessionManager by lazy"))
+        assertTrue(appContainer.contains("val sessionManager: AuthSessionStore by lazy"))
         assertTrue(appContainer.contains("val authRepository: AuthSessionRepository by lazy"))
         assertTrue(appContainer.contains("val notesRepository: NotesDataSource by lazy"))
         assertTrue(appContainer.contains("val homeInfoRepository: HomeInfoDataSource by lazy"))
@@ -69,6 +69,45 @@ class AppContainerWiringTest {
         assertFalse(myAppBody.contains("SessionManager("))
     }
 
+    @Test
+    fun duplicateAuthLayer_isNotReferencedFromSources() {
+        // Держим старый auth-пакет удалённым, чтобы UI не вернулся к legacy repository.
+        val duplicateRepository = "BackendAuth" + "Repository"
+        val duplicatePackage = listOf(
+            "com",
+            "example",
+            "mutlabocsnotes",
+            "auth"
+        ).joinToString(".")
+        val checkedSources = kotlinSourceFiles()
+            .filterNot { it.name == "AppContainerWiringTest.kt" }
+            .joinToString("\n") { it.readText() }
+
+        assertFalse(checkedSources.contains(duplicateRepository))
+        assertFalse(checkedSources.contains(duplicatePackage))
+        assertFalse(projectFile("app/src/main/java/com/example/mutlabocsnotes/auth").exists())
+    }
+
+    @Test
+    fun rootNavigation_usesUnifiedAuthViewModelCallbacks() {
+        // Smoke-проверка root wiring без Compose runner: auth callbacks должны идти через единую ViewModel.
+        val mainActivity = projectFile(
+            "app/src/main/java/com/example/mutlabocsnotes/MainActivity.kt"
+        ).readText()
+        val myAppBody = mainActivity.substringAfter("fun MyApp(")
+
+        assertTrue(myAppBody.contains("authViewModel: AuthViewModel = viewModel(factory = viewModelFactory)"))
+        assertTrue(myAppBody.contains("onSignIn = authViewModel::signIn"))
+        assertTrue(myAppBody.contains("onSignUp = authViewModel::signUp"))
+        assertTrue(myAppBody.contains("onGoogleIdToken = authViewModel::signInWithGoogle"))
+        assertTrue(myAppBody.contains("onYandexAccessToken = authViewModel::signInWithYandex"))
+        assertTrue(myAppBody.contains("is AuthState.Authenticated ->"))
+        assertTrue(myAppBody.contains("""navController.navigate("home")"""))
+        assertTrue(myAppBody.contains("is AuthState.Unauthenticated ->"))
+        assertTrue(myAppBody.contains("""navController.navigate("auth")"""))
+        assertTrue(myAppBody.contains("AuthState.Checking -> Unit"))
+    }
+
     private fun projectFile(path: String): File {
         val userDir = checkNotNull(System.getProperty("user.dir")) {
             "user.dir is not set"
@@ -80,6 +119,19 @@ class AppContainerWiringTest {
             }
         }
         return File(directory, path)
+    }
+
+    private fun kotlinSourceFiles(): List<File> {
+        // Source-level тесты читают Kotlin-файлы напрямую, поэтому не требуют Android instrumentation.
+        val root = projectFile(".")
+        return listOf(
+            File(root, "app/src/main/java"),
+            File(root, "app/src/test/java")
+        ).flatMap { sourceRoot ->
+            sourceRoot.walkTopDown()
+                .filter { it.isFile && it.extension == "kt" }
+                .toList()
+        }
     }
 }
 

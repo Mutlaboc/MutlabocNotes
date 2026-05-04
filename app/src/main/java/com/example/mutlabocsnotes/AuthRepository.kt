@@ -6,6 +6,7 @@ import com.example.mutlabocsnotes.network.AuthResponseDto
 import com.example.mutlabocsnotes.network.GoogleSocialLoginRequestDto
 import com.example.mutlabocsnotes.network.RefreshTokenRequestDto
 import com.example.mutlabocsnotes.network.YandexSocialLoginRequestDto
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -27,11 +28,13 @@ interface AuthSessionRepository {
     fun logout()
 }
 
-// Репозиторий авторизации работает с готовыми SessionManager и AuthApi из AppContainer.
+// Репозиторий авторизации работает с готовыми AuthSessionStore и AuthApi из AppContainer.
 // Так root ViewModel не создаёт общие зависимости самостоятельно.
 class AuthRepository(
-    private val sessionManager: SessionManager,
+    private val sessionManager: AuthSessionStore,
     private val api: AuthApi,
+    // В production используется IO, а тесты подставляют управляемый dispatcher.
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : AuthSessionRepository {
 
     override suspend fun login(email: String, password: String): Result<AuthorizedSession> {
@@ -58,7 +61,7 @@ class AuthRepository(
         }
     }
 
-    override suspend fun restoreSession(): Result<AuthorizedSession> = withContext(Dispatchers.IO) {
+    override suspend fun restoreSession(): Result<AuthorizedSession> = withContext(ioDispatcher) {
         val accessToken = sessionManager.getAccessToken()
             ?: return@withContext Result.failure(IllegalStateException("No saved access token"))
         val refreshToken = sessionManager.getRefreshToken()
@@ -100,7 +103,7 @@ class AuthRepository(
 
     private suspend fun authenticate(
         block: suspend () -> AuthResponseDto
-    ): Result<AuthorizedSession> = withContext(Dispatchers.IO) {
+    ): Result<AuthorizedSession> = withContext(ioDispatcher) {
         return@withContext runCatching {
             val response = block()
             val token = response.accessToken

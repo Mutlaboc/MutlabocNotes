@@ -4,8 +4,18 @@ import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
-// Управляет общим локальным состоянием, используемым во всём приложении.
-class SessionManager(context: Context) {
+// Минимальный контракт хранения auth-сессии: его используют репозиторий и сетевой слой без знания Android-хранилища.
+interface AuthSessionStore {
+    fun saveSession(accessToken: String, refreshToken: String, email: String?)
+    fun getAccessToken(): String?
+    fun getRefreshToken(): String?
+    fun getEmail(): String?
+    fun hasSession(): Boolean
+    fun clear()
+}
+
+// Production-хранилище сессии на EncryptedSharedPreferences.
+class SessionManager(context: Context) : AuthSessionStore {
 
     private val appContext = context.applicationContext
 
@@ -22,7 +32,7 @@ class SessionManager(context: Context) {
     )
 
     // Сохраняет текущие данные и фиксирует изменения.
-    fun saveSession(
+    override fun saveSession(
         accessToken: String,
         refreshToken: String,
         email: String?
@@ -35,19 +45,19 @@ class SessionManager(context: Context) {
     }
 
     // Возвращает данные из текущего источника.
-    fun getAccessToken(): String? = prefs.getString(KEY_ACCESS_TOKEN, null)
+    override fun getAccessToken(): String? = prefs.getString(KEY_ACCESS_TOKEN, null)
 
     // Возвращает данные из текущего источника.
-    fun getRefreshToken(): String? = prefs.getString(KEY_REFRESH_TOKEN, null)
+    override fun getRefreshToken(): String? = prefs.getString(KEY_REFRESH_TOKEN, null)
 
     // Возвращает данные из текущего источника.
-    fun getEmail(): String? = prefs.getString(KEY_EMAIL, null)
+    override fun getEmail(): String? = prefs.getString(KEY_EMAIL, null)
 
     // Возвращает true, если в хранилище есть непустой access token.
-    fun hasSession(): Boolean = !getAccessToken().isNullOrBlank()
+    override fun hasSession(): Boolean = !getAccessToken().isNullOrBlank()
 
     // Очищает временные и сохранённые данные состояния.
-    fun clear() {
+    override fun clear() {
         prefs.edit().clear().apply()
     }
 

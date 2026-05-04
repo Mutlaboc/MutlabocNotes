@@ -12,8 +12,8 @@ import com.example.mutlabocsnotes.network.NotesApi
 class AppContainer(
     private val application: Application
 ) {
-    // Один общий менеджер сессии нужен и репозиториям, и сетевому слою.
-    val sessionManager: SessionManager by lazy {
+    // Один общий store сессии нужен и репозиториям, и сетевому слою.
+    val sessionManager: AuthSessionStore by lazy {
         SessionManager(application)
     }
 
