@@ -2,8 +2,6 @@ package com.example.mutlabocsnotes
 
 import android.app.Application
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
@@ -19,37 +17,27 @@ class NotesViewModel(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : AndroidViewModel(application) {
 
-    val notes = mutableStateListOf<Note>()
-
-    var totalCoins by mutableIntStateOf(0)
+    var uiState by mutableStateOf<NotesUiState>(NotesUiState.Loading)
         private set
 
-    var isLoading by mutableStateOf(false)
-        private set
-
-    var errorMessage by mutableStateOf<String?>(null)
+    var uiMessage by mutableStateOf<UiMessage?>(null)
         private set
 
     fun loadNotes() {
         viewModelScope.launch(ioDispatcher) {
             launch(Dispatchers.Main) {
-                isLoading = true
-                errorMessage = null
+                uiState = NotesUiState.Loading
             }
 
             val result = repository.getAllNotes()
 
             launch(Dispatchers.Main) {
                 result.onSuccess { loadedNotes ->
-                    notes.clear()
-                    notes.addAll(loadedNotes)
-                    notificationScheduler.scheduleAll(notes)
-                    recalculateTotalCoins()
-                    errorMessage = null
+                    applyNotes(loadedNotes)
+                    notificationScheduler.scheduleAll(loadedNotes)
                 }.onFailure { error ->
-                    errorMessage = noteErrorMessage(error, "Failed to load notes")
+                    uiState = NotesUiState.Error(ApiErrorMapper.map(error))
                 }
-                isLoading = false
             }
         }
     }
@@ -60,31 +48,30 @@ class NotesViewModel(
             launch(Dispatchers.Main) {
                 result.onSuccess { id ->
                     val noteWithId = note.copy(id = id)
-                    notes.add(noteWithId)
+                    val notes = currentNotes() + noteWithId
+                    applyNotes(notes)
                     notificationScheduler.schedule(noteWithId)
-                    recalculateTotalCoins()
-                    errorMessage = null
                 }.onFailure { error ->
-                    errorMessage = noteErrorMessage(error, "Failed to save note")
+                    showMessage(error)
                 }
             }
         }
     }
 
     fun clearAll() {
-        notes.clear()
-        totalCoins = 0
-        errorMessage = null
-        isLoading = false
+        uiState = NotesUiState.Empty
+        uiMessage = null
     }
 
-    fun clearError() {
-        errorMessage = null
+    fun onMessageShown(messageId: Long) {
+        if (uiMessage?.id == messageId) {
+            uiMessage = null
+        }
     }
 
     fun updateNote(note: Note) {
         if (note.id.isEmpty()) {
-            errorMessage = "Blank note id"
+            showMessage(IllegalArgumentException("Blank note id"))
             return
         }
 
@@ -92,43 +79,38 @@ class NotesViewModel(
             val result = repository.update(note)
             launch(Dispatchers.Main) {
                 result.onSuccess {
-                    val index = notes.indexOfFirst { it.id == note.id }
-                    if (index != -1) {
-                        notes[index] = note
-                        notificationScheduler.schedule(note)
-                        recalculateTotalCoins()
+                    val notes = currentNotes().map { existing ->
+                        if (existing.id == note.id) note else existing
                     }
-                    errorMessage = null
+                    applyNotes(notes)
+                    notificationScheduler.schedule(note)
                 }.onFailure { error ->
-                    errorMessage = noteErrorMessage(error, "Failed to update note")
+                    showMessage(error)
                 }
             }
         }
     }
 
     fun setNoteCompletion(noteId: String, isCompleted: Boolean) {
-        val index = notes.indexOfFirst { it.id == noteId }
+        val existingNotes = currentNotes()
+        val index = existingNotes.indexOfFirst { it.id == noteId }
         if (index == -1) return
 
-        val existing = notes[index]
+        val existing = existingNotes[index]
         val updatedNote = existing.copy(isCompleted = isCompleted)
-        notes[index] = updatedNote
+        val optimisticNotes = existingNotes.toMutableList().apply {
+            this[index] = updatedNote
+        }
+        applyNotes(optimisticNotes)
         notificationScheduler.schedule(updatedNote)
-        recalculateTotalCoins()
 
         viewModelScope.launch(ioDispatcher) {
             val result = repository.update(updatedNote)
             launch(Dispatchers.Main) {
-                result.onSuccess {
-                    errorMessage = null
-                }.onFailure { error ->
-                    val currentIndex = notes.indexOfFirst { it.id == noteId }
-                    if (currentIndex != -1) {
-                        notes[currentIndex] = existing
-                        notificationScheduler.schedule(existing)
-                        recalculateTotalCoins()
-                    }
-                    errorMessage = noteErrorMessage(error, "Failed to update note")
+                result.onFailure { error ->
+                    applyNotes(existingNotes)
+                    notificationScheduler.schedule(existing)
+                    showMessage(error)
                 }
             }
         }
@@ -139,25 +121,38 @@ class NotesViewModel(
             val result = repository.delete(noteId)
             launch(Dispatchers.Main) {
                 result.onSuccess {
-                    val note = notes.find { it.id == noteId }
-                    if (note != null) {
-                        notes.remove(note)
+                    val notes = currentNotes()
+                    val deletedNote = notes.find { it.id == noteId }
+                    applyNotes(notes.filterNot { it.id == noteId })
+                    if (deletedNote != null) {
                         notificationScheduler.cancel(noteId)
-                        recalculateTotalCoins()
                     }
-                    errorMessage = null
                 }.onFailure { error ->
-                    errorMessage = noteErrorMessage(error, "Failed to delete note")
+                    showMessage(error)
                 }
             }
         }
     }
 
-    private fun recalculateTotalCoins() {
-        totalCoins = notes.sumOf { if (it.isCompleted) it.coinCount else 0 }
+    private fun currentNotes(): List<Note> {
+        return (uiState as? NotesUiState.Content)?.notes.orEmpty()
     }
 
-    private fun noteErrorMessage(error: Throwable, fallback: String): String {
-        return error.message?.takeIf { it.isNotBlank() } ?: fallback
+    private fun applyNotes(notes: List<Note>) {
+        uiState = if (notes.isEmpty()) {
+            NotesUiState.Empty
+        } else {
+            NotesUiState.Content(
+                notes = notes,
+                totalCoins = notes.sumOf { if (it.isCompleted) it.coinCount else 0 }
+            )
+        }
+    }
+
+    private fun showMessage(error: Throwable) {
+        uiMessage = UiMessage(
+            id = UiMessageId.next(),
+            text = ApiErrorMapper.map(error)
+        )
     }
 }

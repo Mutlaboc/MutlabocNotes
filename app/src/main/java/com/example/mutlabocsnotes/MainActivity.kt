@@ -145,12 +145,11 @@ fun MyApp(
 
             composable("home") {
                 HomeScreen(
-                    notes = notesViewModel.notes,
-                    totalCoins = notesViewModel.totalCoins,
+                    uiState = notesViewModel.uiState,
+                    uiMessage = notesViewModel.uiMessage,
                     userEmail = authUiState.currentEmail,
-                    isLoading = notesViewModel.isLoading,
-                    errorMessage = notesViewModel.errorMessage,
                     onRetryNotes = notesViewModel::loadNotes,
+                    onMessageShown = notesViewModel::onMessageShown,
                     onAddNoteClick = {
                         navController.navigate("edit")
                     },
@@ -188,9 +187,10 @@ fun MyApp(
 
             composable("completed") {
                 CompletedNotesScreen(
-                    notes = notesViewModel.notes,
-                    errorMessage = notesViewModel.errorMessage,
+                    uiState = notesViewModel.uiState,
+                    uiMessage = notesViewModel.uiMessage,
                     onRetryNotes = notesViewModel::loadNotes,
+                    onMessageShown = notesViewModel::onMessageShown,
                     onaddNoteClick = {
                         navController.navigate("edit")
                     },
@@ -211,9 +211,10 @@ fun MyApp(
                     homeInfoViewModel.loadCards()
                 }
                 HomeInfoScreen(
-                    cards = homeInfoViewModel.cards,
-                    isLoading = homeInfoViewModel.isLoading,
-                    errorMessage = homeInfoViewModel.errorMessage,
+                    uiState = homeInfoViewModel.uiState,
+                    uiMessage = homeInfoViewModel.uiMessage,
+                    onRetry = homeInfoViewModel::loadCards,
+                    onMessageShown = homeInfoViewModel::onMessageShown,
                     onAddClick = { navController.navigate("home_info_edit") },
                     onCardClick = { cardId ->
                         navController.navigate("home_info_edit/$cardId")
@@ -239,7 +240,8 @@ fun MyApp(
                 arguments = listOf(navArgument("cardId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val cardId = backStackEntry.arguments?.getString("cardId") ?: ""
-                val card = homeInfoViewModel.cards.find { it.id == cardId }
+                val cards = (homeInfoViewModel.uiState as? HomeInfoUiState.Content)?.cards.orEmpty()
+                val card = cards.find { it.id == cardId }
                 EditHomeInfoCardScreen(
                     card = card,
                     onSaveClick = { updatedCard ->
@@ -269,7 +271,8 @@ fun MyApp(
                 arguments = listOf(navArgument("noteId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val noteId = backStackEntry.arguments!!.getString("noteId") ?: ""
-                val note = notesViewModel.notes.find { it.id == noteId }
+                val notes = (notesViewModel.uiState as? NotesUiState.Content)?.notes.orEmpty()
+                val note = notes.find { it.id == noteId }
                 EditNoteScreen(
                     note = note,
                     onSaveClick = { updatedNote ->

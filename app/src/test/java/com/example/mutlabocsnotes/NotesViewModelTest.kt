@@ -5,11 +5,11 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class NotesViewModelTest {
@@ -34,7 +34,7 @@ class NotesViewModelTest {
     }
 
     @Test
-    fun loadNotes_successUpdatesStateRecalculatesCoinsAndSchedulesAll() = runTest(mainDispatcherRule.dispatcher) {
+    fun loadNotes_successSetsContentStateAndSchedulesAll() = runTest(mainDispatcherRule.dispatcher) {
         val completed = note(id = "1", isCompleted = true, coinCount = 5)
         val open = note(id = "2", isCompleted = false, coinCount = 7)
         repository.notesResult = Result.success(listOf(completed, open))
@@ -42,38 +42,51 @@ class NotesViewModelTest {
         viewModel.loadNotes()
         advanceUntilIdle()
 
-        assertEquals(listOf(completed, open), viewModel.notes.toList())
-        assertEquals(5, viewModel.totalCoins)
+        val state = viewModel.uiState as NotesUiState.Content
+        assertEquals(listOf(completed, open), state.notes)
+        assertEquals(5, state.totalCoins)
         assertEquals(listOf(listOf(completed, open)), scheduler.scheduleAllCalls)
-        assertEquals(null, viewModel.errorMessage)
-        assertFalse(viewModel.isLoading)
+        assertEquals(null, viewModel.uiMessage)
     }
 
     @Test
-    fun loadNotes_emptySuccessStaysEmptyWithoutError() = runTest(mainDispatcherRule.dispatcher) {
+    fun loadNotes_emptySuccessSetsEmptyState() = runTest(mainDispatcherRule.dispatcher) {
         repository.notesResult = Result.success(emptyList())
 
         viewModel.loadNotes()
         advanceUntilIdle()
 
-        assertTrue(viewModel.notes.isEmpty())
-        assertEquals(null, viewModel.errorMessage)
-        assertFalse(viewModel.isLoading)
+        assertEquals(NotesUiState.Empty, viewModel.uiState)
+        assertEquals(null, viewModel.uiMessage)
     }
 
     @Test
-    fun loadNotes_failureKeepsExistingNotesAndSetsError() = runTest(mainDispatcherRule.dispatcher) {
-        val existing = note(id = "cached")
-        viewModel.notes.add(existing)
-        repository.notesResult = Result.failure(IllegalStateException("Network unavailable"))
+    fun loadNotes_failureSetsInlineErrorState() = runTest(mainDispatcherRule.dispatcher) {
+        repository.notesResult = Result.failure(IOException("offline"))
 
         viewModel.loadNotes()
         advanceUntilIdle()
 
-        assertEquals(listOf(existing), viewModel.notes.toList())
-        assertEquals("Network unavailable", viewModel.errorMessage)
-        assertFalse(viewModel.isLoading)
+        val state = viewModel.uiState as NotesUiState.Error
+        assertStringResource(R.string.api_error_network, state.message)
         assertTrue(scheduler.scheduleAllCalls.isEmpty())
+    }
+
+    @Test
+    fun loadNotes_retryCanRecoverFromErrorToContent() = runTest(mainDispatcherRule.dispatcher) {
+        val loaded = note(id = "recovered")
+        repository.notesResult = Result.failure(IOException("offline"))
+
+        viewModel.loadNotes()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState is NotesUiState.Error)
+
+        repository.notesResult = Result.success(listOf(loaded))
+        viewModel.loadNotes()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState as NotesUiState.Content
+        assertEquals(listOf(loaded), state.notes)
     }
 
     @Test
@@ -85,87 +98,119 @@ class NotesViewModelTest {
         advanceUntilIdle()
 
         val expected = created.copy(id = "created-id")
-        assertEquals(listOf(expected), viewModel.notes.toList())
+        val state = viewModel.uiState as NotesUiState.Content
+        assertEquals(listOf(expected), state.notes)
         assertEquals(listOf(expected), scheduler.scheduleCalls)
-        assertEquals(null, viewModel.errorMessage)
+        assertEquals(null, viewModel.uiMessage)
     }
 
     @Test
-    fun addNote_failureDoesNotChangeStateAndSetsError() = runTest(mainDispatcherRule.dispatcher) {
-        repository.insertResult = Result.failure(IllegalStateException("Cannot save"))
+    fun addNote_failureKeepsCurrentStateAndEmitsSnackbarMessage() = runTest(mainDispatcherRule.dispatcher) {
+        val existing = note(id = "existing")
+        loadContent(existing)
+        repository.insertResult = Result.failure(IOException("offline"))
 
         viewModel.addNote(note(title = "Created"))
         advanceUntilIdle()
 
-        assertTrue(viewModel.notes.isEmpty())
-        assertEquals("Cannot save", viewModel.errorMessage)
-        assertTrue(scheduler.scheduleCalls.isEmpty())
+        val state = viewModel.uiState as NotesUiState.Content
+        assertEquals(listOf(existing), state.notes)
+        assertStringResource(R.string.api_error_network, checkNotNull(viewModel.uiMessage).text)
+        assertEquals(listOf(existing), scheduler.scheduleCalls)
+    }
+
+    @Test
+    fun messageShownClearsMatchingSnackbarMessage() = runTest(mainDispatcherRule.dispatcher) {
+        repository.insertResult = Result.failure(IOException("offline"))
+
+        viewModel.addNote(note(title = "Created"))
+        advanceUntilIdle()
+
+        val messageId = checkNotNull(viewModel.uiMessage).id
+        viewModel.onMessageShown(messageId)
+
+        assertEquals(null, viewModel.uiMessage)
     }
 
     @Test
     fun setNoteCompletion_successOptimisticallyUpdatesAndPersists() = runTest(mainDispatcherRule.dispatcher) {
         val existing = note(id = "task", isCompleted = false, coinCount = 3)
-        viewModel.notes.add(existing)
+        loadContent(existing)
 
         viewModel.setNoteCompletion("task", true)
 
         val optimistic = existing.copy(isCompleted = true)
-        assertEquals(listOf(optimistic), viewModel.notes.toList())
-        assertEquals(3, viewModel.totalCoins)
+        var state = viewModel.uiState as NotesUiState.Content
+        assertEquals(listOf(optimistic), state.notes)
+        assertEquals(3, state.totalCoins)
 
         advanceUntilIdle()
 
-        assertEquals(listOf(optimistic), viewModel.notes.toList())
+        state = viewModel.uiState as NotesUiState.Content
+        assertEquals(listOf(optimistic), state.notes)
         assertEquals(listOf(optimistic), repository.updateCalls)
-        assertEquals(listOf(optimistic), scheduler.scheduleCalls)
-        assertEquals(null, viewModel.errorMessage)
+        assertEquals(listOf(optimistic), scheduler.scheduleCalls.drop(1))
+        assertEquals(null, viewModel.uiMessage)
     }
 
     @Test
-    fun setNoteCompletion_failureRollsBackStateAndSetsError() = runTest(mainDispatcherRule.dispatcher) {
+    fun setNoteCompletion_failureRollsBackStateAndEmitsSnackbarMessage() = runTest(mainDispatcherRule.dispatcher) {
         val existing = note(id = "task", isCompleted = false, coinCount = 3)
-        repository.updateResult = Result.failure(IllegalStateException("Cannot update"))
-        viewModel.notes.add(existing)
+        repository.updateResult = Result.failure(IOException("offline"))
+        loadContent(existing)
 
         viewModel.setNoteCompletion("task", true)
         advanceUntilIdle()
 
         val optimistic = existing.copy(isCompleted = true)
-        assertEquals(listOf(existing), viewModel.notes.toList())
-        assertEquals(0, viewModel.totalCoins)
+        val state = viewModel.uiState as NotesUiState.Content
+        assertEquals(listOf(existing), state.notes)
+        assertEquals(0, state.totalCoins)
         assertEquals(listOf(optimistic), repository.updateCalls)
-        assertEquals(listOf(optimistic, existing), scheduler.scheduleCalls)
-        assertEquals("Cannot update", viewModel.errorMessage)
+        assertEquals(listOf(optimistic, existing), scheduler.scheduleCalls.drop(1))
+        assertStringResource(R.string.api_error_network, checkNotNull(viewModel.uiMessage).text)
     }
 
     @Test
     fun deleteNote_successRemovesNoteAndCancelsSchedule() = runTest(mainDispatcherRule.dispatcher) {
         val existing = note(id = "delete-me")
         repository.deleteResult = Result.success(Unit)
-        viewModel.notes.add(existing)
+        loadContent(existing)
 
         viewModel.deleteNote("delete-me")
         advanceUntilIdle()
 
-        assertTrue(viewModel.notes.isEmpty())
+        assertEquals(NotesUiState.Empty, viewModel.uiState)
         assertEquals(listOf("delete-me"), repository.deleteCalls)
         assertEquals(listOf("delete-me"), scheduler.cancelCalls)
-        assertEquals(null, viewModel.errorMessage)
+        assertEquals(null, viewModel.uiMessage)
     }
 
     @Test
-    fun deleteNote_failureKeepsNoteAndSetsError() = runTest(mainDispatcherRule.dispatcher) {
+    fun deleteNote_failureKeepsCurrentStateAndEmitsSnackbarMessage() = runTest(mainDispatcherRule.dispatcher) {
         val existing = note(id = "delete-me")
-        repository.deleteResult = Result.failure(IllegalStateException("Cannot delete"))
-        viewModel.notes.add(existing)
+        repository.deleteResult = Result.failure(IOException("offline"))
+        loadContent(existing)
 
         viewModel.deleteNote("delete-me")
         advanceUntilIdle()
 
-        assertEquals(listOf(existing), viewModel.notes.toList())
+        val state = viewModel.uiState as NotesUiState.Content
+        assertEquals(listOf(existing), state.notes)
         assertEquals(listOf("delete-me"), repository.deleteCalls)
         assertTrue(scheduler.cancelCalls.isEmpty())
-        assertEquals("Cannot delete", viewModel.errorMessage)
+        assertStringResource(R.string.api_error_network, checkNotNull(viewModel.uiMessage).text)
+    }
+
+    private fun loadContent(vararg notes: Note) {
+        repository.notesResult = Result.success(notes.toList())
+        viewModel.loadNotes()
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+    }
+
+    private fun assertStringResource(expectedResId: Int, text: UiText) {
+        val resource = text as UiText.StringResource
+        assertEquals(expectedResId, resource.resId)
     }
 
     private fun note(
@@ -224,5 +269,6 @@ private class FakeDeadlineScheduler : DeadlineScheduler {
 
     override fun scheduleAll(notes: List<Note>) {
         scheduleAllCalls.add(notes.toList())
+        scheduleCalls.addAll(notes)
     }
 }

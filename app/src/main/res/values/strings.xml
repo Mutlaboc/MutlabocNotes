@@ -10,5 +10,16 @@
     <string name="deadline_notification_channel_name">Напоминания о дедлайнах</string>
     <string name="deadline_notification_channel_description">Уведомления о наступлении сроков задач</string>
     <string name="deadline_notification_message">Срок выполнения задачи «%1$s» наступил. Не забудьте завершить её!</string>
+    <string name="api_error_unauthorized">Сессия истекла. Войдите снова.</string>
+    <string name="api_error_conflict">Данные были изменены в другом месте. Обновите экран и повторите попытку.</string>
+    <string name="api_error_server">Ошибка сервера. Попробуйте позже.</string>
+    <string name="api_error_network">Ошибка сети. Проверьте подключение и повторите попытку.</string>
+    <string name="api_error_validation">Проверьте введённые данные и повторите попытку.</string>
+    <string name="api_error_unknown">Что-то пошло не так. Повторите попытку.</string>
+    <string name="action_retry">Повторить</string>
+    <string name="notes_empty">Активных заметок пока нет</string>
+    <string name="completed_notes_empty">Здесь будут отображаться выполненные задачи</string>
+    <string name="home_info_empty">Нет карточек для отображения</string>
+    <string name="loading">Загрузка...</string>
 
 </resources>

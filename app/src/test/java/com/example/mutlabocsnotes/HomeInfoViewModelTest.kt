@@ -5,11 +5,11 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeInfoViewModelTest {
@@ -31,7 +31,7 @@ class HomeInfoViewModelTest {
     }
 
     @Test
-    fun loadCards_successSortsByUpdatedAtDescending() = runTest(mainDispatcherRule.dispatcher) {
+    fun loadCards_successSetsContentStateSortedByUpdatedAtDescending() = runTest(mainDispatcherRule.dispatcher) {
         val older = card(id = "older", updatedAt = 1)
         val newer = card(id = "newer", updatedAt = 3)
         val middle = card(id = "middle", updatedAt = 2)
@@ -40,49 +40,77 @@ class HomeInfoViewModelTest {
         viewModel.loadCards()
         advanceUntilIdle()
 
-        assertEquals(listOf(newer, middle, older), viewModel.cards.toList())
-        assertFalse(viewModel.isLoading)
-        assertEquals(null, viewModel.errorMessage)
+        val state = viewModel.uiState as HomeInfoUiState.Content
+        assertEquals(listOf(newer, middle, older), state.cards)
+        assertEquals(null, viewModel.uiMessage)
     }
 
     @Test
-    fun loadCards_failureSetsErrorAndStopsLoading() = runTest(mainDispatcherRule.dispatcher) {
-        repository.cardsResult = Result.failure(IllegalStateException("Network unavailable"))
+    fun loadCards_emptySuccessSetsEmptyState() = runTest(mainDispatcherRule.dispatcher) {
+        repository.cardsResult = Result.success(emptyList())
 
         viewModel.loadCards()
         advanceUntilIdle()
 
-        assertTrue(viewModel.cards.isEmpty())
-        assertFalse(viewModel.isLoading)
-        assertEquals("Network unavailable", viewModel.errorMessage)
+        assertEquals(HomeInfoUiState.Empty, viewModel.uiState)
+    }
+
+    @Test
+    fun loadCards_failureSetsInlineErrorState() = runTest(mainDispatcherRule.dispatcher) {
+        repository.cardsResult = Result.failure(IOException("offline"))
+
+        viewModel.loadCards()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState as HomeInfoUiState.Error
+        assertStringResource(R.string.api_error_network, state.message)
+    }
+
+    @Test
+    fun loadCards_retryCanRecoverFromErrorToContent() = runTest(mainDispatcherRule.dispatcher) {
+        val loaded = card(id = "recovered")
+        repository.cardsResult = Result.failure(IOException("offline"))
+
+        viewModel.loadCards()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState is HomeInfoUiState.Error)
+
+        repository.cardsResult = Result.success(listOf(loaded))
+        viewModel.loadCards()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState as HomeInfoUiState.Content
+        assertEquals(listOf(loaded), state.cards)
     }
 
     @Test
     fun addCard_successAddsCreatedCardAndKeepsSortOrder() = runTest(mainDispatcherRule.dispatcher) {
         val existing = card(id = "existing", updatedAt = 10)
         val created = card(title = "Created", updatedAt = 20)
-        viewModel.cards.add(existing)
+        loadContent(existing)
         repository.insertResult = Result.success("created-id")
 
         viewModel.addCard(created)
         advanceUntilIdle()
 
-        assertEquals(listOf(created.copy(id = "created-id"), existing), viewModel.cards.toList())
+        val state = viewModel.uiState as HomeInfoUiState.Content
+        assertEquals(listOf(created.copy(id = "created-id"), existing), state.cards)
         assertEquals(listOf(created), repository.insertCalls)
+        assertEquals(null, viewModel.uiMessage)
     }
 
     @Test
-    fun addCard_failureDoesNotChangeCardsAndSetsError() = runTest(mainDispatcherRule.dispatcher) {
+    fun addCard_failureKeepsCurrentStateAndEmitsSnackbarMessage() = runTest(mainDispatcherRule.dispatcher) {
         val existing = card(id = "existing")
-        val created = card(title = "Created")
-        viewModel.cards.add(existing)
-        repository.insertResult = Result.failure(IllegalStateException("Cannot save"))
+        loadContent(existing)
+        repository.insertResult = Result.failure(IOException("offline"))
 
-        viewModel.addCard(created)
+        viewModel.addCard(card(title = "Created"))
         advanceUntilIdle()
 
-        assertEquals(listOf(existing), viewModel.cards.toList())
-        assertEquals("Cannot save", viewModel.errorMessage)
+        val state = viewModel.uiState as HomeInfoUiState.Content
+        assertEquals(listOf(existing), state.cards)
+        assertStringResource(R.string.api_error_network, checkNotNull(viewModel.uiMessage).text)
     }
 
     @Test
@@ -90,28 +118,83 @@ class HomeInfoViewModelTest {
         val first = card(id = "first", updatedAt = 10)
         val second = card(id = "second", updatedAt = 20)
         val updatedFirst = first.copy(title = "Updated", updatedAt = 30)
-        viewModel.cards.addAll(listOf(second, first))
+        loadContent(second, first)
         repository.updateResult = Result.success(Unit)
 
         viewModel.updateCard(updatedFirst)
         advanceUntilIdle()
 
-        assertEquals(listOf(updatedFirst, second), viewModel.cards.toList())
+        val state = viewModel.uiState as HomeInfoUiState.Content
+        assertEquals(listOf(updatedFirst, second), state.cards)
         assertEquals(listOf(updatedFirst), repository.updateCalls)
+    }
+
+    @Test
+    fun updateCard_failureKeepsCurrentStateAndEmitsSnackbarMessage() = runTest(mainDispatcherRule.dispatcher) {
+        val existing = card(id = "card")
+        loadContent(existing)
+        repository.updateResult = Result.failure(IOException("offline"))
+
+        viewModel.updateCard(existing.copy(title = "Updated"))
+        advanceUntilIdle()
+
+        val state = viewModel.uiState as HomeInfoUiState.Content
+        assertEquals(listOf(existing), state.cards)
+        assertStringResource(R.string.api_error_network, checkNotNull(viewModel.uiMessage).text)
     }
 
     @Test
     fun deleteCard_successRemovesCard() = runTest(mainDispatcherRule.dispatcher) {
         val first = card(id = "first")
         val second = card(id = "second")
-        viewModel.cards.addAll(listOf(first, second))
+        loadContent(first, second)
         repository.deleteResult = Result.success(Unit)
 
         viewModel.deleteCard("first")
         advanceUntilIdle()
 
-        assertEquals(listOf(second), viewModel.cards.toList())
+        val state = viewModel.uiState as HomeInfoUiState.Content
+        assertEquals(listOf(second), state.cards)
         assertEquals(listOf("first"), repository.deleteCalls)
+    }
+
+    @Test
+    fun deleteCard_failureKeepsCurrentStateAndEmitsSnackbarMessage() = runTest(mainDispatcherRule.dispatcher) {
+        val existing = card(id = "first")
+        loadContent(existing)
+        repository.deleteResult = Result.failure(IOException("offline"))
+
+        viewModel.deleteCard("first")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState as HomeInfoUiState.Content
+        assertEquals(listOf(existing), state.cards)
+        assertEquals(listOf("first"), repository.deleteCalls)
+        assertStringResource(R.string.api_error_network, checkNotNull(viewModel.uiMessage).text)
+    }
+
+    @Test
+    fun messageShownClearsMatchingSnackbarMessage() = runTest(mainDispatcherRule.dispatcher) {
+        repository.insertResult = Result.failure(IOException("offline"))
+
+        viewModel.addCard(card(title = "Created"))
+        advanceUntilIdle()
+
+        val messageId = checkNotNull(viewModel.uiMessage).id
+        viewModel.onMessageShown(messageId)
+
+        assertEquals(null, viewModel.uiMessage)
+    }
+
+    private fun loadContent(vararg cards: HomeInfoCard) {
+        repository.cardsResult = Result.success(cards.toList())
+        viewModel.loadCards()
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
+    }
+
+    private fun assertStringResource(expectedResId: Int, text: UiText) {
+        val resource = text as UiText.StringResource
+        assertEquals(expectedResId, resource.resId)
     }
 
     private fun card(

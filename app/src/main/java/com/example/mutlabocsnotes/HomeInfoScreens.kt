@@ -1,5 +1,6 @@
 package com.example.mutlabocsnotes
 
+import android.app.DatePickerDialog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,10 +15,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.FloatingActionButton
@@ -34,7 +37,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -43,38 +48,48 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import java.util.Calendar
 
-// Composable-функция для отображения экрана информации о доме.
 @Composable
 fun HomeInfoScreen(
-    cards: List<HomeInfoCard>,
-    isLoading: Boolean,
-    errorMessage: String?,
+    uiState: HomeInfoUiState,
+    uiMessage: UiMessage?,
+    onRetry: () -> Unit,
+    onMessageShown: (Long) -> Unit,
     onAddClick: () -> Unit,
     onCardClick: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    val scaffoldState = rememberScaffoldState()
+    val snackbarText = uiMessage?.text?.asString()
+    val cards = (uiState as? HomeInfoUiState.Content)?.cards.orEmpty()
     var query by remember { mutableStateOf("") }
     var selectedSection by remember { mutableStateOf<HomeSection?>(null) }
     var sectionExpanded by remember { mutableStateOf(false) }
     val filteredCards = cards.filter { card ->
+        val queryText = query.trim()
         val matchesSection = selectedSection == null || card.section == selectedSection
-        val queryText = query.trim().lowercase()
-        val matchesQuery = if (queryText.isBlank()) {
-            true
-        } else {
-            card.title.lowercase().contains(queryText) ||
-                    card.note.lowercase().contains(queryText) ||
-                    card.fields.any { it.value.lowercase().contains(queryText) }
-        }
+        val matchesQuery = queryText.isBlank() ||
+            card.title.contains(queryText, ignoreCase = true) ||
+            card.note.contains(queryText, ignoreCase = true) ||
+            card.fields.any { it.value.contains(queryText, ignoreCase = true) }
         matchesSection && matchesQuery
+    }.distinctBy { it.id }
+
+    LaunchedEffect(uiMessage?.id) {
+        val message = uiMessage ?: return@LaunchedEffect
+        val text = snackbarText ?: return@LaunchedEffect
+        scaffoldState.snackbarHostState.showSnackbar(text)
+        onMessageShown(message.id)
     }
 
     Scaffold(
+        scaffoldState = scaffoldState,
         topBar = {
             TopAppBar(
                 title = { Text("Информация о доме") },
@@ -139,25 +154,32 @@ fun HomeInfoScreen(
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            if (isLoading) {
-                Text("Загрузка...")
-            }
-            if (!errorMessage.isNullOrBlank()) {
-                Text(text = errorMessage, color = Color.Red)
-            }
-            if (filteredCards.isEmpty() && !isLoading) {
-                Text("Нет карточек для отображения")
-            } else {
-                val uniqueCards = remember(filteredCards) {
-                    filteredCards.distinctBy { it.id }
-                }
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f, fill = false)
-                ) {
-                    items(uniqueCards, key = { it.id }) { card ->
-                        HomeInfoCardItem(card = card, onClick = { onCardClick(card.id) })
+            when (uiState) {
+                is HomeInfoUiState.Error -> HomeInfoStatusMessage(
+                    message = uiState.message.asString(),
+                    actionText = stringResource(R.string.action_retry),
+                    onAction = onRetry
+                )
+
+                HomeInfoUiState.Loading -> LoadingMessage()
+
+                HomeInfoUiState.Empty -> HomeInfoStatusMessage(
+                    message = stringResource(R.string.home_info_empty)
+                )
+
+                is HomeInfoUiState.Content -> {
+                    if (filteredCards.isEmpty()) {
+                        HomeInfoStatusMessage(message = stringResource(R.string.home_info_empty))
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f, fill = false)
+                        ) {
+                            items(filteredCards, key = { it.id }) { card ->
+                                HomeInfoCardItem(card = card, onClick = { onCardClick(card.id) })
+                            }
+                        }
                     }
                 }
             }
@@ -165,7 +187,42 @@ fun HomeInfoScreen(
     }
 }
 
-// Composable-функция для отображения карточки информации о доме.
+@Composable
+private fun LoadingMessage() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun HomeInfoStatusMessage(
+    message: String,
+    actionText: String? = null,
+    onAction: (() -> Unit)? = null
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = message, style = MaterialTheme.typography.body1)
+        if (actionText != null && onAction != null) {
+            Button(
+                onClick = onAction,
+                modifier = Modifier.padding(top = 12.dp)
+            ) {
+                Text(actionText)
+            }
+        }
+    }
+}
+
 @Composable
 private fun HomeInfoCardItem(card: HomeInfoCard, onClick: () -> Unit) {
     val previewFields = card.fields
@@ -199,7 +256,6 @@ private fun HomeInfoCardItem(card: HomeInfoCard, onClick: () -> Unit) {
     }
 }
 
-// Composable-функция для отображения экрана редактирования карточки информации о доме.
 @Composable
 fun EditHomeInfoCardScreen(
     card: HomeInfoCard?,
@@ -213,14 +269,11 @@ fun EditHomeInfoCardScreen(
     var note by remember(cardId) { mutableStateOf(card?.note ?: "") }
     var showDeleteDialog by remember(cardId) { mutableStateOf(false) }
     var titleError by remember(cardId) { mutableStateOf<String?>(null) }
-
     val fields = remember(cardId) {
-        val initialFields = card?.fields ?: emptyList()
-        mutableStateListOf<HomeField>().apply { addAll(initialFields) }
+        mutableStateListOf<HomeField>().apply { addAll(card?.fields ?: emptyList()) }
     }
     val links = remember(cardId) {
-        val initialLinks = card?.links ?: emptyList()
-        mutableStateListOf<String>().apply { addAll(initialLinks) }
+        mutableStateListOf<String>().apply { addAll(card?.links ?: emptyList()) }
     }
 
     Scaffold(
@@ -249,41 +302,20 @@ fun EditHomeInfoCardScreen(
                 value = title,
                 onValueChange = {
                     title = it
-                    if (!titleError.isNullOrBlank()) {
-                        titleError = null
-                    }
+                    titleError = null
                 },
                 label = { Text("Заголовок") },
                 modifier = Modifier.fillMaxWidth(),
                 isError = !titleError.isNullOrBlank()
             )
-            if (!titleError.isNullOrBlank()) {
-                Text(text = titleError ?: "", color = Color.Red)
+            titleError?.let {
+                Text(text = it, color = Color.Red)
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Раздел")
-                Spacer(modifier = Modifier.width(12.dp))
-                var sectionExpanded by remember { mutableStateOf(false) }
-                Box {
-                    OutlinedButton(onClick = { sectionExpanded = true }) {
-                        Text(selectedSection.displayName())
-                    }
-                    DropdownMenu(
-                        expanded = sectionExpanded,
-                        onDismissRequest = { sectionExpanded = false }
-                    ) {
-                        HomeSection.values().forEach { section ->
-                            DropdownMenuItem(onClick = {
-                                selectedSection = section
-                                sectionExpanded = false
-                            }) {
-                                Text(section.displayName())
-                            }
-                        }
-                    }
-                }
-            }
+            SectionPicker(
+                selectedSection = selectedSection,
+                onSectionSelected = { selectedSection = it }
+            )
             Spacer(modifier = Modifier.height(12.dp))
             Text("Поля")
             Spacer(modifier = Modifier.height(6.dp))
@@ -294,26 +326,19 @@ fun EditHomeInfoCardScreen(
                 ) {
                     OutlinedTextField(
                         value = field.key,
-                        onValueChange = { newKey ->
-                            fields[index] = field.copy(key = newKey)
-                        },
+                        onValueChange = { fields[index] = field.copy(key = it) },
                         label = { Text("Ключ") },
                         modifier = Modifier.weight(1f)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     OutlinedTextField(
                         value = field.value,
-                        onValueChange = { newValue ->
-                            fields[index] = field.copy(value = newValue)
-                        },
+                        onValueChange = { fields[index] = field.copy(value = it) },
                         label = { Text("Значение") },
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(onClick = { fields.removeAt(index) }) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Удалить поле"
-                        )
+                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Удалить поле")
                     }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
@@ -341,17 +366,12 @@ fun EditHomeInfoCardScreen(
                 ) {
                     OutlinedTextField(
                         value = link,
-                        onValueChange = { newValue ->
-                            links[index] = newValue
-                        },
-                        label = { Text("URL") },
+                        onValueChange = { links[index] = it },
+                        label = { Text("Ссылка") },
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(onClick = { links.removeAt(index) }) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Удалить ссылку"
-                        )
+                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Удалить ссылку")
                     }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
@@ -367,18 +387,16 @@ fun EditHomeInfoCardScreen(
                         titleError = "Введите заголовок"
                         return@Button
                     }
-                    val cleanedFields = fields.map {
-                        HomeField(key = it.key.trim(), value = it.value.trim())
-                    }.filter { it.key.isNotBlank() || it.value.isNotBlank() }
-                    val cleanedLinks = links.map { it.trim() }.filter { it.isNotBlank() }
                     val now = System.currentTimeMillis()
                     val updatedCard = HomeInfoCard(
                         id = card?.id ?: "",
                         title = trimmedTitle,
                         section = selectedSection,
-                        fields = cleanedFields,
+                        fields = fields.map {
+                            HomeField(key = it.key.trim(), value = it.value.trim())
+                        }.filter { it.key.isNotBlank() || it.value.isNotBlank() },
                         note = note.trim(),
-                        links = cleanedLinks,
+                        links = links.map { it.trim() }.filter { it.isNotBlank() },
                         createdAt = card?.createdAt ?: now,
                         updatedAt = now
                     )
@@ -399,7 +417,7 @@ fun EditHomeInfoCardScreen(
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Удалить карточку?") },
-            text = { Text("Действие нельзя отменить") },
+            text = { Text("Это действие нельзя отменить.") },
             confirmButton = {
                 Button(onClick = {
                     showDeleteDialog = false
@@ -417,7 +435,36 @@ fun EditHomeInfoCardScreen(
     }
 }
 
-// Возвращает отображаемое пользователю название для каждого раздела информации о доме.
+@Composable
+private fun SectionPicker(
+    selectedSection: HomeSection,
+    onSectionSelected: (HomeSection) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("Раздел")
+        Spacer(modifier = Modifier.width(12.dp))
+        Box {
+            OutlinedButton(onClick = { expanded = true }) {
+                Text(selectedSection.displayName())
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                HomeSection.values().forEach { section ->
+                    DropdownMenuItem(onClick = {
+                        onSectionSelected(section)
+                        expanded = false
+                    }) {
+                        Text(section.displayName())
+                    }
+                }
+            }
+        }
+    }
+}
+
 private fun HomeSection.displayName(): String = when (this) {
     HomeSection.METERS -> "Счётчики"
     HomeSection.APPLIANCES -> "Техника"
@@ -427,22 +474,21 @@ private fun HomeSection.displayName(): String = when (this) {
     HomeSection.OTHER -> "Другое"
 }
 
-
-// Preview-composable для предпросмотра в Android Studio.
 @Preview(showBackground = true)
 @Composable
 fun HomeInfoScreenPreview() {
     val cards = listOf(
-        HomeInfoCard(id = "1", title = "Заметка 1"),
-        HomeInfoCard(id = "2", title = "Заметка 2"),
-        HomeInfoCard(id = "3", title = "Заметка 3")
+        HomeInfoCard(id = "1", title = "Карточка 1"),
+        HomeInfoCard(id = "2", title = "Карточка 2"),
+        HomeInfoCard(id = "3", title = "Карточка 3")
     )
     HomeInfoScreen(
-        cards = cards,
-        isLoading = false,
-        errorMessage = "",
-        onAddClick = {  },
-        onCardClick = {  },
-        onBack = {  }
+        uiState = HomeInfoUiState.Content(cards),
+        uiMessage = null,
+        onRetry = {},
+        onMessageShown = {},
+        onAddClick = {},
+        onCardClick = {},
+        onBack = {}
     )
 }

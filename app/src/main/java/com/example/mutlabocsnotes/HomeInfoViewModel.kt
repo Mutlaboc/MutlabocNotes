@@ -2,7 +2,6 @@ package com.example.mutlabocsnotes
 
 import android.app.Application
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
@@ -11,94 +10,112 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// Хранит UI-состояние карточек домашнего экрана и обрабатывает действия пользователя.
-// Репозиторий передаётся из AppContainer, поэтому экран не занимается созданием зависимостей.
 class HomeInfoViewModel(
     application: Application,
     private val repository: HomeInfoDataSource,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : AndroidViewModel(application) {
 
-    val cards = mutableStateListOf<HomeInfoCard>()
-    var isLoading by mutableStateOf(false)
-    var errorMessage by mutableStateOf<String?>(null)
+    var uiState by mutableStateOf<HomeInfoUiState>(HomeInfoUiState.Loading)
+        private set
 
-    // Загружает карточки и сортирует их по времени обновления.
+    var uiMessage by mutableStateOf<UiMessage?>(null)
+        private set
+
     fun loadCards() {
         viewModelScope.launch(ioDispatcher) {
             launch(Dispatchers.Main) {
-                isLoading = true
-                errorMessage = null
+                uiState = HomeInfoUiState.Loading
             }
+
             val result = repository.getAllCards()
+
             launch(Dispatchers.Main) {
                 result.onSuccess { loadedCards ->
-                    cards.clear()
-                    cards.addAll(loadedCards.sortedByDescending { it.updatedAt })
+                    applyCards(loadedCards.sortedByDescending { it.updatedAt })
                 }.onFailure { error ->
-                    errorMessage = error.message ?: "Не удалось загрузить карточки"
+                    uiState = HomeInfoUiState.Error(ApiErrorMapper.map(error))
                 }
-                isLoading = false
             }
         }
     }
 
-    // Создаёт карточку через репозиторий и добавляет её в локальный список.
     fun addCard(card: HomeInfoCard) {
         viewModelScope.launch(ioDispatcher) {
             val result = repository.insert(card)
             launch(Dispatchers.Main) {
                 result.onSuccess { id ->
                     val cardWithId = card.copy(id = id)
-                    cards.add(cardWithId)
-                    cards.sortByDescending { it.updatedAt }
+                    val cards = currentCards() + cardWithId
+                    applyCards(cards.sortedByDescending { it.updatedAt })
                 }.onFailure { error ->
-                    errorMessage = error.message ?: "Не удалось сохранить карточку"
+                    showMessage(error)
                 }
             }
         }
     }
 
-    // Обновляет карточку и сохраняет сортировку после успешного ответа backend.
     fun updateCard(card: HomeInfoCard) {
-        if (card.id.isEmpty()) return
+        if (card.id.isEmpty()) {
+            showMessage(IllegalArgumentException("Blank card id"))
+            return
+        }
+
         viewModelScope.launch(ioDispatcher) {
             val result = repository.update(card)
             launch(Dispatchers.Main) {
                 result.onSuccess {
-                    val index = cards.indexOfFirst { it.id == card.id }
-                    if (index != -1) {
-                        cards[index] = card
-                        cards.sortByDescending { it.updatedAt }
+                    val cards = currentCards().map { existing ->
+                        if (existing.id == card.id) card else existing
                     }
+                    applyCards(cards.sortedByDescending { it.updatedAt })
                 }.onFailure { error ->
-                    errorMessage = error.message ?: "Не удалось обновить карточку"
+                    showMessage(error)
                 }
             }
         }
     }
 
-    // Удаляет карточку на backend и затем из локального списка.
     fun deleteCard(cardId: String) {
         viewModelScope.launch(ioDispatcher) {
             val result = repository.delete(cardId)
             launch(Dispatchers.Main) {
                 result.onSuccess {
-                    val card = cards.find { it.id == cardId }
-                    if (card != null) {
-                        cards.remove(card)
-                    }
+                    applyCards(currentCards().filterNot { it.id == cardId })
                 }.onFailure { error ->
-                    errorMessage = error.message ?: "Не удалось удалить карточку"
+                    showMessage(error)
                 }
             }
         }
     }
 
-    // Сбрасывает локальное состояние карточек, например при смене пользователя.
     fun clearAll() {
-        cards.clear()
-        errorMessage = null
-        isLoading = false
+        uiState = HomeInfoUiState.Empty
+        uiMessage = null
+    }
+
+    fun onMessageShown(messageId: Long) {
+        if (uiMessage?.id == messageId) {
+            uiMessage = null
+        }
+    }
+
+    private fun currentCards(): List<HomeInfoCard> {
+        return (uiState as? HomeInfoUiState.Content)?.cards.orEmpty()
+    }
+
+    private fun applyCards(cards: List<HomeInfoCard>) {
+        uiState = if (cards.isEmpty()) {
+            HomeInfoUiState.Empty
+        } else {
+            HomeInfoUiState.Content(cards)
+        }
+    }
+
+    private fun showMessage(error: Throwable) {
+        uiMessage = UiMessage(
+            id = UiMessageId.next(),
+            text = ApiErrorMapper.map(error)
+        )
     }
 }
