@@ -7,58 +7,56 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 interface NotesDataSource {
-    suspend fun getAllNotes(): List<Note>
-    suspend fun insert(note: Note): String?
-    suspend fun update(note: Note): Boolean
-    suspend fun delete(noteId: String): Boolean
+    suspend fun getAllNotes(): Result<List<Note>>
+    suspend fun insert(note: Note): Result<String>
+    suspend fun update(note: Note): Result<Unit>
+    suspend fun delete(noteId: String): Result<Unit>
 }
 
-// Репозиторий отвечает только за операции Notes API.
-// Настройка Retrofit и авторизация приходят извне через AppContainer.
 class NotesRepository(
     private val api: NotesApi,
 ) : NotesDataSource {
 
-    // Загружает заметки текущего пользователя; при ошибке отдаёт пустой список, как и раньше.
-    override suspend fun getAllNotes(): List<Note> = withContext(Dispatchers.IO) {
+    override suspend fun getAllNotes(): Result<List<Note>> = withContext(Dispatchers.IO) {
         return@withContext try {
-            api.getNotes().map { it.toDomain() }
-        } catch (_: Exception) {
-            emptyList()
+            Result.success(api.getNotes().map { it.toDomain() })
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 
-    // Создаёт заметку на backend и возвращает id, выданный сервером.
-    override suspend fun insert(note: Note): String? = withContext(Dispatchers.IO) {
+    override suspend fun insert(note: Note): Result<String> = withContext(Dispatchers.IO) {
         return@withContext try {
             val created = api.createNote(note.toUpsertRequestDto())
-            created.id
-        } catch (_: Exception) {
-            null
+            Result.success(created.id)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 
-    // Обновляет существующую заметку; пустой id не отправляем в сеть.
-    override suspend fun update(note: Note): Boolean = withContext(Dispatchers.IO) {
-        if (note.id.isBlank()) return@withContext false
+    override suspend fun update(note: Note): Result<Unit> = withContext(Dispatchers.IO) {
+        if (note.id.isBlank()) {
+            return@withContext Result.failure(IllegalArgumentException("Blank note id"))
+        }
 
         return@withContext try {
             api.updateNote(note.id, note.toUpsertRequestDto())
-            true
-        } catch (_: Exception) {
-            false
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 
-    // Удаляет заметку по id; результат сообщает ViewModel, можно ли менять локальное состояние.
-    override suspend fun delete(noteId: String): Boolean = withContext(Dispatchers.IO) {
-        if (noteId.isBlank()) return@withContext false
+    override suspend fun delete(noteId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        if (noteId.isBlank()) {
+            return@withContext Result.failure(IllegalArgumentException("Blank note id"))
+        }
 
         return@withContext try {
             api.deleteNote(noteId)
-            true
-        } catch (_: Exception) {
-            false
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 }

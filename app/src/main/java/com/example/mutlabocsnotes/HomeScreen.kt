@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.Button
 import androidx.compose.material.Checkbox
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.Icon
@@ -58,6 +60,9 @@ fun HomeScreen(
     notes: List<Note>,
     userEmail: String,
     totalCoins: Int,
+    isLoading: Boolean,
+    errorMessage: String?,
+    onRetryNotes: () -> Unit,
     onAddNoteClick: () -> Unit,
     onNoteClick: (noteId: String) -> Unit,
     onOtherCellClick: (index: Int) -> Unit,
@@ -178,6 +183,37 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .weight(1f)
             ) {
+                when {
+                    errorMessage != null -> {
+                        item {
+                            NotesStatusMessage(
+                                message = errorMessage,
+                                actionText = "Retry",
+                                onAction = onRetryNotes
+                            )
+                        }
+                    }
+
+                    isLoading -> {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    }
+
+                    notes.none { !it.isCompleted } -> {
+                        item {
+                            NotesStatusMessage(message = "No active notes yet")
+                        }
+                    }
+                }
+
                 items(notes.filter { !it.isCompleted }, key = { it.id }) { note ->
                     NoteItem(
                         note = note,
@@ -220,6 +256,8 @@ private fun stageForCoins(totalCoins: Int): BuildingStage = when {
 @Composable
 fun CompletedNotesScreen (
     notes: List<Note>,
+    errorMessage: String?,
+    onRetryNotes: () -> Unit,
     onaddNoteClick: () -> Unit,
     onNoteClick: (noteId:String) -> Unit,
     onCompletionChange: (noteId: String, Boolean) -> Unit,
@@ -254,7 +292,13 @@ fun CompletedNotesScreen (
                 style = MaterialTheme.typography.h6,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
             )
-            if (completedNotes.isEmpty()) {
+            if (errorMessage != null) {
+                NotesStatusMessage(
+                    message = errorMessage,
+                    actionText = "Retry",
+                    onAction = onRetryNotes
+                )
+            } else if (completedNotes.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -285,6 +329,33 @@ fun CompletedNotesScreen (
     }
 }
 // Простой composable для отображения одной заметки
+@Composable
+private fun NotesStatusMessage(
+    message: String,
+    actionText: String? = null,
+    onAction: (() -> Unit)? = null
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.body1
+        )
+        if (actionText != null && onAction != null) {
+            Button(
+                onClick = onAction,
+                modifier = Modifier.padding(top = 12.dp)
+            ) {
+                Text(actionText)
+            }
+        }
+    }
+}
+
 @Composable
 fun NoteItem(
     note: Note,
@@ -534,6 +605,9 @@ fun NoteItem(
                 notes = sampleNotes,
                 totalCoins = 12,
                 userEmail = "user@example.com",
+                isLoading = false,
+                errorMessage = null,
+                onRetryNotes = {},
                 onAddNoteClick = {},
                 onNoteClick = {},
                 onOtherCellClick = {},

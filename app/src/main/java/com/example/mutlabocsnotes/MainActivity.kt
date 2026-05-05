@@ -148,6 +148,9 @@ fun MyApp(
                     notes = notesViewModel.notes,
                     totalCoins = notesViewModel.totalCoins,
                     userEmail = authUiState.currentEmail,
+                    isLoading = notesViewModel.isLoading,
+                    errorMessage = notesViewModel.errorMessage,
+                    onRetryNotes = notesViewModel::loadNotes,
                     onAddNoteClick = {
                         navController.navigate("edit")
                     },
@@ -186,6 +189,8 @@ fun MyApp(
             composable("completed") {
                 CompletedNotesScreen(
                     notes = notesViewModel.notes,
+                    errorMessage = notesViewModel.errorMessage,
+                    onRetryNotes = notesViewModel::loadNotes,
                     onaddNoteClick = {
                         navController.navigate("edit")
                     },
