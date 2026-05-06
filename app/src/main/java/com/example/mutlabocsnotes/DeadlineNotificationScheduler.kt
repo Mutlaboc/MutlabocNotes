@@ -7,26 +7,56 @@ import android.content.Intent
 import android.os.Build
 import java.util.Calendar
 
-interface DeadlineScheduler {
-    fun schedule(note: Note)
-    fun cancel(noteId: String)
-    fun scheduleAll(notes: List<Note>)
+data class DeadlineScheduleResult(
+    val scheduled: Boolean,
+    val exactAlarmPermissionRequired: Boolean
+) {
+    companion object {
+        val NotScheduled = DeadlineScheduleResult(
+            scheduled = false,
+            exactAlarmPermissionRequired = false
+        )
+        val ScheduledExact = DeadlineScheduleResult(
+            scheduled = true,
+            exactAlarmPermissionRequired = false
+        )
+        val ScheduledInexactPermissionRequired = DeadlineScheduleResult(
+            scheduled = true,
+            exactAlarmPermissionRequired = true
+        )
+
+        fun aggregate(results: List<DeadlineScheduleResult>): DeadlineScheduleResult {
+            return DeadlineScheduleResult(
+                scheduled = results.any { it.scheduled },
+                exactAlarmPermissionRequired = results.any { it.exactAlarmPermissionRequired }
+            )
+        }
+    }
 }
 
-// Планирует и отменяет фоновые задачи уведомлений.
-class DeadlineNotificationScheduler(private val context: Context) : DeadlineScheduler {
+interface DeadlineScheduler {
+    fun schedule(note: Note): DeadlineScheduleResult
+    fun cancel(noteId: String)
+    fun scheduleAll(notes: List<Note>): DeadlineScheduleResult
+}
 
-    private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+class DeadlineNotificationScheduler internal constructor(
+    private val alarmBackend: DeadlineAlarmBackend,
+    private val nowProvider: () -> Long = System::currentTimeMillis
+) : DeadlineScheduler {
 
-    // Планирует уведомления о дедлайне для данных заметки.
-    override fun schedule(note: Note) {
-        if (alarmManager == null || note.id.isBlank()) return
+    constructor(context: Context) : this(AndroidDeadlineAlarmBackend(context))
+
+    override fun schedule(note: Note): DeadlineScheduleResult {
+        if (!alarmBackend.isAvailable || note.id.isBlank()) {
+            return DeadlineScheduleResult.NotScheduled
+        }
 
         cancel(note.id)
 
-        if (note.category != NoteCategory.TASKS) return
-        val deadlineMillis = note.deadlineMillis ?: return
-        if (note.isCompleted) return
+        if (note.category != NoteCategory.TASKS) return DeadlineScheduleResult.NotScheduled
+        val deadlineMillis = note.deadlineMillis ?: return DeadlineScheduleResult.NotScheduled
+        if (note.isCompleted) return DeadlineScheduleResult.NotScheduled
 
         val triggerCalendar = Calendar.getInstance().apply {
             timeInMillis = deadlineMillis
@@ -35,38 +65,80 @@ class DeadlineNotificationScheduler(private val context: Context) : DeadlineSche
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
-        val now = System.currentTimeMillis()
+        val now = nowProvider()
         if (triggerCalendar.timeInMillis <= now) {
             if (note.isRepeating) {
                 while (triggerCalendar.timeInMillis <= now) {
                     triggerCalendar.add(Calendar.DAY_OF_YEAR, 1)
                 }
             } else {
-                return
+                return DeadlineScheduleResult.NotScheduled
             }
         }
 
-        val intent = Intent(context, DeadlineNotificationReceiver::class.java).apply {
-            putExtra(DeadlineNotification.EXTRA_NOTE_ID, note.id)
-            putExtra(DeadlineNotification.EXTRA_NOTE_TITLE, note.title)
+        val triggerAtMillis = triggerCalendar.timeInMillis
+        if (requiresExactAlarmPermission() && !alarmBackend.canScheduleExactAlarms()) {
+            alarmBackend.scheduleInexact(triggerAtMillis, note)
+            return DeadlineScheduleResult.ScheduledInexactPermissionRequired
         }
 
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            DeadlineNotification.requestCodeForId(note.id),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or immutableFlag()
-        )
+        return try {
+            alarmBackend.scheduleExact(triggerAtMillis, note)
+            DeadlineScheduleResult.ScheduledExact
+        } catch (error: SecurityException) {
+            alarmBackend.scheduleInexact(triggerAtMillis, note)
+            DeadlineScheduleResult.ScheduledInexactPermissionRequired
+        }
+    }
 
-        val triggerAtMillis = triggerCalendar.timeInMillis
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            alarmManager.setExactAndAllowWhileIdle(
+    override fun cancel(noteId: String) {
+        if (!alarmBackend.isAvailable || noteId.isBlank()) return
+        alarmBackend.cancel(noteId)
+    }
+
+    override fun scheduleAll(notes: List<Note>): DeadlineScheduleResult {
+        return DeadlineScheduleResult.aggregate(notes.map { schedule(it) })
+    }
+
+    private fun requiresExactAlarmPermission(): Boolean {
+        return alarmBackend.sdkInt >= Build.VERSION_CODES.S
+    }
+}
+
+internal interface DeadlineAlarmBackend {
+    val sdkInt: Int
+    val isAvailable: Boolean
+    fun canScheduleExactAlarms(): Boolean
+    fun scheduleExact(triggerAtMillis: Long, note: Note)
+    fun scheduleInexact(triggerAtMillis: Long, note: Note)
+    fun cancel(noteId: String)
+}
+
+private class AndroidDeadlineAlarmBackend(
+    private val context: Context
+) : DeadlineAlarmBackend {
+
+    private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+
+    override val sdkInt: Int = Build.VERSION.SDK_INT
+    override val isAvailable: Boolean = alarmManager != null
+
+    override fun canScheduleExactAlarms(): Boolean {
+        val manager = alarmManager ?: return false
+        return sdkInt < Build.VERSION_CODES.S || manager.canScheduleExactAlarms()
+    }
+
+    override fun scheduleExact(triggerAtMillis: Long, note: Note) {
+        val manager = alarmManager ?: return
+        val pendingIntent = createPendingIntent(note, PendingIntent.FLAG_UPDATE_CURRENT)
+        if (sdkInt >= Build.VERSION_CODES.M) {
+            manager.setExactAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
                 triggerAtMillis,
                 pendingIntent
             )
         } else {
-            alarmManager.setExact(
+            manager.setExact(
                 AlarmManager.RTC_WAKEUP,
                 triggerAtMillis,
                 pendingIntent
@@ -74,9 +146,26 @@ class DeadlineNotificationScheduler(private val context: Context) : DeadlineSche
         }
     }
 
-    // Отменяет ранее запланированные уведомления о дедлайне.
+    override fun scheduleInexact(triggerAtMillis: Long, note: Note) {
+        val manager = alarmManager ?: return
+        val pendingIntent = createPendingIntent(note, PendingIntent.FLAG_UPDATE_CURRENT)
+        if (sdkInt >= Build.VERSION_CODES.M) {
+            manager.setAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerAtMillis,
+                pendingIntent
+            )
+        } else {
+            manager.set(
+                AlarmManager.RTC_WAKEUP,
+                triggerAtMillis,
+                pendingIntent
+            )
+        }
+    }
+
     override fun cancel(noteId: String) {
-        if (alarmManager == null || noteId.isBlank()) return
+        val manager = alarmManager ?: return
         val pendingIntent = PendingIntent.getBroadcast(
             context,
             DeadlineNotification.requestCodeForId(noteId),
@@ -84,17 +173,25 @@ class DeadlineNotificationScheduler(private val context: Context) : DeadlineSche
             PendingIntent.FLAG_NO_CREATE or immutableFlag()
         )
         if (pendingIntent != null) {
-            alarmManager.cancel(pendingIntent)
+            manager.cancel(pendingIntent)
             pendingIntent.cancel()
         }
     }
 
-    // Планирует уведомления о дедлайне для данных заметки.
-    override fun scheduleAll(notes: List<Note>) {
-        notes.forEach { schedule(it) }
+    private fun createPendingIntent(note: Note, flags: Int): PendingIntent {
+        val intent = Intent(context, DeadlineNotificationReceiver::class.java).apply {
+            putExtra(DeadlineNotification.EXTRA_NOTE_ID, note.id)
+            putExtra(DeadlineNotification.EXTRA_NOTE_TITLE, note.title)
+        }
+        return PendingIntent.getBroadcast(
+            context,
+            DeadlineNotification.requestCodeForId(note.id),
+            intent,
+            flags or immutableFlag()
+        )
     }
 
-    // Добавляет флаг immutable на поддерживаемых версиях Android для безопасности PendingIntent.
-    private fun immutableFlag(): Int =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
+    private fun immutableFlag(): Int {
+        return if (sdkInt >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
+    }
 }

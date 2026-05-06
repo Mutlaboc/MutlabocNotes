@@ -28,6 +28,14 @@ class AppContainerWiringTest {
     }
 
     @Test
+    fun manifest_declaresScheduleExactAlarmOnly() {
+        val manifest = projectFile("app/src/main/AndroidManifest.xml").readText()
+
+        assertTrue(manifest.contains("android.permission.SCHEDULE_EXACT_ALARM"))
+        assertFalse(manifest.contains("android.permission.USE_EXACT_ALARM"))
+    }
+
+    @Test
     fun appContainer_ownsSharedDependencyCreation() {
         val appContainer = projectFile(
             "app/src/main/java/com/example/mutlabocsnotes/AppContainer.kt"
@@ -108,6 +116,19 @@ class AppContainerWiringTest {
         assertTrue(myAppBody.contains("AuthState.Checking -> Unit"))
     }
 
+    @Test
+    fun rootNavigation_handlesExactAlarmSnackbarAction() {
+        val mainActivity = projectFile(
+            "app/src/main/java/com/example/mutlabocsnotes/MainActivity.kt"
+        ).readText()
+
+        assertTrue(mainActivity.contains("UiMessageAction.OPEN_EXACT_ALARM_SETTINGS"))
+        assertTrue(mainActivity.contains("Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM"))
+        assertTrue(mainActivity.contains("exactAlarmSettingsLauncher.launch"))
+        assertTrue(mainActivity.contains("notesViewModel.loadNotes()"))
+        assertTrue(mainActivity.contains("onMessageAction = onMessageAction"))
+    }
+
     private fun projectFile(path: String): File {
         val userDir = checkNotNull(System.getProperty("user.dir")) {
             "user.dir is not set"
@@ -170,7 +191,7 @@ private class WiringFakeHomeInfoDataSource : HomeInfoDataSource {
 }
 
 private class WiringFakeDeadlineScheduler : DeadlineScheduler {
-    override fun schedule(note: Note) = Unit
+    override fun schedule(note: Note): DeadlineScheduleResult = DeadlineScheduleResult.ScheduledExact
     override fun cancel(noteId: String) = Unit
-    override fun scheduleAll(notes: List<Note>) = Unit
+    override fun scheduleAll(notes: List<Note>): DeadlineScheduleResult = DeadlineScheduleResult.ScheduledExact
 }

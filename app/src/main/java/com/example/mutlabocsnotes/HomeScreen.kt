@@ -26,6 +26,7 @@ import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Scaffold
+import androidx.compose.material.SnackbarResult
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
@@ -60,6 +61,7 @@ fun HomeScreen(
     userEmail: String,
     onRetryNotes: () -> Unit,
     onMessageShown: (Long) -> Unit,
+    onMessageAction: (UiMessageAction) -> Unit,
     onAddNoteClick: () -> Unit,
     onNoteClick: (noteId: String) -> Unit,
     onOtherCellClick: (index: Int) -> Unit,
@@ -69,6 +71,7 @@ fun HomeScreen(
 ) {
     val scaffoldState = rememberScaffoldState()
     val snackbarText = uiMessage?.text?.asString()
+    val snackbarActionText = uiMessage?.actionText?.asString()
     val contentState = uiState as? NotesUiState.Content
     val notes = contentState?.notes.orEmpty()
     val totalCoins = contentState?.totalCoins ?: 0
@@ -78,7 +81,13 @@ fun HomeScreen(
     LaunchedEffect(uiMessage?.id) {
         val message = uiMessage ?: return@LaunchedEffect
         val text = snackbarText ?: return@LaunchedEffect
-        scaffoldState.snackbarHostState.showSnackbar(text)
+        val result = scaffoldState.snackbarHostState.showSnackbar(
+            message = text,
+            actionLabel = snackbarActionText
+        )
+        if (result == SnackbarResult.ActionPerformed) {
+            message.action?.let(onMessageAction)
+        }
         onMessageShown(message.id)
     }
 
@@ -251,6 +260,7 @@ fun CompletedNotesScreen(
     uiMessage: UiMessage?,
     onRetryNotes: () -> Unit,
     onMessageShown: (Long) -> Unit,
+    onMessageAction: (UiMessageAction) -> Unit,
     onaddNoteClick: () -> Unit,
     onNoteClick: (noteId: String) -> Unit,
     onCompletionChange: (noteId: String, Boolean) -> Unit,
@@ -258,6 +268,7 @@ fun CompletedNotesScreen(
 ) {
     val scaffoldState = rememberScaffoldState()
     val snackbarText = uiMessage?.text?.asString()
+    val snackbarActionText = uiMessage?.actionText?.asString()
     val completedNotes = (uiState as? NotesUiState.Content)
         ?.notes
         .orEmpty()
@@ -266,7 +277,13 @@ fun CompletedNotesScreen(
     LaunchedEffect(uiMessage?.id) {
         val message = uiMessage ?: return@LaunchedEffect
         val text = snackbarText ?: return@LaunchedEffect
-        scaffoldState.snackbarHostState.showSnackbar(text)
+        val result = scaffoldState.snackbarHostState.showSnackbar(
+            message = text,
+            actionLabel = snackbarActionText
+        )
+        if (result == SnackbarResult.ActionPerformed) {
+            message.action?.let(onMessageAction)
+        }
         onMessageShown(message.id)
     }
 
@@ -576,6 +593,7 @@ fun HomeScreenPreview() {
         userEmail = "user@example.com",
         onRetryNotes = {},
         onMessageShown = {},
+        onMessageAction = {},
         onAddNoteClick = {},
         onNoteClick = {},
         onOtherCellClick = {},

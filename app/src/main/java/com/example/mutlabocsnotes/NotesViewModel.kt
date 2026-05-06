@@ -34,7 +34,7 @@ class NotesViewModel(
             launch(Dispatchers.Main) {
                 result.onSuccess { loadedNotes ->
                     applyNotes(loadedNotes)
-                    notificationScheduler.scheduleAll(loadedNotes)
+                    handleScheduleResult(notificationScheduler.scheduleAll(loadedNotes))
                 }.onFailure { error ->
                     uiState = NotesUiState.Error(ApiErrorMapper.map(error))
                 }
@@ -50,7 +50,7 @@ class NotesViewModel(
                     val noteWithId = note.copy(id = id)
                     val notes = currentNotes() + noteWithId
                     applyNotes(notes)
-                    notificationScheduler.schedule(noteWithId)
+                    handleScheduleResult(notificationScheduler.schedule(noteWithId))
                 }.onFailure { error ->
                     showMessage(error)
                 }
@@ -83,7 +83,7 @@ class NotesViewModel(
                         if (existing.id == note.id) note else existing
                     }
                     applyNotes(notes)
-                    notificationScheduler.schedule(note)
+                    handleScheduleResult(notificationScheduler.schedule(note))
                 }.onFailure { error ->
                     showMessage(error)
                 }
@@ -102,14 +102,14 @@ class NotesViewModel(
             this[index] = updatedNote
         }
         applyNotes(optimisticNotes)
-        notificationScheduler.schedule(updatedNote)
+        handleScheduleResult(notificationScheduler.schedule(updatedNote))
 
         viewModelScope.launch(ioDispatcher) {
             val result = repository.updateCompletion(noteId, isCompleted)
             launch(Dispatchers.Main) {
                 result.onFailure { error ->
                     applyNotes(existingNotes)
-                    notificationScheduler.schedule(existing)
+                    handleScheduleResult(notificationScheduler.schedule(existing))
                     showMessage(error)
                 }
             }
@@ -153,6 +153,16 @@ class NotesViewModel(
         uiMessage = UiMessage(
             id = UiMessageId.next(),
             text = ApiErrorMapper.map(error)
+        )
+    }
+
+    private fun handleScheduleResult(result: DeadlineScheduleResult) {
+        if (!result.exactAlarmPermissionRequired) return
+        uiMessage = UiMessage(
+            id = UiMessageId.next(),
+            text = UiText.StringResource(R.string.exact_alarm_permission_message),
+            action = UiMessageAction.OPEN_EXACT_ALARM_SETTINGS,
+            actionText = UiText.StringResource(R.string.action_allow)
         )
     }
 }

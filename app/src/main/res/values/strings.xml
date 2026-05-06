@@ -22,4 +22,6 @@
     <string name="home_info_empty">Нет карточек для отображения</string>
     <string name="loading">Загрузка...</string>
 
+    <string name="action_allow">Разрешить</string>
+    <string name="exact_alarm_permission_message">Точные напоминания отключены. Разрешите доступ, чтобы получать дедлайны вовремя.</string>
 </resources>

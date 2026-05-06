@@ -14,8 +14,14 @@ sealed interface UiText {
 
 data class UiMessage(
     val id: Long,
-    val text: UiText
+    val text: UiText,
+    val action: UiMessageAction? = null,
+    val actionText: UiText? = null
 )
+
+enum class UiMessageAction {
+    OPEN_EXACT_ALARM_SETTINGS
+}
 
 object UiMessageId {
     private val nextId = AtomicLong(0L)

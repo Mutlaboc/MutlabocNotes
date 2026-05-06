@@ -1,11 +1,16 @@
 package com.example.mutlabocsnotes
 
 import android.Manifest
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -20,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
@@ -75,6 +81,18 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+internal fun exactAlarmSettingsIntent(packageName: String): Intent {
+    return Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+        data = Uri.parse("package:$packageName")
+    }
+}
+
+internal fun applicationDetailsSettingsIntent(packageName: String): Intent {
+    return Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        data = Uri.parse("package:$packageName")
+    }
+}
+
 @Composable
 fun MyApp(
     viewModelFactory: ViewModelProvider.Factory,
@@ -84,8 +102,25 @@ fun MyApp(
     homeInfoViewModel: HomeInfoViewModel = viewModel(factory = viewModelFactory)
 ) {
     val navController = rememberNavController()
+    val context = LocalContext.current
     val authUiState = authViewModel.uiState
     val authState = authUiState.authState
+    val exactAlarmSettingsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        notesViewModel.loadNotes()
+    }
+    val onMessageAction: (UiMessageAction) -> Unit = { action ->
+        when (action) {
+            UiMessageAction.OPEN_EXACT_ALARM_SETTINGS -> {
+                try {
+                    exactAlarmSettingsLauncher.launch(exactAlarmSettingsIntent(context.packageName))
+                } catch (error: ActivityNotFoundException) {
+                    exactAlarmSettingsLauncher.launch(applicationDetailsSettingsIntent(context.packageName))
+                }
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         SessionEventBus.events.collect { event ->
@@ -150,6 +185,7 @@ fun MyApp(
                     userEmail = authUiState.currentEmail,
                     onRetryNotes = notesViewModel::loadNotes,
                     onMessageShown = notesViewModel::onMessageShown,
+                    onMessageAction = onMessageAction,
                     onAddNoteClick = {
                         navController.navigate("edit")
                     },
@@ -191,6 +227,7 @@ fun MyApp(
                     uiMessage = notesViewModel.uiMessage,
                     onRetryNotes = notesViewModel::loadNotes,
                     onMessageShown = notesViewModel::onMessageShown,
+                    onMessageAction = onMessageAction,
                     onaddNoteClick = {
                         navController.navigate("edit")
                     },

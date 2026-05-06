@@ -105,6 +105,32 @@ class NotesViewModelTest {
     }
 
     @Test
+    fun addNote_inexactFallbackShowsExactAlarmPermissionMessage() = runTest(mainDispatcherRule.dispatcher) {
+        val created = note(title = "Created")
+        repository.insertResult = Result.success("created-id")
+        scheduler.scheduleResult = DeadlineScheduleResult.ScheduledInexactPermissionRequired
+
+        viewModel.addNote(created)
+        advanceUntilIdle()
+
+        val message = checkNotNull(viewModel.uiMessage)
+        assertStringResource(R.string.exact_alarm_permission_message, message.text)
+        assertEquals(UiMessageAction.OPEN_EXACT_ALARM_SETTINGS, message.action)
+        assertStringResource(R.string.action_allow, checkNotNull(message.actionText))
+    }
+
+    @Test
+    fun addNote_exactScheduleDoesNotShowPermissionMessage() = runTest(mainDispatcherRule.dispatcher) {
+        repository.insertResult = Result.success("created-id")
+        scheduler.scheduleResult = DeadlineScheduleResult.ScheduledExact
+
+        viewModel.addNote(note(title = "Created"))
+        advanceUntilIdle()
+
+        assertEquals(null, viewModel.uiMessage)
+    }
+
+    @Test
     fun addNote_failureKeepsCurrentStateAndEmitsSnackbarMessage() = runTest(mainDispatcherRule.dispatcher) {
         val existing = note(id = "existing")
         loadContent(existing)
@@ -264,20 +290,24 @@ private class FakeNotesDataSource : NotesDataSource {
 }
 
 private class FakeDeadlineScheduler : DeadlineScheduler {
+    var scheduleResult: DeadlineScheduleResult = DeadlineScheduleResult.ScheduledExact
+    var scheduleAllResult: DeadlineScheduleResult = DeadlineScheduleResult.ScheduledExact
     val scheduleCalls = mutableListOf<Note>()
     val scheduleAllCalls = mutableListOf<List<Note>>()
     val cancelCalls = mutableListOf<String>()
 
-    override fun schedule(note: Note) {
+    override fun schedule(note: Note): DeadlineScheduleResult {
         scheduleCalls.add(note)
+        return scheduleResult
     }
 
     override fun cancel(noteId: String) {
         cancelCalls.add(noteId)
     }
 
-    override fun scheduleAll(notes: List<Note>) {
+    override fun scheduleAll(notes: List<Note>): DeadlineScheduleResult {
         scheduleAllCalls.add(notes.toList())
         scheduleCalls.addAll(notes)
+        return scheduleAllResult
     }
 }
