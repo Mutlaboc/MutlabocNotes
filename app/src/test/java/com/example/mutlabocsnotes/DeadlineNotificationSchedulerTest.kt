@@ -101,6 +101,30 @@ class DeadlineNotificationSchedulerTest {
         assertTrue(backend.inexactCalls.isEmpty())
     }
 
+    @Test
+    fun scheduleAllCancelsExistingAlarmsBeforeReschedulingCurrentNotes() {
+        val backend = FakeDeadlineAlarmBackend()
+        val scheduler = scheduler(backend)
+        val first = task(id = "first", deadlineMillis = futureDeadlineMillis)
+        val second = task(id = "second", deadlineMillis = futureDeadlineMillis)
+
+        val result = scheduler.scheduleAll(listOf(first, second))
+
+        assertEquals(DeadlineScheduleResult.ScheduledExact, result)
+        assertEquals(1, backend.cancelAllCalls)
+        assertEquals(listOf("first", "second"), backend.exactCalls.map { it.note.id })
+    }
+
+    @Test
+    fun cancelAllDelegatesToBackendWhenAvailable() {
+        val backend = FakeDeadlineAlarmBackend()
+        val scheduler = scheduler(backend)
+
+        scheduler.cancelAll()
+
+        assertEquals(1, backend.cancelAllCalls)
+    }
+
     private fun scheduler(backend: FakeDeadlineAlarmBackend): DeadlineNotificationScheduler {
         return DeadlineNotificationScheduler(
             alarmBackend = backend,
@@ -151,6 +175,7 @@ private class FakeDeadlineAlarmBackend(
     val exactCalls = mutableListOf<ScheduledAlarmCall>()
     val inexactCalls = mutableListOf<ScheduledAlarmCall>()
     val cancelCalls = mutableListOf<String>()
+    var cancelAllCalls = 0
 
     override fun canScheduleExactAlarms(): Boolean {
         canScheduleExactAlarmChecks += 1
@@ -168,5 +193,9 @@ private class FakeDeadlineAlarmBackend(
 
     override fun cancel(noteId: String) {
         cancelCalls.add(noteId)
+    }
+
+    override fun cancelAll() {
+        cancelAllCalls += 1
     }
 }

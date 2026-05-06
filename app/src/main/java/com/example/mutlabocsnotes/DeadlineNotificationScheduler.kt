@@ -38,6 +38,7 @@ interface DeadlineScheduler {
     fun schedule(note: Note): DeadlineScheduleResult
     fun cancel(noteId: String)
     fun scheduleAll(notes: List<Note>): DeadlineScheduleResult
+    fun cancelAll()
 }
 
 class DeadlineNotificationScheduler internal constructor(
@@ -97,7 +98,13 @@ class DeadlineNotificationScheduler internal constructor(
     }
 
     override fun scheduleAll(notes: List<Note>): DeadlineScheduleResult {
+        cancelAll()
         return DeadlineScheduleResult.aggregate(notes.map { schedule(it) })
+    }
+
+    override fun cancelAll() {
+        if (!alarmBackend.isAvailable) return
+        alarmBackend.cancelAll()
     }
 
     private fun requiresExactAlarmPermission(): Boolean {
@@ -112,6 +119,7 @@ internal interface DeadlineAlarmBackend {
     fun scheduleExact(triggerAtMillis: Long, note: Note)
     fun scheduleInexact(triggerAtMillis: Long, note: Note)
     fun cancel(noteId: String)
+    fun cancelAll()
 }
 
 private class AndroidDeadlineAlarmBackend(
@@ -144,6 +152,7 @@ private class AndroidDeadlineAlarmBackend(
                 pendingIntent
             )
         }
+        rememberScheduledNote(note.id)
     }
 
     override fun scheduleInexact(triggerAtMillis: Long, note: Note) {
@@ -162,9 +171,24 @@ private class AndroidDeadlineAlarmBackend(
                 pendingIntent
             )
         }
+        rememberScheduledNote(note.id)
     }
 
     override fun cancel(noteId: String) {
+        cancelAlarm(noteId)
+        forgetScheduledNote(noteId)
+    }
+
+    override fun cancelAll() {
+        scheduledNoteIds().forEach { noteId ->
+            cancelAlarm(noteId)
+        }
+        scheduledAlarmPrefs.edit()
+            .remove(KEY_SCHEDULED_NOTE_IDS)
+            .apply()
+    }
+
+    private fun cancelAlarm(noteId: String) {
         val manager = alarmManager ?: return
         val pendingIntent = PendingIntent.getBroadcast(
             context,
@@ -176,6 +200,32 @@ private class AndroidDeadlineAlarmBackend(
             manager.cancel(pendingIntent)
             pendingIntent.cancel()
         }
+    }
+
+    private val scheduledAlarmPrefs by lazy {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    }
+
+    private fun scheduledNoteIds(): Set<String> {
+        return scheduledAlarmPrefs.getStringSet(KEY_SCHEDULED_NOTE_IDS, emptySet()).orEmpty()
+            .filter { it.isNotBlank() }
+            .toSet()
+    }
+
+    private fun rememberScheduledNote(noteId: String) {
+        if (noteId.isBlank()) return
+        val updatedIds = scheduledNoteIds() + noteId
+        scheduledAlarmPrefs.edit()
+            .putStringSet(KEY_SCHEDULED_NOTE_IDS, updatedIds)
+            .apply()
+    }
+
+    private fun forgetScheduledNote(noteId: String) {
+        if (noteId.isBlank()) return
+        val updatedIds = scheduledNoteIds() - noteId
+        scheduledAlarmPrefs.edit()
+            .putStringSet(KEY_SCHEDULED_NOTE_IDS, updatedIds)
+            .apply()
     }
 
     private fun createPendingIntent(note: Note, flags: Int): PendingIntent {
@@ -193,5 +243,10 @@ private class AndroidDeadlineAlarmBackend(
 
     private fun immutableFlag(): Int {
         return if (sdkInt >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
+    }
+
+    private companion object {
+        const val PREFS_NAME = "deadline_notification_alarms"
+        const val KEY_SCHEDULED_NOTE_IDS = "scheduled_note_ids"
     }
 }

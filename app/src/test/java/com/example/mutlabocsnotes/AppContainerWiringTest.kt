@@ -129,6 +129,45 @@ class AppContainerWiringTest {
         assertTrue(mainActivity.contains("onMessageAction = onMessageAction"))
     }
 
+    @Test
+    fun rootNavigation_clearsNotesAndSchedulesWhenUnauthenticated() {
+        val mainActivity = projectFile(
+            "app/src/main/java/com/example/mutlabocsnotes/MainActivity.kt"
+        ).readText()
+
+        assertTrue(mainActivity.contains("is AuthState.Unauthenticated ->"))
+        assertTrue(mainActivity.contains("notesViewModel.clearAll()"))
+    }
+
+    @Test
+    fun rootNavigation_handlesPendingNotificationNoteAfterLoadingNotes() {
+        val mainActivity = projectFile(
+            "app/src/main/java/com/example/mutlabocsnotes/MainActivity.kt"
+        ).readText()
+
+        assertTrue(mainActivity.contains("DeadlineNotification.noteIdFromIntent(intent)"))
+        assertTrue(mainActivity.contains("override fun onNewIntent(intent: Intent)"))
+        assertTrue(mainActivity.contains("pendingNotificationNoteId: String? = null"))
+        assertTrue(mainActivity.contains("onPendingNotificationHandled(targetNoteId)"))
+        assertTrue(mainActivity.contains("state.notes.any { it.id == targetNoteId }"))
+        assertTrue(mainActivity.contains("navController.navigate(\"edit/\${Uri.encode(targetNoteId)}\")"))
+    }
+
+    @Test
+    fun deadlineNotificationContentIntentTargetsTheDeadlineNote() {
+        val receiver = projectFile(
+            "app/src/main/java/com/example/mutlabocsnotes/DeadlineNotificationReceiver.kt"
+        ).readText()
+
+        assertTrue(receiver.contains("const val ACTION_OPEN_NOTE"))
+        assertTrue(receiver.contains("fun openNoteIntent(context: Context, noteId: String): Intent"))
+        assertTrue(receiver.contains("action = ACTION_OPEN_NOTE"))
+        assertTrue(receiver.contains("data = openNoteUri(noteId)"))
+        assertTrue(receiver.contains("putExtra(EXTRA_NOTE_ID, noteId)"))
+        assertTrue(receiver.contains("PendingIntent.getActivity"))
+        assertTrue(receiver.contains("DeadlineNotification.requestCodeForId(noteId)"))
+    }
+
     private fun projectFile(path: String): File {
         val userDir = checkNotNull(System.getProperty("user.dir")) {
             "user.dir is not set"
@@ -194,4 +233,5 @@ private class WiringFakeDeadlineScheduler : DeadlineScheduler {
     override fun schedule(note: Note): DeadlineScheduleResult = DeadlineScheduleResult.ScheduledExact
     override fun cancel(noteId: String) = Unit
     override fun scheduleAll(notes: List<Note>): DeadlineScheduleResult = DeadlineScheduleResult.ScheduledExact
+    override fun cancelAll() = Unit
 }

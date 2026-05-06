@@ -40,9 +40,11 @@ import androidx.navigation.navArgument
 class MainActivity : ComponentActivity() {
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    private var pendingNotificationNoteId by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingNotificationNoteId = DeadlineNotification.noteIdFromIntent(intent)
 
         createNotificationChannel()
         requestNotificationPermissionIfNeeded()
@@ -50,8 +52,22 @@ class MainActivity : ComponentActivity() {
         // Activity получает готовую фабрику из Application и передаёт её в Compose-root.
         val appContainer = (application as MutlabocNotesApplication).appContainer
         setContent {
-            MyApp(viewModelFactory = appContainer.viewModelFactory)
+            MyApp(
+                viewModelFactory = appContainer.viewModelFactory,
+                pendingNotificationNoteId = pendingNotificationNoteId,
+                onPendingNotificationHandled = { handledNoteId ->
+                    if (pendingNotificationNoteId == handledNoteId) {
+                        pendingNotificationNoteId = null
+                    }
+                }
+            )
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingNotificationNoteId = DeadlineNotification.noteIdFromIntent(intent)
     }
 
     private fun createNotificationChannel() {
@@ -96,6 +112,8 @@ internal fun applicationDetailsSettingsIntent(packageName: String): Intent {
 @Composable
 fun MyApp(
     viewModelFactory: ViewModelProvider.Factory,
+    pendingNotificationNoteId: String? = null,
+    onPendingNotificationHandled: (String) -> Unit = {},
     // Все root ViewModel создаются одной фабрикой, чтобы зависимости не собирались внутри UI.
     authViewModel: AuthViewModel = viewModel(factory = viewModelFactory),
     notesViewModel: NotesViewModel = viewModel(factory = viewModelFactory),
@@ -105,6 +123,8 @@ fun MyApp(
     val context = LocalContext.current
     val authUiState = authViewModel.uiState
     val authState = authUiState.authState
+    val notesUiState = notesViewModel.uiState
+    var isWaitingForNotificationNotes by rememberSaveable { mutableStateOf(false) }
     val exactAlarmSettingsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
@@ -133,6 +153,7 @@ fun MyApp(
     LaunchedEffect(authState) {
         when (authState) {
             is AuthState.Authenticated -> {
+                isWaitingForNotificationNotes = pendingNotificationNoteId != null
                 notesViewModel.loadNotes()
                 navController.navigate("home") {
                     popUpTo("bootstrap") { inclusive = false }
@@ -141,6 +162,8 @@ fun MyApp(
             }
 
             is AuthState.Unauthenticated -> {
+                isWaitingForNotificationNotes = false
+                notesViewModel.clearAll()
                 navController.navigate("auth") {
                     popUpTo("bootstrap") { inclusive = false }
                     launchSingleTop = true
@@ -148,6 +171,41 @@ fun MyApp(
             }
 
             AuthState.Checking -> Unit
+        }
+    }
+
+    LaunchedEffect(pendingNotificationNoteId) {
+        if (pendingNotificationNoteId != null && authState is AuthState.Authenticated) {
+            isWaitingForNotificationNotes = true
+            notesViewModel.loadNotes()
+            navController.navigate("home") {
+                launchSingleTop = true
+            }
+        }
+    }
+
+    LaunchedEffect(authState, notesUiState, pendingNotificationNoteId, isWaitingForNotificationNotes) {
+        val targetNoteId = pendingNotificationNoteId ?: return@LaunchedEffect
+        if (!isWaitingForNotificationNotes || authState !is AuthState.Authenticated) {
+            return@LaunchedEffect
+        }
+
+        when (val state = notesUiState) {
+            is NotesUiState.Content -> {
+                isWaitingForNotificationNotes = false
+                onPendingNotificationHandled(targetNoteId)
+                if (state.notes.any { it.id == targetNoteId }) {
+                    navController.navigate("edit/${Uri.encode(targetNoteId)}") {
+                        launchSingleTop = true
+                    }
+                }
+            }
+            NotesUiState.Empty -> {
+                isWaitingForNotificationNotes = false
+                onPendingNotificationHandled(targetNoteId)
+            }
+            is NotesUiState.Error,
+            NotesUiState.Loading -> Unit
         }
     }
 
@@ -190,7 +248,7 @@ fun MyApp(
                         navController.navigate("edit")
                     },
                     onNoteClick = { noteId ->
-                        navController.navigate("edit/$noteId")
+                        navController.navigate("edit/${Uri.encode(noteId)}")
                     },
                     onOtherCellClick = { index ->
                         when (index) {
@@ -232,7 +290,7 @@ fun MyApp(
                         navController.navigate("edit")
                     },
                     onNoteClick = { noteId ->
-                        navController.navigate("edit/$noteId")
+                        navController.navigate("edit/${Uri.encode(noteId)}")
                     },
                     onCompletionChange = { noteId, isCompleted ->
                         notesViewModel.setNoteCompletion(noteId, isCompleted)

@@ -230,6 +230,20 @@ class NotesViewModelTest {
         assertStringResource(R.string.api_error_network, checkNotNull(viewModel.uiMessage).text)
     }
 
+    @Test
+    fun clearAllClearsStateAndCancelsAllSchedules() = runTest(mainDispatcherRule.dispatcher) {
+        val existing = note(id = "scheduled")
+        scheduler.scheduleAllResult = DeadlineScheduleResult.ScheduledInexactPermissionRequired
+        loadContent(existing)
+        checkNotNull(viewModel.uiMessage)
+
+        viewModel.clearAll()
+
+        assertEquals(NotesUiState.Empty, viewModel.uiState)
+        assertEquals(null, viewModel.uiMessage)
+        assertEquals(1, scheduler.cancelAllCalls)
+    }
+
     private fun loadContent(vararg notes: Note) {
         repository.notesResult = Result.success(notes.toList())
         viewModel.loadNotes()
@@ -295,6 +309,7 @@ private class FakeDeadlineScheduler : DeadlineScheduler {
     val scheduleCalls = mutableListOf<Note>()
     val scheduleAllCalls = mutableListOf<List<Note>>()
     val cancelCalls = mutableListOf<String>()
+    var cancelAllCalls = 0
 
     override fun schedule(note: Note): DeadlineScheduleResult {
         scheduleCalls.add(note)
@@ -309,5 +324,9 @@ private class FakeDeadlineScheduler : DeadlineScheduler {
         scheduleAllCalls.add(notes.toList())
         scheduleCalls.addAll(notes)
         return scheduleAllResult
+    }
+
+    override fun cancelAll() {
+        cancelAllCalls += 1
     }
 }

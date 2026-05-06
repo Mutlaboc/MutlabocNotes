@@ -24,11 +24,8 @@ class NotesViewModel(
         private set
 
     fun loadNotes() {
+        uiState = NotesUiState.Loading
         viewModelScope.launch(ioDispatcher) {
-            launch(Dispatchers.Main) {
-                uiState = NotesUiState.Loading
-            }
-
             val result = repository.getAllNotes()
 
             launch(Dispatchers.Main) {
@@ -59,6 +56,7 @@ class NotesViewModel(
     }
 
     fun clearAll() {
+        notificationScheduler.cancelAll()
         uiState = NotesUiState.Empty
         uiMessage = null
     }
