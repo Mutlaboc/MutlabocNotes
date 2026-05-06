@@ -117,13 +117,15 @@ fun MyApp(
     // Все root ViewModel создаются одной фабрикой, чтобы зависимости не собирались внутри UI.
     authViewModel: AuthViewModel = viewModel(factory = viewModelFactory),
     notesViewModel: NotesViewModel = viewModel(factory = viewModelFactory),
-    homeInfoViewModel: HomeInfoViewModel = viewModel(factory = viewModelFactory)
+    homeInfoViewModel: HomeInfoViewModel = viewModel(factory = viewModelFactory),
+    settingsViewModel: SettingsViewModel = viewModel(factory = viewModelFactory)
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
     val authUiState = authViewModel.uiState
     val authState = authUiState.authState
     val notesUiState = notesViewModel.uiState
+    val settingsPreferences = settingsViewModel.uiState.preferences
     var isWaitingForNotificationNotes by rememberSaveable { mutableStateOf(false) }
     val exactAlarmSettingsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -209,9 +211,7 @@ fun MyApp(
         }
     }
 
-    var isDarkTheme by rememberSaveable { mutableStateOf(false) }
-
-    MaterialTheme(colors = if (isDarkTheme) darkColors() else lightColors()) {
+    MaterialTheme(colors = if (settingsPreferences.isDarkTheme) darkColors() else lightColors()) {
         NavHost(
             navController = navController,
             startDestination = "bootstrap"
@@ -270,8 +270,11 @@ fun MyApp(
 
             composable("settings") {
                 SettingsScreen(
-                    isDarkTheme = isDarkTheme,
-                    onThemeChange = { isDarkTheme = it },
+                    isDarkTheme = settingsPreferences.isDarkTheme,
+                    onThemeChange = settingsViewModel::setDarkTheme,
+                    selectedLanguage = settingsPreferences.language,
+                    availableLanguages = AppLanguage.entries.toList(),
+                    onLanguageChange = settingsViewModel::setLanguage,
                     onLogout = authViewModel::logout,
                     onBack = {
                         navController.popBackStack()

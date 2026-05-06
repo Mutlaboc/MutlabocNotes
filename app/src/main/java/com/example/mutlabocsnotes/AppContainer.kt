@@ -53,6 +53,10 @@ class AppContainer(
         DeadlineNotificationScheduler(application)
     }
 
+    val settingsRepository: SettingsRepository by lazy {
+        DataStoreSettingsRepository(application)
+    }
+
     // Фабрика создаёт root ViewModel с зависимостями из контейнера.
     val viewModelFactory: ViewModelProvider.Factory by lazy {
         MutlabocNotesViewModelFactory(
@@ -60,7 +64,8 @@ class AppContainer(
             authRepository = authRepository,
             notesRepository = notesRepository,
             homeInfoRepository = homeInfoRepository,
-            deadlineNotificationScheduler = deadlineNotificationScheduler
+            deadlineNotificationScheduler = deadlineNotificationScheduler,
+            settingsRepository = settingsRepository
         )
     }
 }
@@ -71,7 +76,8 @@ class MutlabocNotesViewModelFactory(
     private val authRepository: AuthSessionRepository,
     private val notesRepository: NotesDataSource,
     private val homeInfoRepository: HomeInfoDataSource,
-    private val deadlineNotificationScheduler: DeadlineScheduler
+    private val deadlineNotificationScheduler: DeadlineScheduler,
+    private val settingsRepository: SettingsRepository
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -93,6 +99,11 @@ class MutlabocNotesViewModelFactory(
             modelClass.isAssignableFrom(HomeInfoViewModel::class.java) -> HomeInfoViewModel(
                 application = application,
                 repository = homeInfoRepository
+            ) as T
+
+            modelClass.isAssignableFrom(SettingsViewModel::class.java) -> SettingsViewModel(
+                application = application,
+                repository = settingsRepository
             ) as T
 
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

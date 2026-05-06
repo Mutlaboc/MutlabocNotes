@@ -25,7 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,12 +35,13 @@ import androidx.compose.ui.unit.dp
 fun SettingsScreen(
     isDarkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit,
+    selectedLanguage: AppLanguage,
+    availableLanguages: List<AppLanguage>,
+    onLanguageChange: (AppLanguage) -> Unit,
     onLogout: () -> Unit,
     onBack: () -> Unit,
 ) {
-    val languages = listOf("Русский", "English", "Deutsch")
     var isLanguageMenuExpanded by remember { mutableStateOf(false) }
-    var selectedLanguage by rememberSaveable { mutableStateOf(languages.first()) }
 
     Scaffold(
         topBar = {
@@ -103,18 +103,18 @@ fun SettingsScreen(
                 onClick = { isLanguageMenuExpanded = true },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Выбран $selectedLanguage")
+                Text("Выбран ${selectedLanguage.displayName}")
             }
             DropdownMenu(
                 expanded = isLanguageMenuExpanded,
                 onDismissRequest = { isLanguageMenuExpanded = false }
             ) {
-                languages.forEach { language ->
+                availableLanguages.forEach { language ->
                     DropdownMenuItem(onClick = {
-                        selectedLanguage = language
+                        onLanguageChange(language)
                         isLanguageMenuExpanded = false
                     }) {
-                        Text(language)
+                        Text(language.displayName)
                     }
                 }
             }
@@ -128,6 +128,9 @@ fun SettingsScreenPreview() {
     SettingsScreen(
         isDarkTheme = false,
         onThemeChange = {},
+        selectedLanguage = AppLanguage.RU,
+        availableLanguages = AppLanguage.entries.toList(),
+        onLanguageChange = {},
         onLogout = {},
         onBack = {}
     )

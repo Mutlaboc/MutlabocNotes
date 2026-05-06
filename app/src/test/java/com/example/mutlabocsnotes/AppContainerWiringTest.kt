@@ -2,6 +2,8 @@ package com.example.mutlabocsnotes
 
 import android.app.Application
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertFalse
@@ -46,6 +48,7 @@ class AppContainerWiringTest {
         assertTrue(appContainer.contains("val notesRepository: NotesDataSource by lazy"))
         assertTrue(appContainer.contains("val homeInfoRepository: HomeInfoDataSource by lazy"))
         assertTrue(appContainer.contains("val deadlineNotificationScheduler: DeadlineScheduler by lazy"))
+        assertTrue(appContainer.contains("val settingsRepository: SettingsRepository by lazy"))
         assertTrue(appContainer.contains("class MutlabocNotesViewModelFactory"))
     }
 
@@ -56,12 +59,14 @@ class AppContainerWiringTest {
             authRepository = WiringFakeAuthSessionRepository(),
             notesRepository = WiringFakeNotesDataSource(),
             homeInfoRepository = WiringFakeHomeInfoDataSource(),
-            deadlineNotificationScheduler = WiringFakeDeadlineScheduler()
+            deadlineNotificationScheduler = WiringFakeDeadlineScheduler(),
+            settingsRepository = WiringFakeSettingsRepository()
         )
 
         assertNotNull(factory.create(AuthViewModel::class.java))
         assertNotNull(factory.create(NotesViewModel::class.java))
         assertNotNull(factory.create(HomeInfoViewModel::class.java))
+        assertNotNull(factory.create(SettingsViewModel::class.java))
         advanceUntilIdle()
     }
 
@@ -168,6 +173,28 @@ class AppContainerWiringTest {
         assertTrue(receiver.contains("DeadlineNotification.requestCodeForId(noteId)"))
     }
 
+    @Test
+    fun settingsPersistence_isWiredThroughRootViewModel() {
+        val appContainer = projectFile(
+            "app/src/main/java/com/example/mutlabocsnotes/AppContainer.kt"
+        ).readText()
+        val mainActivity = projectFile(
+            "app/src/main/java/com/example/mutlabocsnotes/MainActivity.kt"
+        ).readText()
+        val settingsScreen = projectFile(
+            "app/src/main/java/com/example/mutlabocsnotes/SettingsScreen.kt"
+        ).readText()
+
+        assertTrue(appContainer.contains("DataStoreSettingsRepository(application)"))
+        assertTrue(appContainer.contains("SettingsViewModel("))
+        assertTrue(mainActivity.contains("settingsViewModel: SettingsViewModel = viewModel(factory = viewModelFactory)"))
+        assertTrue(mainActivity.contains("settingsViewModel.uiState.preferences"))
+        assertTrue(mainActivity.contains("settingsViewModel::setDarkTheme"))
+        assertTrue(mainActivity.contains("settingsViewModel::setLanguage"))
+        assertFalse(mainActivity.contains("var isDarkTheme by rememberSaveable"))
+        assertFalse(settingsScreen.contains("rememberSaveable"))
+    }
+
     private fun projectFile(path: String): File {
         val userDir = checkNotNull(System.getProperty("user.dir")) {
             "user.dir is not set"
@@ -234,4 +261,10 @@ private class WiringFakeDeadlineScheduler : DeadlineScheduler {
     override fun cancel(noteId: String) = Unit
     override fun scheduleAll(notes: List<Note>): DeadlineScheduleResult = DeadlineScheduleResult.ScheduledExact
     override fun cancelAll() = Unit
+}
+
+private class WiringFakeSettingsRepository : SettingsRepository {
+    override val preferences: Flow<UserPreferences> = flowOf(UserPreferences())
+    override suspend fun setDarkTheme(isDarkTheme: Boolean) = Unit
+    override suspend fun setLanguage(language: AppLanguage) = Unit
 }

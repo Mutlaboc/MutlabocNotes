@@ -66,6 +66,7 @@ dependencies {
     androidTestImplementation(composeBom)
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("androidx.datastore:datastore-preferences:1.2.1")
 
     implementation("com.google.android.gms:play-services-auth:21.3.0")
 
