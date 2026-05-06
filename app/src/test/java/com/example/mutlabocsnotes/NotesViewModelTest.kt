@@ -148,7 +148,8 @@ class NotesViewModelTest {
 
         state = viewModel.uiState as NotesUiState.Content
         assertEquals(listOf(optimistic), state.notes)
-        assertEquals(listOf(optimistic), repository.updateCalls)
+        assertEquals(listOf("task" to true), repository.updateCompletionCalls)
+        assertTrue(repository.updateCalls.isEmpty())
         assertEquals(listOf(optimistic), scheduler.scheduleCalls.drop(1))
         assertEquals(null, viewModel.uiMessage)
     }
@@ -156,7 +157,7 @@ class NotesViewModelTest {
     @Test
     fun setNoteCompletion_failureRollsBackStateAndEmitsSnackbarMessage() = runTest(mainDispatcherRule.dispatcher) {
         val existing = note(id = "task", isCompleted = false, coinCount = 3)
-        repository.updateResult = Result.failure(IOException("offline"))
+        repository.updateCompletionResult = Result.failure(IOException("offline"))
         loadContent(existing)
 
         viewModel.setNoteCompletion("task", true)
@@ -166,7 +167,8 @@ class NotesViewModelTest {
         val state = viewModel.uiState as NotesUiState.Content
         assertEquals(listOf(existing), state.notes)
         assertEquals(0, state.totalCoins)
-        assertEquals(listOf(optimistic), repository.updateCalls)
+        assertEquals(listOf("task" to true), repository.updateCompletionCalls)
+        assertTrue(repository.updateCalls.isEmpty())
         assertEquals(listOf(optimistic, existing), scheduler.scheduleCalls.drop(1))
         assertStringResource(R.string.api_error_network, checkNotNull(viewModel.uiMessage).text)
     }
@@ -231,9 +233,11 @@ private class FakeNotesDataSource : NotesDataSource {
     var notesResult: Result<List<Note>> = Result.success(emptyList())
     var insertResult: Result<String> = Result.failure(IllegalStateException("not set"))
     var updateResult: Result<Unit> = Result.success(Unit)
+    var updateCompletionResult: Result<Unit> = Result.success(Unit)
     var deleteResult: Result<Unit> = Result.failure(IllegalStateException("not set"))
     val insertCalls = mutableListOf<Note>()
     val updateCalls = mutableListOf<Note>()
+    val updateCompletionCalls = mutableListOf<Pair<String, Boolean>>()
     val deleteCalls = mutableListOf<String>()
 
     override suspend fun getAllNotes(): Result<List<Note>> = notesResult
@@ -246,6 +250,11 @@ private class FakeNotesDataSource : NotesDataSource {
     override suspend fun update(note: Note): Result<Unit> {
         updateCalls.add(note)
         return updateResult
+    }
+
+    override suspend fun updateCompletion(noteId: String, isCompleted: Boolean): Result<Unit> {
+        updateCompletionCalls.add(noteId to isCompleted)
+        return updateCompletionResult
     }
 
     override suspend fun delete(noteId: String): Result<Unit> {

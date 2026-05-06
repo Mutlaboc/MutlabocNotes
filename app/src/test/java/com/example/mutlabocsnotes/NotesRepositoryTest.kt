@@ -1,6 +1,7 @@
 package com.example.mutlabocsnotes
 
 import com.example.mutlabocsnotes.network.ChecklistItemDto
+import com.example.mutlabocsnotes.network.NoteCompletionRequestDto
 import com.example.mutlabocsnotes.network.NoteDto
 import com.example.mutlabocsnotes.network.NoteUpsertRequestDto
 import com.example.mutlabocsnotes.network.NotesApi
@@ -104,6 +105,36 @@ class NotesRepositoryTest {
     }
 
     @Test
+    fun updateCompletion_successCallsPatchEndpointWithCompletionPayload() = runTest(mainDispatcherRule.dispatcher) {
+        val result = repository.updateCompletion("note-id", true)
+
+        assertEquals(Result.success(Unit), result)
+        assertEquals("note-id", api.lastCompletionId)
+        assertEquals(NoteCompletionRequestDto(isCompleted = true), api.lastCompletionRequest)
+        assertEquals(null, api.lastUpdateRequest)
+    }
+
+    @Test
+    fun updateCompletion_blankIdReturnsFailureWithoutCallingApi() = runTest(mainDispatcherRule.dispatcher) {
+        val result = repository.updateCompletion("", true)
+
+        assertTrue(result.isFailure)
+        assertEquals("Blank note id", result.exceptionOrNull()?.message)
+        assertEquals(null, api.lastCompletionRequest)
+    }
+
+    @Test
+    fun updateCompletion_failurePropagatesError() = runTest(mainDispatcherRule.dispatcher) {
+        val error = IllegalStateException("cannot patch completion")
+        api.completionError = error
+
+        val result = repository.updateCompletion("note-id", false)
+
+        assertTrue(result.isFailure)
+        assertSame(error, result.exceptionOrNull())
+    }
+
+    @Test
     fun delete_successReturnsUnit() = runTest(mainDispatcherRule.dispatcher) {
         val result = repository.delete("delete-me")
 
@@ -156,10 +187,13 @@ private class FakeNotesApi : NotesApi {
     var getNotesError: Exception? = null
     var createError: Exception? = null
     var updateError: Exception? = null
+    var completionError: Exception? = null
     var deleteError: Exception? = null
     var lastCreateRequest: NoteUpsertRequestDto? = null
     var lastUpdateId: String? = null
     var lastUpdateRequest: NoteUpsertRequestDto? = null
+    var lastCompletionId: String? = null
+    var lastCompletionRequest: NoteCompletionRequestDto? = null
     var lastDeleteId: String? = null
 
     override suspend fun getNotes(): List<NoteDto> {
@@ -182,6 +216,12 @@ private class FakeNotesApi : NotesApi {
         lastUpdateId = noteId
         lastUpdateRequest = request
         return noteDto(noteId)
+    }
+
+    override suspend fun updateNoteCompletion(noteId: String, request: NoteCompletionRequestDto) {
+        completionError?.let { throw it }
+        lastCompletionId = noteId
+        lastCompletionRequest = request
     }
 
     override suspend fun deleteNote(noteId: String) {

@@ -1,5 +1,6 @@
 package com.example.mutlabocsnotes
 
+import com.example.mutlabocsnotes.network.NoteCompletionRequestDto
 import com.example.mutlabocsnotes.network.NotesApi
 import com.example.mutlabocsnotes.network.toDomain
 import com.example.mutlabocsnotes.network.toUpsertRequestDto
@@ -10,6 +11,7 @@ interface NotesDataSource {
     suspend fun getAllNotes(): Result<List<Note>>
     suspend fun insert(note: Note): Result<String>
     suspend fun update(note: Note): Result<Unit>
+    suspend fun updateCompletion(noteId: String, isCompleted: Boolean): Result<Unit>
     suspend fun delete(noteId: String): Result<Unit>
 }
 
@@ -46,6 +48,20 @@ class NotesRepository(
             Result.failure(e)
         }
     }
+
+    override suspend fun updateCompletion(noteId: String, isCompleted: Boolean): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            if (noteId.isBlank()) {
+                return@withContext Result.failure(IllegalArgumentException("Blank note id"))
+            }
+
+            return@withContext try {
+                api.updateNoteCompletion(noteId, NoteCompletionRequestDto(isCompleted))
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
 
     override suspend fun delete(noteId: String): Result<Unit> = withContext(Dispatchers.IO) {
         if (noteId.isBlank()) {

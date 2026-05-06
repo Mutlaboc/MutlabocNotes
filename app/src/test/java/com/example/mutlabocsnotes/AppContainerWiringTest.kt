@@ -158,6 +158,7 @@ private class WiringFakeNotesDataSource : NotesDataSource {
     override suspend fun getAllNotes(): Result<List<Note>> = Result.success(emptyList())
     override suspend fun insert(note: Note): Result<String> = Result.success(note.id.ifBlank { "note-id" })
     override suspend fun update(note: Note): Result<Unit> = Result.success(Unit)
+    override suspend fun updateCompletion(noteId: String, isCompleted: Boolean): Result<Unit> = Result.success(Unit)
     override suspend fun delete(noteId: String): Result<Unit> = Result.success(Unit)
 }
 

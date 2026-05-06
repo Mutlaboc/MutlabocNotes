@@ -35,6 +35,10 @@ data class NoteUpsertRequestDto(
     val isCompleted: Boolean,
 )
 
+data class NoteCompletionRequestDto(
+    val isCompleted: Boolean,
+)
+
 // Преобразует строку категории из backend в enum доменной модели с безопасным fallback.
 private fun String.toNoteCategory(): NoteCategory {
     return runCatching { NoteCategory.valueOf(this) }

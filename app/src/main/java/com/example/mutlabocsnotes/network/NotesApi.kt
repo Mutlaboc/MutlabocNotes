@@ -3,6 +3,7 @@ package com.example.mutlabocsnotes.network
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
@@ -31,6 +32,12 @@ interface NotesApi {
         @Path("id") noteId: String,
         @Body request: NoteUpsertRequestDto,
     ): NoteDto
+
+    @PATCH("notes/{id}/completion")
+    suspend fun updateNoteCompletion(
+        @Path("id") noteId: String,
+        @Body request: NoteCompletionRequestDto,
+    )
 
     // Удаление заметки.
     @DELETE("notes/{id}")

@@ -105,7 +105,7 @@ class NotesViewModel(
         notificationScheduler.schedule(updatedNote)
 
         viewModelScope.launch(ioDispatcher) {
-            val result = repository.update(updatedNote)
+            val result = repository.updateCompletion(noteId, isCompleted)
             launch(Dispatchers.Main) {
                 result.onFailure { error ->
                     applyNotes(existingNotes)
