@@ -1,6 +1,7 @@
 package com.example.mutlabocsnotes
 
 import android.content.Context
+import androidx.annotation.StringRes
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -15,11 +16,10 @@ import kotlinx.coroutines.flow.map
 
 enum class AppLanguage(
     val code: String,
-    val displayName: String
+    @StringRes val displayNameResId: Int
 ) {
-    RU("ru", "Русский"),
-    EN("en", "English"),
-    DE("de", "Deutsch");
+    RU("ru", R.string.language_ru),
+    EN("en", R.string.language_en);
 
     companion object {
         fun fromCode(code: String?): AppLanguage {

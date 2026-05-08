@@ -55,12 +55,12 @@ class DataStoreSettingsRepositoryTest {
         val file = preferenceFile()
         var store = repository(file)
 
-        store.repository.setLanguage(AppLanguage.DE)
-        assertEquals(AppLanguage.DE, store.repository.preferences.first().language)
+        store.repository.setLanguage(AppLanguage.EN)
+        assertEquals(AppLanguage.EN, store.repository.preferences.first().language)
         store.scope.cancel()
 
         store = repository(file)
-        assertEquals(AppLanguage.DE, store.repository.preferences.first().language)
+        assertEquals(AppLanguage.EN, store.repository.preferences.first().language)
 
         store.scope.cancel()
     }

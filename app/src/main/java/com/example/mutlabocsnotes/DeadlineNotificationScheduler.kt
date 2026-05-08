@@ -1,10 +1,12 @@
 package com.example.mutlabocsnotes
 
+import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import androidx.annotation.RequiresApi
 import java.util.Calendar
 
 data class DeadlineScheduleResult(
@@ -131,9 +133,16 @@ private class AndroidDeadlineAlarmBackend(
     override val sdkInt: Int = Build.VERSION.SDK_INT
     override val isAvailable: Boolean = alarmManager != null
 
+    @SuppressLint("NewApi")
     override fun canScheduleExactAlarms(): Boolean {
         val manager = alarmManager ?: return false
-        return sdkInt < Build.VERSION_CODES.S || manager.canScheduleExactAlarms()
+        if (sdkInt < Build.VERSION_CODES.S) return true
+        return canScheduleExactAlarmsOnAndroidS(manager)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun canScheduleExactAlarmsOnAndroidS(manager: AlarmManager): Boolean {
+        return manager.canScheduleExactAlarms()
     }
 
     override fun scheduleExact(triggerAtMillis: Long, note: Note) {

@@ -3,7 +3,7 @@ package com.example.mutlabocsnotes
 sealed interface AuthState {
     data object Checking : AuthState
     data class Authenticated(val email: String) : AuthState
-    data class Unauthenticated(val errorMessage: String? = null) : AuthState
+    data class Unauthenticated(val errorMessage: UiText? = null) : AuthState
 }
 
 data class AuthUiState(
@@ -19,6 +19,6 @@ data class AuthUiState(
     val currentEmail: String
         get() = (authState as? AuthState.Authenticated)?.email.orEmpty()
 
-    val errorMessage: String?
+    val errorMessage: UiText?
         get() = (authState as? AuthState.Unauthenticated)?.errorMessage
 }

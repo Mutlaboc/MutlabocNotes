@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
@@ -42,14 +43,18 @@ fun SettingsScreen(
     onBack: () -> Unit,
 ) {
     var isLanguageMenuExpanded by remember { mutableStateOf(false) }
+    val selectedLanguageName = stringResource(selectedLanguage.displayNameResId)
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Настройки") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Назад")
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back)
+                        )
                     }
                 }
             )
@@ -63,7 +68,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.Top
         ) {
             Text(
-                text = "Аккаунт",
+                text = stringResource(R.string.settings_account),
                 style = MaterialTheme.typography.subtitle1
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -71,12 +76,12 @@ fun SettingsScreen(
                 onClick = onLogout,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Выйти")
+                Text(stringResource(R.string.settings_logout))
             }
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Тема",
+                text = stringResource(R.string.settings_theme),
                 style = MaterialTheme.typography.subtitle1
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -85,7 +90,11 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isDarkTheme) "Темная" else "Светлая",
+                    text = if (isDarkTheme) {
+                        stringResource(R.string.settings_theme_dark)
+                    } else {
+                        stringResource(R.string.settings_theme_light)
+                    },
                     modifier = Modifier.weight(1f)
                 )
                 Switch(
@@ -96,14 +105,14 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Язык",
+                text = stringResource(R.string.settings_language),
                 style = MaterialTheme.typography.subtitle1
             )
             OutlinedButton(
                 onClick = { isLanguageMenuExpanded = true },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Выбран ${selectedLanguage.displayName}")
+                Text(stringResource(R.string.settings_selected_language, selectedLanguageName))
             }
             DropdownMenu(
                 expanded = isLanguageMenuExpanded,
@@ -114,7 +123,7 @@ fun SettingsScreen(
                         onLanguageChange(language)
                         isLanguageMenuExpanded = false
                     }) {
-                        Text(language.displayName)
+                        Text(stringResource(language.displayNameResId))
                     }
                 }
             }

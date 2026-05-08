@@ -1,6 +1,6 @@
 package com.example.mutlabocsnotes
 
-import android.app.DatePickerDialog
+import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,12 +48,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import java.util.Calendar
 
 @Composable
 fun HomeInfoScreen(
@@ -92,12 +90,12 @@ fun HomeInfoScreen(
         scaffoldState = scaffoldState,
         topBar = {
             TopAppBar(
-                title = { Text("Информация о доме") },
+                title = { Text(stringResource(R.string.home_info_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Назад"
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                 }
@@ -105,7 +103,10 @@ fun HomeInfoScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddClick) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Добавить карточку")
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(R.string.home_info_add_card)
+                )
             }
         }
     ) { padding ->
@@ -118,7 +119,7 @@ fun HomeInfoScreen(
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                label = { Text("Поиск") },
+                label = { Text(stringResource(R.string.search_label)) },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -127,10 +128,13 @@ fun HomeInfoScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Раздел")
+                Text(stringResource(R.string.home_info_section))
                 Box {
                     OutlinedButton(onClick = { sectionExpanded = true }) {
-                        Text(selectedSection?.displayName() ?: "Все")
+                        Text(
+                            selectedSection?.let { sectionLabel(it) }
+                                ?: stringResource(R.string.home_info_all_sections)
+                        )
                     }
                     DropdownMenu(
                         expanded = sectionExpanded,
@@ -140,14 +144,14 @@ fun HomeInfoScreen(
                             selectedSection = null
                             sectionExpanded = false
                         }) {
-                            Text("Все")
+                            Text(stringResource(R.string.home_info_all_sections))
                         }
                         HomeSection.values().forEach { section ->
                             DropdownMenuItem(onClick = {
                                 selectedSection = section
                                 sectionExpanded = false
                             }) {
-                                Text(section.displayName())
+                                Text(sectionLabel(section))
                             }
                         }
                     }
@@ -243,14 +247,20 @@ private fun HomeInfoCardItem(card: HomeInfoCard, onClick: () -> Unit) {
                 .clickable(onClick = onClick)
         ) {
             Text(text = card.title, style = MaterialTheme.typography.subtitle1)
-            Text(text = card.section.displayName(), style = MaterialTheme.typography.caption)
+            Text(text = sectionLabel(card.section), style = MaterialTheme.typography.caption)
             Spacer(modifier = Modifier.height(6.dp))
             previewFields.forEach { field ->
-                Text(text = "${field.key}: ${field.value}", style = MaterialTheme.typography.body2)
+                Text(
+                    text = stringResource(R.string.home_info_field_value, field.key, field.value),
+                    style = MaterialTheme.typography.body2
+                )
             }
             if (card.links.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(6.dp))
-                Text(text = "Ссылок: ${card.links.size}", style = MaterialTheme.typography.caption)
+                Text(
+                    text = stringResource(R.string.home_info_links_count, card.links.size),
+                    style = MaterialTheme.typography.caption
+                )
             }
         }
     }
@@ -268,7 +278,7 @@ fun EditHomeInfoCardScreen(
     var selectedSection by remember(cardId) { mutableStateOf(card?.section ?: HomeSection.OTHER) }
     var note by remember(cardId) { mutableStateOf(card?.note ?: "") }
     var showDeleteDialog by remember(cardId) { mutableStateOf(false) }
-    var titleError by remember(cardId) { mutableStateOf<String?>(null) }
+    var isTitleError by remember(cardId) { mutableStateOf(false) }
     val fields = remember(cardId) {
         mutableStateListOf<HomeField>().apply { addAll(card?.fields ?: emptyList()) }
     }
@@ -279,12 +289,20 @@ fun EditHomeInfoCardScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (card == null) "Новая карточка" else "Редактирование") },
+                title = {
+                    Text(
+                        if (card == null) {
+                            stringResource(R.string.home_info_new_card)
+                        } else {
+                            stringResource(R.string.home_info_edit_card)
+                        }
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Назад"
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                 }
@@ -302,14 +320,17 @@ fun EditHomeInfoCardScreen(
                 value = title,
                 onValueChange = {
                     title = it
-                    titleError = null
+                    isTitleError = false
                 },
-                label = { Text("Заголовок") },
+                label = { Text(stringResource(R.string.note_title_label)) },
                 modifier = Modifier.fillMaxWidth(),
-                isError = !titleError.isNullOrBlank()
+                isError = isTitleError
             )
-            titleError?.let {
-                Text(text = it, color = Color.Red)
+            if (isTitleError) {
+                Text(
+                    text = stringResource(R.string.home_info_title_required),
+                    color = Color.Red
+                )
             }
             Spacer(modifier = Modifier.height(8.dp))
             SectionPicker(
@@ -317,7 +338,7 @@ fun EditHomeInfoCardScreen(
                 onSectionSelected = { selectedSection = it }
             )
             Spacer(modifier = Modifier.height(12.dp))
-            Text("Поля")
+            Text(stringResource(R.string.home_info_fields))
             Spacer(modifier = Modifier.height(6.dp))
             fields.forEachIndexed { index, field ->
                 Row(
@@ -327,37 +348,40 @@ fun EditHomeInfoCardScreen(
                     OutlinedTextField(
                         value = field.key,
                         onValueChange = { fields[index] = field.copy(key = it) },
-                        label = { Text("Ключ") },
+                        label = { Text(stringResource(R.string.home_info_key_label)) },
                         modifier = Modifier.weight(1f)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     OutlinedTextField(
                         value = field.value,
                         onValueChange = { fields[index] = field.copy(value = it) },
-                        label = { Text("Значение") },
+                        label = { Text(stringResource(R.string.home_info_value_label)) },
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(onClick = { fields.removeAt(index) }) {
-                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Удалить поле")
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.home_info_delete_field)
+                        )
                     }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
             }
             OutlinedButton(onClick = { fields.add(HomeField()) }) {
-                Text("Добавить поле")
+                Text(stringResource(R.string.home_info_add_field))
             }
             Spacer(modifier = Modifier.height(12.dp))
             OutlinedTextField(
                 value = note,
                 onValueChange = { note = it },
-                label = { Text("Заметка") },
+                label = { Text(stringResource(R.string.home_info_note_label)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp),
                 keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Text)
             )
             Spacer(modifier = Modifier.height(12.dp))
-            Text("Ссылки")
+            Text(stringResource(R.string.home_info_links))
             Spacer(modifier = Modifier.height(6.dp))
             links.forEachIndexed { index, link ->
                 Row(
@@ -367,24 +391,27 @@ fun EditHomeInfoCardScreen(
                     OutlinedTextField(
                         value = link,
                         onValueChange = { links[index] = it },
-                        label = { Text("Ссылка") },
+                        label = { Text(stringResource(R.string.home_info_link_label)) },
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(onClick = { links.removeAt(index) }) {
-                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Удалить ссылку")
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.home_info_delete_link)
+                        )
                     }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
             }
             OutlinedButton(onClick = { links.add("") }) {
-                Text("Добавить ссылку")
+                Text(stringResource(R.string.home_info_add_link))
             }
             Spacer(modifier = Modifier.height(20.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(onClick = {
                     val trimmedTitle = title.trim()
                     if (trimmedTitle.isBlank()) {
-                        titleError = "Введите заголовок"
+                        isTitleError = true
                         return@Button
                     }
                     val now = System.currentTimeMillis()
@@ -402,11 +429,11 @@ fun EditHomeInfoCardScreen(
                     )
                     onSaveClick(updatedCard)
                 }) {
-                    Text("Сохранить")
+                    Text(stringResource(R.string.action_save))
                 }
                 if (card != null && onDeleteClick != null) {
                     OutlinedButton(onClick = { showDeleteDialog = true }) {
-                        Text("Удалить")
+                        Text(stringResource(R.string.action_delete))
                     }
                 }
             }
@@ -416,19 +443,19 @@ fun EditHomeInfoCardScreen(
     if (showDeleteDialog && onDeleteClick != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Удалить карточку?") },
-            text = { Text("Это действие нельзя отменить.") },
+            title = { Text(stringResource(R.string.home_info_delete_card_title)) },
+            text = { Text(stringResource(R.string.home_info_delete_card_message)) },
             confirmButton = {
                 Button(onClick = {
                     showDeleteDialog = false
                     onDeleteClick()
                 }) {
-                    Text("Удалить")
+                    Text(stringResource(R.string.action_delete))
                 }
             },
             dismissButton = {
                 OutlinedButton(onClick = { showDeleteDialog = false }) {
-                    Text("Отмена")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
@@ -442,11 +469,11 @@ private fun SectionPicker(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("Раздел")
+        Text(stringResource(R.string.home_info_section))
         Spacer(modifier = Modifier.width(12.dp))
         Box {
             OutlinedButton(onClick = { expanded = true }) {
-                Text(selectedSection.displayName())
+                Text(sectionLabel(selectedSection))
             }
             DropdownMenu(
                 expanded = expanded,
@@ -457,7 +484,7 @@ private fun SectionPicker(
                         onSectionSelected(section)
                         expanded = false
                     }) {
-                        Text(section.displayName())
+                        Text(sectionLabel(section))
                     }
                 }
             }
@@ -465,22 +492,28 @@ private fun SectionPicker(
     }
 }
 
-private fun HomeSection.displayName(): String = when (this) {
-    HomeSection.METERS -> "Счётчики"
-    HomeSection.APPLIANCES -> "Техника"
-    HomeSection.LIGHTING -> "Освещение"
-    HomeSection.DOCUMENTS -> "Документы"
-    HomeSection.CONTACTS -> "Контакты"
-    HomeSection.OTHER -> "Другое"
+@Composable
+private fun sectionLabel(section: HomeSection): String {
+    return stringResource(section.labelResId())
+}
+
+@StringRes
+private fun HomeSection.labelResId(): Int = when (this) {
+    HomeSection.METERS -> R.string.home_section_meters
+    HomeSection.APPLIANCES -> R.string.home_section_appliances
+    HomeSection.LIGHTING -> R.string.home_section_lighting
+    HomeSection.DOCUMENTS -> R.string.home_section_documents
+    HomeSection.CONTACTS -> R.string.home_section_contacts
+    HomeSection.OTHER -> R.string.home_section_other
 }
 
 @Preview(showBackground = true)
 @Composable
 fun HomeInfoScreenPreview() {
     val cards = listOf(
-        HomeInfoCard(id = "1", title = "Карточка 1"),
-        HomeInfoCard(id = "2", title = "Карточка 2"),
-        HomeInfoCard(id = "3", title = "Карточка 3")
+        HomeInfoCard(id = "1", title = "Card 1"),
+        HomeInfoCard(id = "2", title = "Card 2"),
+        HomeInfoCard(id = "3", title = "Card 3")
     )
     HomeInfoScreen(
         uiState = HomeInfoUiState.Content(cards),

@@ -1,6 +1,9 @@
 package com.example.mutlabocsnotes
 
+import android.app.DatePickerDialog
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,50 +12,45 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
+import androidx.compose.material.Checkbox
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.foundation.layout.width
-import androidx.compose.material.Checkbox
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.platform.LocalContext
-import android.app.DatePickerDialog
-import java.util.Calendar
-import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
-
-// Composable-функция для отображения экрана редактирования заметки.
 @Composable
 fun EditNoteScreen(
     note: Note?,
     onSaveClick: (Note) -> Unit,
     onDeleteClick: (() -> Unit)? = null
 ) {
-    // особенность - привязываем изменение данных при рекомпозиции к noteId
     val noteId = note?.id.orEmpty()
     var title by remember(noteId) { mutableStateOf(note?.title ?: "") }
     var content by remember(noteId) { mutableStateOf(note?.content ?: "") }
@@ -91,15 +89,15 @@ fun EditNoteScreen(
         mutableStateOf(defaultCoinCount.toString())
     }
     val categories = listOf(
-        NoteCategory.SHOPPING to "Покупки",
-        NoteCategory.TASKS to "Дела",
-        NoteCategory.NOTES to "Заметки"
+        NoteCategory.SHOPPING to R.string.note_category_shopping,
+        NoteCategory.TASKS to R.string.note_category_tasks,
+        NoteCategory.NOTES to R.string.note_category_notes
     )
-// Экран
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Редактирование заметки") }
+                title = { Text(stringResource(R.string.edit_note_title)) }
             )
         }
     ) { padding ->
@@ -113,25 +111,23 @@ fun EditNoteScreen(
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("Заголовок") },
-                // TODO может убрать жесткую привязку к черному?
+                label = { Text(stringResource(R.string.note_title_label)) },
                 textStyle = TextStyle(color = Color.Black),
                 colors = TextFieldDefaults.outlinedTextFieldColors(
                     textColor = Color.Black,
                     focusedLabelColor = Color.Black,
                     unfocusedLabelColor = Color.Gray,
-                    cursorColor = Color.Black),
+                    cursorColor = Color.Black
+                ),
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row {
-                categories.forEach { (category, label) ->
+                categories.forEach { (category, labelResId) ->
                     FilterChip(
                         selected = selectedCategory == category,
-                        onClick = {
-                            selectedCategory = category
-                        },
-                        label = { Text(label) },
+                        onClick = { selectedCategory = category },
+                        label = { Text(stringResource(labelResId)) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = Color(0xFFBBDEFB)
                         ),
@@ -149,8 +145,7 @@ fun EditNoteScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(bottom = 4.dp)
-                            )
-                            {
+                            ) {
                                 Checkbox(
                                     checked = item.isChecked,
                                     onCheckedChange = { checked ->
@@ -173,20 +168,21 @@ fun EditNoteScreen(
                                         .weight(1f)
                                         .padding(start = 8.dp)
                                 )
-
                             }
                         }
                         Button(onClick = { checklistItems.add(ChecklistItem()) }) {
-                            Text("Добавить")
+                            Text(stringResource(R.string.checklist_add_item))
                         }
                     }
-                    }
-                NoteCategory.TASKS -> {
+                }
 
+                NoteCategory.TASKS -> {
                     val context = LocalContext.current
 
                     val datePickerDialog = remember(context) {
-                        val calendar = Calendar.getInstance().apply { timeInMillis = selectedDeadlineMillis }
+                        val calendar = Calendar.getInstance().apply {
+                            timeInMillis = selectedDeadlineMillis
+                        }
                         DatePickerDialog(
                             context,
                             { _, year, month, dayOfMonth ->
@@ -213,7 +209,9 @@ fun EditNoteScreen(
                     LaunchedEffect(dateFieldInteractionSource) {
                         dateFieldInteractionSource.interactions.collect { interaction ->
                             if (interaction is PressInteraction.Release) {
-                                val cal = Calendar.getInstance().apply { timeInMillis = selectedDeadlineMillis }
+                                val cal = Calendar.getInstance().apply {
+                                    timeInMillis = selectedDeadlineMillis
+                                }
                                 datePickerDialog.updateDate(
                                     cal.get(Calendar.YEAR),
                                     cal.get(Calendar.MONTH),
@@ -229,7 +227,7 @@ fun EditNoteScreen(
                         }
                         "%02d.%02d.%04d".format(
                             calendar.get(Calendar.DAY_OF_MONTH),
-                            calendar.get(Calendar.MONTH) +1,
+                            calendar.get(Calendar.MONTH) + 1,
                             calendar.get(Calendar.YEAR)
                         )
                     }
@@ -237,7 +235,7 @@ fun EditNoteScreen(
                         OutlinedTextField(
                             value = deadlineText,
                             onValueChange = {},
-                            label = { Text("Дедлайн") },
+                            label = { Text(stringResource(R.string.deadline_label)) },
                             textStyle = TextStyle(color = Color.Black),
                             colors = TextFieldDefaults.outlinedTextFieldColors(
                                 textColor = Color.Black,
@@ -255,36 +253,23 @@ fun EditNoteScreen(
                                 checked = isRepeating,
                                 onCheckedChange = { isRepeating = it }
                             )
-                            Text("Повторять")
+                            Text(stringResource(R.string.repeat_label))
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = content,
-                        onValueChange = { content = it },
-                        label = { Text("Содержимое", color = Color.Black) },
-                        textStyle = TextStyle(color = Color.Black),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.4f),
-                        maxLines = Int.MAX_VALUE
+                    NoteContentField(
+                        content = content,
+                        onContentChange = { content = it }
                     )
                 }
+
                 NoteCategory.NOTES -> {
-                    OutlinedTextField(
-                        value = content,
-                        onValueChange = {
-                            content = it
-                        },
-                        label = { Text("Содержимое", color = Color.Black) },
-                        textStyle = TextStyle(color = Color.Black),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.4f),
-                        maxLines = Int.MAX_VALUE
+                    NoteContentField(
+                        content = content,
+                        onContentChange = { content = it }
                     )
                 }
-                }
+            }
             Spacer(modifier = Modifier.height(16.dp))
             if (BuildConfig.DEBUG) {
                 OutlinedTextField(
@@ -294,7 +279,7 @@ fun EditNoteScreen(
                             coinCountText = value
                         }
                     },
-                    label = { Text("Количество монет") },
+                    label = { Text(stringResource(R.string.coin_count_label)) },
                     textStyle = TextStyle(color = Color.Black),
                     colors = TextFieldDefaults.outlinedTextFieldColors(
                         textColor = Color.Black,
@@ -305,21 +290,19 @@ fun EditNoteScreen(
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            Row (
+            Row(
                 modifier = Modifier.fillMaxWidth()
             ) {
-
                 Button(
                     onClick = {
                         val coinCount = coinCountText.toIntOrNull()
                             ?: defaultCoinCount
-                        val cleanedChecklist  = if (selectedCategory == NoteCategory.SHOPPING)
-                        {
+                        val cleanedChecklist = if (selectedCategory == NoteCategory.SHOPPING) {
                             checklistItems
-                                .map {it.copy(text = it.text.trim())}
+                                .map { it.copy(text = it.text.trim()) }
                                 .filter { it.text.isNotEmpty() || it.isChecked }
                         } else {
                             emptyList()
@@ -328,7 +311,7 @@ fun EditNoteScreen(
                             NoteCategory.SHOPPING -> note?.content ?: ""
                             else -> content
                         }
-                        val preparedNote = Note (
+                        val preparedNote = Note(
                             id = noteId,
                             title = title,
                             content = preparedContent,
@@ -350,14 +333,14 @@ fun EditNoteScreen(
                         onSaveClick(preparedNote)
                     },
                 ) {
-                    Text("Сохранить")
+                    Text(stringResource(R.string.action_save))
                 }
                 Spacer(Modifier.weight(1f))
                 onDeleteClick?.let {
                     Button(
                         onClick = { it() },
                     ) {
-                        Text("Удалить")
+                        Text(stringResource(R.string.action_delete))
                     }
                 }
             }
@@ -365,14 +348,30 @@ fun EditNoteScreen(
     }
 }
 
-// Preview-composable для предпросмотра в Android Studio.
+@Composable
+private fun NoteContentField(
+    content: String,
+    onContentChange: (String) -> Unit
+) {
+    OutlinedTextField(
+        value = content,
+        onValueChange = onContentChange,
+        label = { Text(stringResource(R.string.note_content_label), color = Color.Black) },
+        textStyle = TextStyle(color = Color.Black),
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(0.4f),
+        maxLines = Int.MAX_VALUE
+    )
+}
+
 @Preview(showBackground = true)
 @Composable
 fun EditNoteScreenPreview() {
     val sampleNote = Note(
         id = "1",
-        title = "Пример",
-        content = "Содержимое",
+        title = "Sample",
+        content = "Content",
         category = NoteCategory.NOTES,
         coinCount = 3
     )

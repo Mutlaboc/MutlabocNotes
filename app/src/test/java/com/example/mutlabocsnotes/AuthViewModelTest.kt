@@ -79,10 +79,7 @@ class AuthViewModelTest {
         viewModel.handleSessionExpired()
 
         assertTrue(repository.logoutCalled)
-        assertEquals(
-            AuthState.Unauthenticated("Session expired. Please sign in again."),
-            viewModel.uiState.authState
-        )
+        assertUnauthenticatedError(R.string.api_error_unauthorized)
     }
 
     @Test
@@ -91,10 +88,7 @@ class AuthViewModelTest {
         advanceUntilIdle()
 
         assertEquals(0, repository.loginCalls)
-        assertEquals(
-            AuthState.Unauthenticated("Enter a valid email and a password of at least 8 characters"),
-            viewModel.uiState.authState
-        )
+        assertUnauthenticatedError(R.string.auth_error_invalid_credentials)
     }
 
     @Test
@@ -103,10 +97,7 @@ class AuthViewModelTest {
         advanceUntilIdle()
 
         assertEquals(0, repository.registerCalls)
-        assertEquals(
-            AuthState.Unauthenticated("Enter a valid email and a password of at least 8 characters"),
-            viewModel.uiState.authState
-        )
+        assertUnauthenticatedError(R.string.auth_error_invalid_credentials)
     }
 
     @Test
@@ -161,10 +152,7 @@ class AuthViewModelTest {
         advanceUntilIdle()
 
         assertEquals(0, repository.googleCalls)
-        assertEquals(
-            AuthState.Unauthenticated("Google id token is empty"),
-            viewModel.uiState.authState
-        )
+        assertUnauthenticatedError(R.string.auth_error_google_token_empty)
     }
 
     @Test
@@ -173,10 +161,13 @@ class AuthViewModelTest {
         advanceUntilIdle()
 
         assertEquals(0, repository.yandexCalls)
-        assertEquals(
-            AuthState.Unauthenticated("Yandex access token is empty"),
-            viewModel.uiState.authState
-        )
+        assertUnauthenticatedError(R.string.auth_error_yandex_token_empty)
+    }
+
+    private fun assertUnauthenticatedError(expectedResId: Int) {
+        val state = viewModel.uiState.authState as AuthState.Unauthenticated
+        val message = state.errorMessage as UiText.StringResource
+        assertEquals(expectedResId, message.resId)
     }
 }
 

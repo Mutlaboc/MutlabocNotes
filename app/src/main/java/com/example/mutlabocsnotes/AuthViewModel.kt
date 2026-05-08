@@ -8,7 +8,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 
-// ViewModel авторизации получает репозиторий снаружи, чтобы не создавать сетевой слой внутри себя.
 class AuthViewModel(
     application: Application,
     private val repository: AuthSessionRepository,
@@ -60,7 +59,7 @@ class AuthViewModel(
 
     fun signInWithGoogle(idToken: String) {
         if (idToken.isBlank()) {
-            showAuthError("Google id token is empty")
+            showAuthError(R.string.auth_error_google_token_empty)
             return
         }
 
@@ -71,7 +70,7 @@ class AuthViewModel(
 
     fun signInWithYandex(accessToken: String) {
         if (accessToken.isBlank()) {
-            showAuthError("Yandex access token is empty")
+            showAuthError(R.string.auth_error_yandex_token_empty)
             return
         }
 
@@ -91,7 +90,7 @@ class AuthViewModel(
         repository.logout()
         uiState = AuthUiState(
             authState = AuthState.Unauthenticated(
-                errorMessage = "Session expired. Please sign in again."
+                errorMessage = UiText.StringResource(R.string.api_error_unauthorized)
             )
         )
     }
@@ -106,7 +105,7 @@ class AuthViewModel(
 
     private fun validateCredentials(email: String, password: String): Boolean {
         if (email.isBlank() || password.length < 8) {
-            showAuthError("Enter a valid email and a password of at least 8 characters")
+            showAuthError(R.string.auth_error_invalid_credentials)
             return false
         }
 
@@ -129,7 +128,7 @@ class AuthViewModel(
                 .onFailure { error ->
                     uiState = AuthUiState(
                         authState = AuthState.Unauthenticated(
-                            errorMessage = error.message ?: "Authentication failed"
+                            errorMessage = ApiErrorMapper.map(error)
                         ),
                         isLoading = false
                     )
@@ -137,9 +136,9 @@ class AuthViewModel(
         }
     }
 
-    private fun showAuthError(message: String) {
+    private fun showAuthError(messageResId: Int) {
         uiState = AuthUiState(
-            authState = AuthState.Unauthenticated(message),
+            authState = AuthState.Unauthenticated(UiText.StringResource(messageResId)),
             isLoading = false
         )
     }

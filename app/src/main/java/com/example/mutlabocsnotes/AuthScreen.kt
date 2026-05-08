@@ -47,9 +47,15 @@ fun AuthScreen(
     val isPreview = LocalInspectionMode.current
     val context = LocalContext.current
     val googleWebClientId = stringResource(id = R.string.google_web_client_id)
+    val errorMessage = uiState.errorMessage?.asString()
+    val googleTokenEmptyMessage = stringResource(R.string.auth_error_google_token_empty)
+    val googleSignInFailedMessage = stringResource(R.string.auth_error_google_sign_in_failed)
+    val yandexTokenEmptyMessage = stringResource(R.string.auth_error_yandex_token_empty)
+    val yandexSignInFailedMessage = stringResource(R.string.auth_error_yandex_sign_in_failed)
+    val yandexSignInCancelledMessage = stringResource(R.string.auth_error_yandex_sign_in_cancelled)
 
     LaunchedEffect(uiState.errorMessage) {
-        val message = uiState.errorMessage ?: return@LaunchedEffect
+        val message = errorMessage ?: return@LaunchedEffect
         Toast.makeText(context, message, LENGTH_SHORT).show()
         onClearError()
     }
@@ -84,13 +90,13 @@ fun AuthScreen(
                 if (!idToken.isNullOrBlank()) {
                     onGoogleIdToken(idToken)
                 } else {
-                    Toast.makeText(context, "Google id token is empty", LENGTH_SHORT).show()
+                    Toast.makeText(context, googleTokenEmptyMessage, LENGTH_SHORT).show()
                 }
             } else {
-                Log.e("Auth", "Google sign-in failed", task.exception)
+                Log.e("Auth", googleSignInFailedMessage, task.exception)
                 Toast.makeText(
                     context,
-                    task.exception?.localizedMessage ?: "Google sign-in failed",
+                    task.exception?.localizedMessage ?: googleSignInFailedMessage,
                     LENGTH_SHORT
                 ).show()
             }
@@ -103,23 +109,23 @@ fun AuthScreen(
                 is YandexAuthResult.Success -> {
                     val accessToken = result.token.value.trim()
                     if (accessToken.isBlank()) {
-                        Toast.makeText(context, "Yandex access token is empty", LENGTH_SHORT).show()
+                        Toast.makeText(context, yandexTokenEmptyMessage, LENGTH_SHORT).show()
                     } else {
                         onYandexAccessToken(accessToken)
                     }
                 }
 
                 is YandexAuthResult.Failure -> {
-                    Log.e("Auth", "Yandex SDK sign-in failed", result.exception)
+                    Log.e("Auth", yandexSignInFailedMessage, result.exception)
                     Toast.makeText(
                         context,
-                        result.exception.localizedMessage ?: "Yandex sign-in failed",
+                        result.exception.localizedMessage ?: yandexSignInFailedMessage,
                         LENGTH_SHORT
                     ).show()
                 }
 
                 YandexAuthResult.Cancelled -> {
-                    Toast.makeText(context, "Yandex sign-in cancelled", LENGTH_SHORT).show()
+                    Toast.makeText(context, yandexSignInCancelledMessage, LENGTH_SHORT).show()
                 }
             }
         }
@@ -132,7 +138,7 @@ fun AuthScreen(
             value = email,
             onValueChange = { email = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Email") },
+            label = { Text(stringResource(R.string.auth_email_label)) },
             enabled = !uiState.isLoading
         )
         Spacer(Modifier.padding(6.dp))
@@ -140,7 +146,7 @@ fun AuthScreen(
             value = password,
             onValueChange = { password = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Password") },
+            label = { Text(stringResource(R.string.auth_password_label)) },
             enabled = !uiState.isLoading
         )
         Spacer(Modifier.padding(6.dp))
@@ -149,7 +155,13 @@ fun AuthScreen(
             modifier = Modifier.fillMaxWidth(),
             enabled = !uiState.isLoading
         ) {
-            Text(if (uiState.isLoading) "Signing in..." else "Sign In")
+            Text(
+                if (uiState.isLoading) {
+                    stringResource(R.string.auth_signing_in)
+                } else {
+                    stringResource(R.string.auth_sign_in)
+                }
+            )
         }
 
         Spacer(Modifier.padding(6.dp))
@@ -159,7 +171,7 @@ fun AuthScreen(
             modifier = Modifier.fillMaxWidth(),
             enabled = !uiState.isLoading
         ) {
-            Text("Sign Up")
+            Text(stringResource(R.string.auth_sign_up))
         }
 
         Spacer(Modifier.padding(6.dp))
@@ -173,7 +185,7 @@ fun AuthScreen(
             modifier = Modifier.fillMaxWidth(),
             enabled = !uiState.isLoading
         ) {
-            Text("Sign in with Google")
+            Text(stringResource(R.string.auth_sign_in_google))
         }
 
         Spacer(Modifier.padding(6.dp))
@@ -187,7 +199,7 @@ fun AuthScreen(
             modifier = Modifier.fillMaxWidth(),
             enabled = !uiState.isLoading
         ) {
-            Text("Sign in with Yandex")
+            Text(stringResource(R.string.auth_sign_in_yandex))
         }
     }
 }

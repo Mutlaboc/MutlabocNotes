@@ -113,7 +113,7 @@ fun HomeScreen(
                 OutlinedTextField(
                     value = search,
                     onValueChange = { search = it },
-                    placeholder = { Text("Поиск") },
+                    placeholder = { Text(stringResource(R.string.search_label)) },
                     modifier = Modifier
                         .padding(start = 8.dp)
                         .weight(1f)
@@ -184,7 +184,7 @@ private fun HomeHeader(totalCoins: Int) {
     ) {
         Image(
             painter = painterResource(id = R.drawable.background_country_home),
-                contentDescription = "Фон главного экрана",
+            contentDescription = stringResource(R.string.home_background_description),
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
@@ -201,7 +201,7 @@ private fun HomeHeader(totalCoins: Int) {
         ) {
             Image(
                 painter = painterResource(id = R.drawable.gold_coin),
-                contentDescription = "Всего монет",
+                contentDescription = stringResource(R.string.total_coins_description),
                 modifier = Modifier.size(24.dp)
             )
             Text(
@@ -225,7 +225,7 @@ private fun UserMenu(
             IconButton(onClick = { expanded = true }) {
                 Icon(
                     imageVector = Icons.Default.AccountCircle,
-                    contentDescription = "Пользователь"
+                    contentDescription = stringResource(R.string.user_description)
                 )
             }
             DropdownMenu(
@@ -236,13 +236,13 @@ private fun UserMenu(
                     expanded = false
                     onSwitchUser()
                 }) {
-                    Text("Сменить пользователя")
+                    Text(stringResource(R.string.switch_user))
                 }
                 DropdownMenuItem(onClick = {
                     expanded = false
                     onOpenSettings()
                 }) {
-                    Text("Настройки")
+                    Text(stringResource(R.string.action_settings))
                 }
                 if (userEmail.isNotBlank()) {
                     DropdownMenuItem(onClick = { expanded = false }) {
@@ -309,7 +309,7 @@ fun CompletedNotesScreen(
                 .fillMaxSize()
         ) {
             Text(
-                text = "Выполненные задачи",
+                text = stringResource(R.string.completed_notes_title),
                 style = MaterialTheme.typography.h6,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
             )
@@ -454,7 +454,7 @@ fun NoteItem(
                     repeat(note.coinCount.coerceAtLeast(0)) {
                         Image(
                             painter = painterResource(id = R.drawable.gold_coin),
-                            contentDescription = "Монета",
+                            contentDescription = stringResource(R.string.coin_description),
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -470,10 +470,16 @@ private fun NoteDetails(note: Note) {
         NoteCategory.SHOPPING -> {
             if (note.checklist.isNotEmpty()) {
                 note.checklist.take(3).forEach { item ->
-                    Text(text = "- ${item.text}", style = MaterialTheme.typography.body2)
+                    Text(
+                        text = stringResource(R.string.checklist_preview_item, item.text),
+                        style = MaterialTheme.typography.body2
+                    )
                 }
                 if (note.checklist.size > 3) {
-                    Text(text = "...", style = MaterialTheme.typography.body2)
+                    Text(
+                        text = stringResource(R.string.more_items_indicator),
+                        style = MaterialTheme.typography.body2
+                    )
                 }
             } else if (note.content.isNotBlank()) {
                 Text(text = note.content, style = MaterialTheme.typography.body2)
@@ -492,12 +498,15 @@ private fun NoteDetails(note: Note) {
             }
             note.deadlineMillis?.let { millis ->
                 Text(
-                    text = "Дедлайн: ${formatDeadline(millis)}",
+                    text = stringResource(R.string.note_deadline_value, formatDeadline(millis)),
                     style = MaterialTheme.typography.caption
                 )
             }
             if (note.isRepeating) {
-                Text(text = "Повторяется", style = MaterialTheme.typography.caption)
+                Text(
+                    text = stringResource(R.string.note_repeating),
+                    style = MaterialTheme.typography.caption
+                )
             }
         }
     }
@@ -546,31 +555,31 @@ fun BottomRowWithFiveCells(
                 when (index) {
                     0 -> Icon(
                         imageVector = Icons.Default.Task,
-                        contentDescription = "Активные задачи",
+                        contentDescription = stringResource(R.string.active_tasks),
                         tint = if (isSelected) MaterialTheme.colors.secondary else MaterialTheme.colors.onPrimary
                     )
 
                     1 -> Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = "Добавить",
+                        contentDescription = stringResource(R.string.action_add),
                         tint = MaterialTheme.colors.onPrimary
                     )
 
                     2 -> Icon(
                         imageVector = Icons.Default.QuestionMark,
-                        contentDescription = "Информация о доме",
+                        contentDescription = stringResource(R.string.home_info_title),
                         tint = MaterialTheme.colors.onPrimary
                     )
 
                     3 -> Icon(
                         imageVector = Icons.Default.DoneAll,
-                        contentDescription = "Выполненные задачи",
+                        contentDescription = stringResource(R.string.completed_notes_title),
                         tint = if (isSelected) MaterialTheme.colors.secondary else MaterialTheme.colors.onPrimary
                     )
 
                     4 -> Icon(
                         imageVector = Icons.Default.Settings,
-                        contentDescription = "Настройки",
+                        contentDescription = stringResource(R.string.action_settings),
                         tint = MaterialTheme.colors.onPrimary
                     )
                 }
@@ -583,9 +592,9 @@ fun BottomRowWithFiveCells(
 @Composable
 fun HomeScreenPreview() {
     val sampleNotes = listOf(
-        Note(id = "1", title = "Заметка 1", content = "Содержимое заметки"),
-        Note(id = "2", title = "Заметка 2", content = "Содержимое заметки", category = NoteCategory.SHOPPING),
-        Note(id = "3", title = "Заметка 3", content = "Содержимое заметки", category = NoteCategory.TASKS)
+        Note(id = "1", title = "Note 1", content = "Note content"),
+        Note(id = "2", title = "Note 2", content = "Note content", category = NoteCategory.SHOPPING),
+        Note(id = "3", title = "Note 3", content = "Note content", category = NoteCategory.TASKS)
     )
     HomeScreen(
         uiState = NotesUiState.Content(sampleNotes, totalCoins = 12),

@@ -18,20 +18,23 @@ class SettingsViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private lateinit var repository: FakeSettingsRepository
+    private lateinit var localeApplier: FakeLocaleApplier
     private lateinit var viewModel: SettingsViewModel
 
     @Before
     fun setUp() {
         repository = FakeSettingsRepository()
+        localeApplier = FakeLocaleApplier()
         viewModel = SettingsViewModel(
             application = Application(),
             repository = repository,
-            ioDispatcher = mainDispatcherRule.dispatcher
+            ioDispatcher = mainDispatcherRule.dispatcher,
+            localeApplier = localeApplier
         )
     }
 
     @Test
-    fun initialPreferencesAreCollectedIntoUiState() = runTest(mainDispatcherRule.dispatcher) {
+    fun initialPreferencesAreCollectedIntoUiStateAndAppliedAsLocale() = runTest(mainDispatcherRule.dispatcher) {
         repository.preferencesState.value = UserPreferences(
             isDarkTheme = true,
             language = AppLanguage.EN
@@ -43,6 +46,7 @@ class SettingsViewModelTest {
             UserPreferences(isDarkTheme = true, language = AppLanguage.EN),
             viewModel.uiState.preferences
         )
+        assertEquals(AppLanguage.EN, localeApplier.languageCalls.last())
     }
 
     @Test
@@ -55,12 +59,13 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun setLanguageDelegatesToRepositoryAndUpdatesState() = runTest(mainDispatcherRule.dispatcher) {
-        viewModel.setLanguage(AppLanguage.DE)
+    fun setLanguageDelegatesToRepositoryUpdatesStateAndAppliesLocale() = runTest(mainDispatcherRule.dispatcher) {
+        viewModel.setLanguage(AppLanguage.EN)
         advanceUntilIdle()
 
-        assertEquals(listOf(AppLanguage.DE), repository.languageCalls)
-        assertEquals(AppLanguage.DE, viewModel.uiState.preferences.language)
+        assertEquals(listOf(AppLanguage.EN), repository.languageCalls)
+        assertEquals(AppLanguage.EN, viewModel.uiState.preferences.language)
+        assertEquals(AppLanguage.EN, localeApplier.languageCalls.last())
     }
 }
 
@@ -79,5 +84,13 @@ private class FakeSettingsRepository : SettingsRepository {
     override suspend fun setLanguage(language: AppLanguage) {
         languageCalls.add(language)
         preferencesState.value = preferencesState.value.copy(language = language)
+    }
+}
+
+private class FakeLocaleApplier : LocaleApplier {
+    val languageCalls = mutableListOf<AppLanguage>()
+
+    override fun applyLanguage(language: AppLanguage) {
+        languageCalls.add(language)
     }
 }

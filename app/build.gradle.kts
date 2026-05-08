@@ -54,6 +54,10 @@ android {
         buildConfig = true
     }
 
+    androidResources {
+        generateLocaleConfig = true
+    }
+
 }
 
 // Зависимости функциональности, сгруппированные по платформе, сети, хранению и тестам.
