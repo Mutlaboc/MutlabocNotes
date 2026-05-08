@@ -1,5 +1,6 @@
 package com.example.mutlabocsnotes
 
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -51,8 +52,48 @@ class ApiErrorMapperTest {
         assertStringResource(R.string.api_error_unknown, message)
     }
 
-    private fun httpException(code: Int): HttpException {
-        return HttpException(Response.error<Unit>(code, "error".toResponseBody()))
+    @Test
+    fun map_apiUnauthorizedCodeReturnsSessionMessage() {
+        val message = ApiErrorMapper.map(httpException(401, """{"code":"unauthorized"}"""))
+
+        assertStringResource(R.string.api_error_unauthorized, message)
+    }
+
+    @Test
+    fun map_apiInvalidRequestCodeReturnsValidationMessage() {
+        val message = ApiErrorMapper.map(httpException(400, """{"code":"invalid_request","message":"Email is required"}"""))
+
+        assertStringResource(R.string.api_error_validation, message)
+    }
+
+    @Test
+    fun map_apiEmailAlreadyRegisteredCodeReturnsConflictMessage() {
+        val message = ApiErrorMapper.map(httpException(409, """{"code":"email_already_registered"}"""))
+
+        assertStringResource(R.string.api_error_conflict, message)
+    }
+
+    @Test
+    fun map_apiInvalidCredentialsCodeReturnsCredentialsMessage() {
+        val message = ApiErrorMapper.map(httpException(401, """{"code":"invalid_email_or_password"}"""))
+
+        assertStringResource(R.string.auth_error_invalid_credentials, message)
+    }
+
+    @Test
+    fun map_apiInternalServerCodeReturnsServerMessage() {
+        val message = ApiErrorMapper.map(httpException(500, """{"code":"internal_server_error"}"""))
+
+        assertStringResource(R.string.api_error_server, message)
+    }
+
+    private fun httpException(code: Int, body: String = "error"): HttpException {
+        return HttpException(
+            Response.error<Unit>(
+                code,
+                body.toResponseBody("application/json".toMediaType())
+            )
+        )
     }
 
     private fun assertStringResource(expectedResId: Int, text: UiText) {
