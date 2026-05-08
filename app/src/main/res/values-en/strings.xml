@@ -107,4 +107,6 @@
     <string name="home_section_documents">Documents</string>
     <string name="home_section_contacts">Contacts</string>
     <string name="home_section_other">Other</string>
+    <string name="auth_show_password">Show password</string>
+    <string name="auth_hide_password">Hide password</string>
 </resources>

@@ -250,13 +250,13 @@ fun MyApp(
                     onNoteClick = { noteId ->
                         navController.navigate("edit/${Uri.encode(noteId)}")
                     },
-                    onOtherCellClick = { index ->
-                        when (index) {
-                            0 -> navController.navigate("completed") {
-                                launchSingleTop = true
-                            }
-                            2 -> navController.navigate("home_info")
+                    onCompletedNotesClick = {
+                        navController.navigate("completed") {
+                            launchSingleTop = true
                         }
+                    },
+                    onHomeInfoClick = {
+                        navController.navigate("home_info")
                     },
                     onCompletionChange = { noteId, isCompleted ->
                         notesViewModel.setNoteCompletion(noteId, isCompleted)
@@ -300,6 +300,9 @@ fun MyApp(
                     },
                     onNavigateHome = {
                         navController.popBackStack()
+                    },
+                    onHomeInfoClick = {
+                        navController.navigate("home_info")
                     }
                 )
             }

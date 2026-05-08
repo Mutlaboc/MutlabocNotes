@@ -32,10 +32,9 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddTask
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.QuestionMark
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Task
 import androidx.compose.material.primarySurface
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
@@ -48,11 +47,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import java.util.Calendar
+
+const val HOME_SEARCH_FIELD_TEST_TAG = "home_search_field"
+const val BOTTOM_BAR_TEST_TAG = "bottom_bar"
+
+fun noteItemTestTag(noteId: String): String = "note_item_$noteId"
+
+enum class BottomBarAction {
+    CompletedNotes,
+    AddNote,
+    HomeInfo
+}
 
 @Composable
 fun HomeScreen(
@@ -64,7 +75,8 @@ fun HomeScreen(
     onMessageAction: (UiMessageAction) -> Unit,
     onAddNoteClick: () -> Unit,
     onNoteClick: (noteId: String) -> Unit,
-    onOtherCellClick: (index: Int) -> Unit,
+    onCompletedNotesClick: () -> Unit,
+    onHomeInfoClick: () -> Unit,
     onCompletionChange: (noteId: String, Boolean) -> Unit,
     onSwitchUser: () -> Unit,
     onOpenSettings: () -> Unit
@@ -95,10 +107,11 @@ fun HomeScreen(
         scaffoldState = scaffoldState,
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            BottomRowWithFiveCells(
-                selectedIndex = 0,
+            BottomBar(
+                selectedAction = null,
+                onCompletedNotesClick = onCompletedNotesClick,
                 onAddClick = onAddNoteClick,
-                onCellClick = onOtherCellClick
+                onHomeInfoClick = onHomeInfoClick
             )
         }
     ) { paddingValues ->
@@ -117,6 +130,7 @@ fun HomeScreen(
                     modifier = Modifier
                         .padding(start = 8.dp)
                         .weight(1f)
+                        .testTag(HOME_SEARCH_FIELD_TEST_TAG)
                 )
                 UserMenu(
                     userEmail = userEmail,
@@ -162,6 +176,7 @@ fun HomeScreen(
                             NoteItem(
                                 note = note,
                                 onClick = { onNoteClick(note.id) },
+                                modifier = Modifier.testTag(noteItemTestTag(note.id)),
                                 onCompletionChange = { isCompleted ->
                                     onCompletionChange(note.id, isCompleted)
                                 }
@@ -264,7 +279,8 @@ fun CompletedNotesScreen(
     onaddNoteClick: () -> Unit,
     onNoteClick: (noteId: String) -> Unit,
     onCompletionChange: (noteId: String, Boolean) -> Unit,
-    onNavigateHome: () -> Unit
+    onNavigateHome: () -> Unit,
+    onHomeInfoClick: () -> Unit
 ) {
     val scaffoldState = rememberScaffoldState()
     val snackbarText = uiMessage?.text?.asString()
@@ -291,15 +307,11 @@ fun CompletedNotesScreen(
         scaffoldState = scaffoldState,
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            BottomRowWithFiveCells(
-                selectedIndex = 2,
+            BottomBar(
+                selectedAction = BottomBarAction.CompletedNotes,
+                onCompletedNotesClick = onNavigateHome,
                 onAddClick = onaddNoteClick,
-                onCellClick = { index ->
-                    when (index) {
-                        0 -> onNavigateHome()
-                        2 -> Unit
-                    }
-                }
+                onHomeInfoClick = onHomeInfoClick
             )
         }
     ) { paddingValues ->
@@ -405,6 +417,7 @@ private fun NotesStatusMessage(
 fun NoteItem(
     note: Note,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     onCompletionChange: (Boolean) -> Unit
 ) {
     val backgroundColor = when (note.category) {
@@ -413,7 +426,7 @@ fun NoteItem(
         NoteCategory.NOTES -> Color(0xFFE1F5E3)
     }
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
@@ -524,63 +537,68 @@ private fun formatDeadline(millis: Long): String {
 }
 
 @Composable
-fun BottomRowWithFiveCells(
-    selectedIndex: Int,
+fun BottomBar(
+    selectedAction: BottomBarAction?,
+    onCompletedNotesClick: () -> Unit,
     onAddClick: () -> Unit,
-    onCellClick: (index: Int) -> Unit
+    onHomeInfoClick: () -> Unit
 ) {
+    val actions = listOf(
+        BottomBarAction.CompletedNotes,
+        BottomBarAction.AddNote,
+        BottomBarAction.HomeInfo
+    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
-            .background(MaterialTheme.colors.primarySurface),
+            .background(MaterialTheme.colors.primarySurface)
+            .testTag(BOTTOM_BAR_TEST_TAG),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        for (index in 0 until 3) {
-            val isSelected = index == selectedIndex
+        actions.forEach { action ->
+            val isSelected = action == selectedAction
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
                     .clickable {
-                        if (index == 1) {
-                            onAddClick()
-                        } else {
-                            onCellClick(index)
+                        when (action) {
+                            BottomBarAction.CompletedNotes -> onCompletedNotesClick()
+                            BottomBarAction.AddNote -> onAddClick()
+                            BottomBarAction.HomeInfo -> onHomeInfoClick()
                         }
                     },
                 contentAlignment = Alignment.Center
             ) {
-                when (index) {
-                    0 -> Icon(
-                        imageVector = Icons.Default.Task,
-                        contentDescription = stringResource(R.string.active_tasks),
-                        tint = if (isSelected) MaterialTheme.colors.secondary else MaterialTheme.colors.onPrimary
-                    )
+                when (action) {
+                    BottomBarAction.CompletedNotes -> if (isSelected) {
+                        Icon(
 
-                    1 -> Icon(
+                            imageVector = Icons.Default.AddTask,
+                            contentDescription = stringResource(R.string.notes_title),
+                            tint = MaterialTheme.colors.onPrimary)
+                        }
+                        else {
+                            Icon(
+                            imageVector = Icons.Default.DoneAll,
+                            contentDescription = stringResource(R.string.completed_notes_title),
+                            tint = MaterialTheme.colors.onPrimary)
+                        }
+
+
+
+                    BottomBarAction.AddNote -> Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = stringResource(R.string.action_add),
-                        tint = MaterialTheme.colors.onPrimary
-                    )
-
-                    2 -> Icon(
-                        imageVector = Icons.Default.QuestionMark,
-                        contentDescription = stringResource(R.string.home_info_title),
-                        tint = MaterialTheme.colors.onPrimary
-                    )
-
-                    3 -> Icon(
-                        imageVector = Icons.Default.DoneAll,
-                        contentDescription = stringResource(R.string.completed_notes_title),
                         tint = if (isSelected) MaterialTheme.colors.secondary else MaterialTheme.colors.onPrimary
                     )
 
-                    4 -> Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = stringResource(R.string.action_settings),
-                        tint = MaterialTheme.colors.onPrimary
+                    BottomBarAction.HomeInfo -> Icon(
+                        imageVector = Icons.Default.QuestionMark,
+                        contentDescription = stringResource(R.string.home_info_title),
+                        tint = if (isSelected) MaterialTheme.colors.secondary else MaterialTheme.colors.onPrimary
                     )
                 }
             }
@@ -605,7 +623,8 @@ fun HomeScreenPreview() {
         onMessageAction = {},
         onAddNoteClick = {},
         onNoteClick = {},
-        onOtherCellClick = {},
+        onCompletedNotesClick = {},
+        onHomeInfoClick = {},
         onCompletionChange = { _, _ -> },
         onSwitchUser = {},
         onOpenSettings = {}
