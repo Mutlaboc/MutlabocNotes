@@ -1,8 +1,7 @@
-// Корневой файл сборки, где задаются общие параметры для всех модулей.
-// Объявления версий находятся здесь, чтобы модули использовали единый набор плагинов.
+// Root build configuration. Plugin versions are centralized in the version catalog.
 plugins {
-    id("com.android.application") version "8.11.1" apply false
-    kotlin("android")            version "2.1.20" apply false
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.kotlin.kapt) apply false
     alias(libs.plugins.compose.compiler) apply false
-
 }
