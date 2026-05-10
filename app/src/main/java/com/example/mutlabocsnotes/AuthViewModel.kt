@@ -80,14 +80,16 @@ class AuthViewModel(
     }
 
     fun logout() {
-        repository.logout()
-        uiState = AuthUiState(
-            authState = AuthState.Unauthenticated()
-        )
+        viewModelScope.launch {
+            repository.logout()
+            uiState = AuthUiState(
+                authState = AuthState.Unauthenticated()
+            )
+        }
     }
 
     fun handleSessionExpired() {
-        repository.logout()
+        repository.clearLocalSession()
         uiState = AuthUiState(
             authState = AuthState.Unauthenticated(
                 errorMessage = UiText.StringResource(R.string.api_error_unauthorized)

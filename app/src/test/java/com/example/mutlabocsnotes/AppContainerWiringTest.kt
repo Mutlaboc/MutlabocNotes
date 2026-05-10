@@ -238,7 +238,9 @@ private class WiringFakeAuthSessionRepository : AuthSessionRepository {
     override suspend fun restoreSession(): Result<AuthorizedSession> =
         Result.failure(IllegalStateException("No saved access token"))
 
-    override fun logout() = Unit
+    override suspend fun logout() = Unit
+
+    override fun clearLocalSession() = Unit
 }
 
 private class WiringFakeNotesDataSource : NotesDataSource {

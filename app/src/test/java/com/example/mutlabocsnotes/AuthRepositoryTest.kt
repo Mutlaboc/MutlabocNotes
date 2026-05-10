@@ -5,6 +5,7 @@ import com.example.mutlabocsnotes.network.AuthCredentialsDto
 import com.example.mutlabocsnotes.network.AuthResponseDto
 import com.example.mutlabocsnotes.network.AuthUserDto
 import com.example.mutlabocsnotes.network.GoogleSocialLoginRequestDto
+import com.example.mutlabocsnotes.network.LogoutRequestDto
 import com.example.mutlabocsnotes.network.MeResponseDto
 import com.example.mutlabocsnotes.network.RefreshTokenRequestDto
 import com.example.mutlabocsnotes.network.YandexSocialLoginRequestDto
@@ -167,12 +168,42 @@ class AuthRepositoryTest {
     }
 
     @Test
-    fun logoutClearsSession() {
+    fun logout_sendsRefreshTokenAndClearsSession() = runTest(mainDispatcherRule.dispatcher) {
         // Logout остаётся простой операцией над общим AuthSessionStore.
         sessionStore.saveSession("access", "refresh", "user@example.com")
 
         repository.logout()
 
+        assertEquals(LogoutRequestDto("refresh"), api.lastLogoutRequest)
+        assertEquals(1, api.logoutCalls)
+        assertNull(sessionStore.storedAccessToken)
+        assertNull(sessionStore.storedRefreshToken)
+        assertNull(sessionStore.storedEmail)
+        assertEquals(1, sessionStore.clearCalls)
+    }
+
+    @Test
+    fun logout_failureStillClearsSession() = runTest(mainDispatcherRule.dispatcher) {
+        sessionStore.saveSession("access", "refresh", "user@example.com")
+        api.logoutThrowable = IllegalStateException("offline")
+
+        repository.logout()
+
+        assertEquals(LogoutRequestDto("refresh"), api.lastLogoutRequest)
+        assertNull(sessionStore.storedAccessToken)
+        assertNull(sessionStore.storedRefreshToken)
+        assertNull(sessionStore.storedEmail)
+        assertEquals(1, sessionStore.clearCalls)
+    }
+
+    @Test
+    fun logout_withoutRefreshTokenClearsSessionWithoutApiCall() = runTest(mainDispatcherRule.dispatcher) {
+        sessionStore.saveSession("access", "", "user@example.com")
+
+        repository.logout()
+
+        assertNull(api.lastLogoutRequest)
+        assertEquals(0, api.logoutCalls)
         assertNull(sessionStore.storedAccessToken)
         assertNull(sessionStore.storedRefreshToken)
         assertNull(sessionStore.storedEmail)
@@ -214,6 +245,9 @@ private class FakeAuthApi : AuthApi {
     var lastGoogleRequest: GoogleSocialLoginRequestDto? = null
     var lastYandexRequest: YandexSocialLoginRequestDto? = null
     var lastRefreshRequest: RefreshTokenRequestDto? = null
+    var lastLogoutRequest: LogoutRequestDto? = null
+    var logoutCalls: Int = 0
+    var logoutThrowable: Throwable? = null
     val meAuthorizationCalls = mutableListOf<String>()
     val meResponses = mutableListOf<MeResponseDto>()
     val meThrowables = mutableListOf<Throwable>()
@@ -241,6 +275,13 @@ private class FakeAuthApi : AuthApi {
     override suspend fun refresh(request: RefreshTokenRequestDto): AuthResponseDto {
         lastRefreshRequest = request
         return refreshResponse
+    }
+
+    override suspend fun logout(request: LogoutRequestDto): Response<Unit> {
+        logoutCalls++
+        lastLogoutRequest = request
+        logoutThrowable?.let { throw it }
+        return Response.success(Unit)
     }
 
     override suspend fun me(authorization: String): MeResponseDto {

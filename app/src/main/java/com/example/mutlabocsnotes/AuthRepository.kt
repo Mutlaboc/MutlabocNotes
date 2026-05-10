@@ -4,6 +4,7 @@ import com.example.mutlabocsnotes.network.AuthApi
 import com.example.mutlabocsnotes.network.AuthCredentialsDto
 import com.example.mutlabocsnotes.network.AuthResponseDto
 import com.example.mutlabocsnotes.network.GoogleSocialLoginRequestDto
+import com.example.mutlabocsnotes.network.LogoutRequestDto
 import com.example.mutlabocsnotes.network.RefreshTokenRequestDto
 import com.example.mutlabocsnotes.network.YandexSocialLoginRequestDto
 import kotlinx.coroutines.CoroutineDispatcher
@@ -25,7 +26,8 @@ interface AuthSessionRepository {
     suspend fun loginWithGoogle(idToken: String): Result<AuthorizedSession>
     suspend fun loginWithYandex(accessToken: String): Result<AuthorizedSession>
     suspend fun restoreSession(): Result<AuthorizedSession>
-    fun logout()
+    suspend fun logout()
+    fun clearLocalSession()
 }
 
 // Репозиторий авторизации работает с готовыми AuthSessionStore и AuthApi из AppContainer.
@@ -97,7 +99,23 @@ class AuthRepository(
         }
     }
 
-    override fun logout() {
+    override suspend fun logout() = withContext(ioDispatcher) {
+        val refreshToken = sessionManager.getRefreshToken()
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+
+        try {
+            if (refreshToken != null) {
+                runCatching {
+                    api.logout(LogoutRequestDto(refreshToken))
+                }
+            }
+        } finally {
+            sessionManager.clear()
+        }
+    }
+
+    override fun clearLocalSession() {
         sessionManager.clear()
     }
 

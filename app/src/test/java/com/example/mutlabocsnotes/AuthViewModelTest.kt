@@ -78,7 +78,7 @@ class AuthViewModelTest {
     fun handleSessionExpired_logsOutAndSetsUnauthenticatedState() {
         viewModel.handleSessionExpired()
 
-        assertTrue(repository.logoutCalled)
+        assertTrue(repository.clearLocalSessionCalled)
         assertUnauthenticatedError(R.string.api_error_unauthorized)
     }
 
@@ -174,6 +174,7 @@ class AuthViewModelTest {
 private class FakeAuthSessionRepository : AuthSessionRepository {
     var restoreResult: Result<AuthorizedSession> = Result.failure(IllegalStateException("not set"))
     var logoutCalled: Boolean = false
+    var clearLocalSessionCalled: Boolean = false
     var loginCalls: Int = 0
     var registerCalls: Int = 0
     var googleCalls: Int = 0
@@ -215,7 +216,11 @@ private class FakeAuthSessionRepository : AuthSessionRepository {
         return restoreResult
     }
 
-    override fun logout() {
+    override suspend fun logout() {
         logoutCalled = true
+    }
+
+    override fun clearLocalSession() {
+        clearLocalSessionCalled = true
     }
 }

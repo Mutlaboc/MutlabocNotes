@@ -19,6 +19,10 @@ data class RefreshTokenRequestDto(
     val refreshToken: String
 )
 
+data class LogoutRequestDto(
+    val refreshToken: String
+)
+
 data class AuthUserDto(
     val id: String? = null,
     val email: String? = null,
