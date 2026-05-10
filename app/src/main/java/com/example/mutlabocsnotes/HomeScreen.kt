@@ -56,6 +56,8 @@ import java.util.Calendar
 
 const val HOME_SEARCH_FIELD_TEST_TAG = "home_search_field"
 const val BOTTOM_BAR_TEST_TAG = "bottom_bar"
+const val USER_MENU_BUTTON_TEST_TAG = "user_menu_button"
+const val USER_MENU_SETTINGS_ITEM_TEST_TAG = "user_menu_settings_item"
 
 fun noteItemTestTag(noteId: String): String = "note_item_$noteId"
 
@@ -237,7 +239,10 @@ private fun UserMenu(
     var expanded by remember { mutableStateOf(false) }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box {
-            IconButton(onClick = { expanded = true }) {
+            IconButton(
+                onClick = { expanded = true },
+                modifier = Modifier.testTag(USER_MENU_BUTTON_TEST_TAG)
+            ) {
                 Icon(
                     imageVector = Icons.Default.AccountCircle,
                     contentDescription = stringResource(R.string.user_description)
@@ -253,10 +258,13 @@ private fun UserMenu(
                 }) {
                     Text(stringResource(R.string.switch_user))
                 }
-                DropdownMenuItem(onClick = {
-                    expanded = false
-                    onOpenSettings()
-                }) {
+                DropdownMenuItem(
+                    onClick = {
+                        expanded = false
+                        onOpenSettings()
+                    },
+                    modifier = Modifier.testTag(USER_MENU_SETTINGS_ITEM_TEST_TAG)
+                ) {
                     Text(stringResource(R.string.action_settings))
                 }
                 if (userEmail.isNotBlank()) {

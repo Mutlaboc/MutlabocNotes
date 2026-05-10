@@ -28,9 +28,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+
+const val SETTINGS_LOGOUT_BUTTON_TEST_TAG = "settings_logout_button"
+const val SETTINGS_THEME_SWITCH_TEST_TAG = "settings_theme_switch"
 
 @Composable
 fun SettingsScreen(
@@ -74,7 +78,9 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = onLogout,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(SETTINGS_LOGOUT_BUTTON_TEST_TAG)
             ) {
                 Text(stringResource(R.string.settings_logout))
             }
@@ -99,7 +105,8 @@ fun SettingsScreen(
                 )
                 Switch(
                     checked = isDarkTheme,
-                    onCheckedChange = onThemeChange
+                    onCheckedChange = onThemeChange,
+                    modifier = Modifier.testTag(SETTINGS_THEME_SWITCH_TEST_TAG)
                 )
             }
             Spacer(modifier = Modifier.height(24.dp))

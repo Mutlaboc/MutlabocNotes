@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -38,6 +39,11 @@ import com.yandex.authsdk.YandexAuthLoginOptions
 import com.yandex.authsdk.YandexAuthOptions
 import com.yandex.authsdk.YandexAuthResult
 import com.yandex.authsdk.YandexAuthSdk
+
+const val AUTH_EMAIL_FIELD_TEST_TAG = "auth_email_field"
+const val AUTH_PASSWORD_FIELD_TEST_TAG = "auth_password_field"
+const val AUTH_SIGN_IN_BUTTON_TEST_TAG = "auth_sign_in_button"
+const val AUTH_ERROR_MESSAGE_TEST_TAG = "auth_error_message"
 
 @Composable
 fun AuthScreen(
@@ -145,7 +151,9 @@ fun AuthScreen(
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(AUTH_EMAIL_FIELD_TEST_TAG),
             label = { Text(stringResource(R.string.auth_email_label)) },
             enabled = !uiState.isLoading
         )
@@ -153,7 +161,9 @@ fun AuthScreen(
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(AUTH_PASSWORD_FIELD_TEST_TAG),
             label = { Text(stringResource(R.string.auth_password_label)) },
             visualTransformation = if (passwordVisible) {
                 VisualTransformation.None
@@ -185,7 +195,9 @@ fun AuthScreen(
         Spacer(Modifier.padding(6.dp))
         Button(
             onClick = { onSignIn(email.trim(), password) },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(AUTH_SIGN_IN_BUTTON_TEST_TAG),
             enabled = !uiState.isLoading
         ) {
             Text(
@@ -194,6 +206,15 @@ fun AuthScreen(
                 } else {
                     stringResource(R.string.auth_sign_in)
                 }
+            )
+        }
+        if (errorMessage != null) {
+            Text(
+                text = errorMessage,
+                color = MaterialTheme.colors.error,
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .testTag(AUTH_ERROR_MESSAGE_TEST_TAG)
             )
         }
 
