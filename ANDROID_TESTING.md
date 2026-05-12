@@ -9,13 +9,14 @@ hardening step.
 Run from the Android repository root:
 
 ```powershell
-.\gradlew.bat assembleDebug testDebugUnitTest
+.\gradlew.bat assembleDevDebug testDevDebugUnitTest lintDevDebug
 ```
 
 Expected result:
 
 - Debug APK assembles successfully.
 - Unit tests pass.
+- Dev debug lint completes without errors.
 - No new warnings or failures are accepted without a linked blocker.
 
 ## Connected smoke suite
@@ -23,7 +24,7 @@ Expected result:
 Run the critical Compose UI smoke suite before release builds:
 
 ```powershell
-.\gradlew.bat :app:connectedDebugAndroidTest
+.\gradlew.bat :app:connectedDevDebugAndroidTest
 ```
 
 This suite covers the auth, home, settings, and logout path on a connected emulator or

@@ -59,6 +59,7 @@ const val EDIT_NOTE_COIN_COUNT_FIELD_TEST_TAG = "edit_note_coin_count_field"
 const val EDIT_NOTE_SAVE_BUTTON_TEST_TAG = "edit_note_save_button"
 const val EDIT_NOTE_DELETE_BUTTON_TEST_TAG = "edit_note_delete_button"
 const val EDIT_NOTE_DELETE_CONFIRM_BUTTON_TEST_TAG = "edit_note_delete_confirm_button"
+const val EDIT_NOTE_CHECKLIST_ADD_BUTTON_TEST_TAG = "edit_note_checklist_add_button"
 
 fun editNoteCategoryChipTestTag(category: NoteCategory): String = "edit_note_category_${category.name}"
 
@@ -393,7 +394,10 @@ private fun ChecklistEditor(
                 }
             }
         }
-        Button(onClick = onAddItem) {
+        Button(
+            onClick = onAddItem,
+            modifier = Modifier.testTag(EDIT_NOTE_CHECKLIST_ADD_BUTTON_TEST_TAG)
+        ) {
             Text(stringResource(R.string.checklist_add_item))
         }
     }

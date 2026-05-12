@@ -57,6 +57,7 @@
     <string name="notes_empty">There are no active notes yet</string>
     <string name="completed_notes_empty">Completed tasks will appear here</string>
     <string name="completed_notes_title">Completed tasks</string>
+    <string name="notes_title">Notes</string>
     <string name="home_background_description">Home screen background</string>
     <string name="total_coins_description">Total coins</string>
     <string name="coin_description">Coin</string>

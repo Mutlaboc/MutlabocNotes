@@ -9,7 +9,7 @@ CI jobs или переключение backend URL.
 Запускать из корня Android-репозитория:
 
 ```powershell
-.\gradlew.bat assembleDebug testDebugUnitTest
+.\gradlew.bat assembleDevDebug testDevDebugUnitTest lintDevDebug
 ```
 
 Ожидаемый результат:
@@ -23,7 +23,7 @@ CI jobs или переключение backend URL.
 Перед release builds запустить критический Compose UI smoke suite:
 
 ```powershell
-.\gradlew.bat :app:connectedDebugAndroidTest
+.\gradlew.bat :app:connectedDevDebugAndroidTest
 ```
 
 Этот suite покрывает auth, home, settings и logout path на подключенном emulator или

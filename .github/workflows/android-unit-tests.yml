@@ -12,7 +12,7 @@ on:
 
 jobs:
   assemble-and-test:
-    name: assembleDebug + testDebugUnitTest
+    name: assembleDevDebug + testDevDebugUnitTest + lintDevDebug
     runs-on: ubuntu-latest
 
     steps:
@@ -31,12 +31,57 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: Run assemble and debug unit tests
-        run: ./gradlew assembleDebug testDebugUnitTest
+      - name: Run assemble, dev debug unit tests, and lint
+        run: ./gradlew assembleDevDebug testDevDebugUnitTest lintDevDebug
 
       - name: Upload unit test results
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: testDebugUnitTest-results
-          path: app/build/test-results/testDebugUnitTest
+          name: testDevDebugUnitTest-results
+          path: app/build/test-results/testDevDebugUnitTest
+
+      - name: Upload lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lintDevDebug-results
+          path: |
+            app/build/reports/lint-results-devDebug.*
+            app/build/intermediates/lint_intermediate_text_report/devDebug/lintReportDevDebug/lint-results-devDebug.txt
+
+      - name: Publish test and lint summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Android smoke summary"
+            echo
+            echo "### Unit tests"
+            if compgen -G "app/build/test-results/testDevDebugUnitTest/TEST-*.xml" > /dev/null; then
+              tests=0
+              failures=0
+              errors=0
+              skipped=0
+              for file in app/build/test-results/testDevDebugUnitTest/TEST-*.xml; do
+                tests=$((tests + $(grep -o 'tests="[0-9]*"' "$file" | head -1 | grep -o '[0-9]*')))
+                failures=$((failures + $(grep -o 'failures="[0-9]*"' "$file" | head -1 | grep -o '[0-9]*')))
+                errors=$((errors + $(grep -o 'errors="[0-9]*"' "$file" | head -1 | grep -o '[0-9]*')))
+                skipped=$((skipped + $(grep -o 'skipped="[0-9]*"' "$file" | head -1 | grep -o '[0-9]*')))
+              done
+              echo "- Tests: $tests"
+              echo "- Failures: $failures"
+              echo "- Errors: $errors"
+              echo "- Skipped: $skipped"
+            else
+              echo "- No JUnit XML files found."
+            fi
+            echo
+            echo "### Lint"
+            lint_report="app/build/intermediates/lint_intermediate_text_report/devDebug/lintReportDevDebug/lint-results-devDebug.txt"
+            if [[ -f "$lint_report" ]]; then
+              grep -E "Lint found|No issues found" "$lint_report" | head -5 | sed 's/^/- /' || true
+            else
+              echo "- No lint text report found."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

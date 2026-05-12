@@ -8,8 +8,8 @@ owner or a linked blocker before go/no-go.
 | Gate | Owner | Evidence | Status |
 | --- | --- | --- | --- |
 | Android branch is rebased or merged onto the intended release branch | TBD | Commit SHA / PR | TBD |
-| `.\gradlew.bat assembleDebug testDebugUnitTest` passes | TBD | Local or CI run link | TBD |
-| `.\gradlew.bat :app:connectedDebugAndroidTest` passes on at least one target device | TBD | Run notes | TBD |
+| `.\gradlew.bat assembleDevDebug testDevDebugUnitTest lintDevDebug` passes | TBD | Local or CI run link | TBD |
+| `.\gradlew.bat :app:connectedDevDebugAndroidTest` passes on at least one target device | TBD | Run notes | TBD |
 | Backend staging environment is identified | TBD | URL / deployment reference | TBD |
 | Backend migration and rollback runbook is reviewed | TBD | `notes-backend/RELEASE_RUNBOOK.md` revision | TBD |
 | Test accounts and social auth configuration are ready | TBD | Account references, no secrets | TBD |

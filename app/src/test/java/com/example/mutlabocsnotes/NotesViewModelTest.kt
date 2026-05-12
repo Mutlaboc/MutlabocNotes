@@ -61,6 +61,19 @@ class NotesViewModelTest {
     }
 
     @Test
+    fun loadNotes_setsLoadingStateBeforeRepositoryReturns() = runTest(mainDispatcherRule.dispatcher) {
+        loadContent(note(id = "existing"))
+        repository.notesResult = Result.success(emptyList())
+
+        viewModel.loadNotes()
+
+        assertEquals(NotesUiState.Loading, viewModel.uiState)
+
+        advanceUntilIdle()
+        assertEquals(NotesUiState.Empty, viewModel.uiState)
+    }
+
+    @Test
     fun loadNotes_failureSetsInlineErrorState() = runTest(mainDispatcherRule.dispatcher) {
         repository.notesResult = Result.failure(IOException("offline"))
 
@@ -143,6 +156,41 @@ class NotesViewModelTest {
         assertEquals(listOf(existing), state.notes)
         assertStringResource(R.string.api_error_network, checkNotNull(viewModel.uiMessage).text)
         assertEquals(listOf(existing), scheduler.scheduleCalls)
+    }
+
+    @Test
+    fun updateNote_successReplacesNoteAndSchedulesIt() = runTest(mainDispatcherRule.dispatcher) {
+        val existing = note(id = "update-me", title = "Original", isCompleted = false, coinCount = 3)
+        val updated = existing.copy(title = "Updated", isCompleted = true, coinCount = 7)
+        repository.updateResult = Result.success(Unit)
+        loadContent(existing)
+
+        viewModel.updateNote(updated)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState as NotesUiState.Content
+        assertEquals(listOf(updated), state.notes)
+        assertEquals(7, state.totalCoins)
+        assertEquals(listOf(updated), repository.updateCalls)
+        assertEquals(listOf(updated), scheduler.scheduleCalls.drop(1))
+        assertEquals(null, viewModel.uiMessage)
+    }
+
+    @Test
+    fun updateNote_failureKeepsCurrentStateAndEmitsSnackbarMessage() = runTest(mainDispatcherRule.dispatcher) {
+        val existing = note(id = "update-me", title = "Original")
+        val updated = existing.copy(title = "Updated")
+        repository.updateResult = Result.failure(IOException("offline"))
+        loadContent(existing)
+
+        viewModel.updateNote(updated)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState as NotesUiState.Content
+        assertEquals(listOf(existing), state.notes)
+        assertEquals(listOf(updated), repository.updateCalls)
+        assertEquals(listOf(existing), scheduler.scheduleCalls)
+        assertStringResource(R.string.api_error_network, checkNotNull(viewModel.uiMessage).text)
     }
 
     @Test

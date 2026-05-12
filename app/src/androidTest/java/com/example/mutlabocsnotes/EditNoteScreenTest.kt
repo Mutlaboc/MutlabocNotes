@@ -61,6 +61,31 @@ class EditNoteScreenTest {
     }
 
     @Test
+    fun checklistItemCanBeAddedBeforeSave() {
+        var savedNote: Note? = null
+        setEditNoteContent(
+            note = Note(
+                id = "shopping",
+                title = "Groceries",
+                category = NoteCategory.SHOPPING,
+                checklist = listOf(ChecklistItem(text = "Milk"))
+            ),
+            onSaveClick = { savedNote = it }
+        )
+
+        composeRule.onNodeWithTag(EDIT_NOTE_CHECKLIST_ADD_BUTTON_TEST_TAG).performClick()
+        composeRule.onNodeWithTag(editNoteChecklistItemFieldTestTag(1)).performTextInput("Bread")
+        clickSave()
+
+        composeRule.runOnIdle {
+            assertEquals(
+                listOf(ChecklistItem(text = "Milk"), ChecklistItem(text = "Bread")),
+                checkNotNull(savedNote).checklist
+            )
+        }
+    }
+
+    @Test
     fun deleteRequiresConfirmBeforeCallback() {
         var deleteCalls = 0
         setEditNoteContent(

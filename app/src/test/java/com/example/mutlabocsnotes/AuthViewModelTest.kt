@@ -17,6 +17,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainDispatcherRule(
@@ -113,6 +114,18 @@ class AuthViewModelTest {
     }
 
     @Test
+    fun signIn_repositoryFailure_setsUnauthenticatedErrorAndStopsLoading() = runTest(mainDispatcherRule.dispatcher) {
+        repository.loginResult = Result.failure(IOException("offline"))
+
+        viewModel.signIn("user@example.com", "12345678")
+        advanceUntilIdle()
+
+        assertEquals(1, repository.loginCalls)
+        assertUnauthenticatedError(R.string.api_error_network)
+        assertFalse(viewModel.uiState.isLoading)
+    }
+
+    @Test
     fun signUp_validCredentials_callsRepositoryAndSetsAuthenticatedState() = runTest(mainDispatcherRule.dispatcher) {
         viewModel.signUp("new@example.com", "12345678")
         advanceUntilIdle()
@@ -136,6 +149,20 @@ class AuthViewModelTest {
     }
 
     @Test
+    fun signInWithGoogle_repositoryFailure_setsUnauthenticatedErrorAndStopsLoading() =
+        runTest(mainDispatcherRule.dispatcher) {
+            repository.googleResult = Result.failure(IOException("offline"))
+
+            viewModel.signInWithGoogle("google-token")
+            advanceUntilIdle()
+
+            assertEquals(1, repository.googleCalls)
+            assertEquals("google-token", repository.lastGoogleToken)
+            assertUnauthenticatedError(R.string.api_error_network)
+            assertFalse(viewModel.uiState.isLoading)
+        }
+
+    @Test
     fun signInWithYandex_validToken_callsRepositoryAndSetsAuthenticatedState() = runTest(mainDispatcherRule.dispatcher) {
         viewModel.signInWithYandex("yandex-token")
         advanceUntilIdle()
@@ -145,6 +172,20 @@ class AuthViewModelTest {
         assertEquals(AuthState.Authenticated("yandex@example.com"), viewModel.uiState.authState)
         assertFalse(viewModel.uiState.isLoading)
     }
+
+    @Test
+    fun signInWithYandex_repositoryFailure_setsUnauthenticatedErrorAndStopsLoading() =
+        runTest(mainDispatcherRule.dispatcher) {
+            repository.yandexResult = Result.failure(IOException("offline"))
+
+            viewModel.signInWithYandex("yandex-token")
+            advanceUntilIdle()
+
+            assertEquals(1, repository.yandexCalls)
+            assertEquals("yandex-token", repository.lastYandexToken)
+            assertUnauthenticatedError(R.string.api_error_network)
+            assertFalse(viewModel.uiState.isLoading)
+        }
 
     @Test
     fun signInWithGoogle_blankToken_doesNotCallRepositoryAndShowsError() = runTest(mainDispatcherRule.dispatcher) {
@@ -164,6 +205,16 @@ class AuthViewModelTest {
         assertUnauthenticatedError(R.string.auth_error_yandex_token_empty)
     }
 
+    @Test
+    fun logout_callsRepositoryAndSetsUnauthenticatedState() = runTest(mainDispatcherRule.dispatcher) {
+        viewModel.logout()
+        advanceUntilIdle()
+
+        assertTrue(repository.logoutCalled)
+        assertEquals(AuthState.Unauthenticated(), viewModel.uiState.authState)
+        assertFalse(viewModel.uiState.isLoading)
+    }
+
     private fun assertUnauthenticatedError(expectedResId: Int) {
         val state = viewModel.uiState.authState as AuthState.Unauthenticated
         val message = state.errorMessage as UiText.StringResource
@@ -179,6 +230,9 @@ private class FakeAuthSessionRepository : AuthSessionRepository {
     var registerCalls: Int = 0
     var googleCalls: Int = 0
     var yandexCalls: Int = 0
+    var loginResult: Result<AuthorizedSession>? = null
+    var googleResult: Result<AuthorizedSession>? = null
+    var yandexResult: Result<AuthorizedSession>? = null
     var lastLoginEmail: String? = null
     var lastLoginPassword: String? = null
     var lastRegisterEmail: String? = null
@@ -190,7 +244,7 @@ private class FakeAuthSessionRepository : AuthSessionRepository {
         loginCalls++
         lastLoginEmail = email
         lastLoginPassword = password
-        return Result.success(AuthorizedSession(email))
+        return loginResult ?: Result.success(AuthorizedSession(email))
     }
 
     override suspend fun register(email: String, password: String): Result<AuthorizedSession> {
@@ -203,13 +257,13 @@ private class FakeAuthSessionRepository : AuthSessionRepository {
     override suspend fun loginWithGoogle(idToken: String): Result<AuthorizedSession> {
         googleCalls++
         lastGoogleToken = idToken
-        return Result.success(AuthorizedSession("google@example.com"))
+        return googleResult ?: Result.success(AuthorizedSession("google@example.com"))
     }
 
     override suspend fun loginWithYandex(accessToken: String): Result<AuthorizedSession> {
         yandexCalls++
         lastYandexToken = accessToken
-        return Result.success(AuthorizedSession("yandex@example.com"))
+        return yandexResult ?: Result.success(AuthorizedSession("yandex@example.com"))
     }
 
     override suspend fun restoreSession(): Result<AuthorizedSession> {
