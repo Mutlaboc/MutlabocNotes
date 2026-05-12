@@ -16,6 +16,8 @@ object DeadlineNotification {
     const val CHANNEL_ID = "deadline_notification"
     const val EXTRA_NOTE_ID = "extra_note_id"
     const val EXTRA_NOTE_TITLE = "extra_note_title"
+    const val EXTRA_DEADLINE_MILLIS = "extra_deadline_millis"
+    const val EXTRA_REPEATS_DAILY = "extra_repeats_daily"
     const val ACTION_OPEN_NOTE = "com.example.mutlabocsnotes.action.OPEN_DEADLINE_NOTE"
 
     // Формирует стабильный request code уведомления по id заметки.
@@ -35,14 +37,27 @@ object DeadlineNotification {
     }
 
     fun noteIdFromIntent(intent: Intent?): String? {
-        if (intent?.action != ACTION_OPEN_NOTE) return null
-        val extraNoteId = intent.getStringExtra(EXTRA_NOTE_ID)?.takeIf { it.isNotBlank() }
-        if (extraNoteId != null) return extraNoteId
+        val data = intent?.data
+        return noteIdFromIntentParts(
+            action = intent?.action,
+            extraNoteId = intent?.getStringExtra(EXTRA_NOTE_ID),
+            dataScheme = data?.scheme,
+            dataHost = data?.host,
+            dataPathSegments = data?.pathSegments.orEmpty()
+        )
+    }
 
-        val data = intent.data ?: return null
-        if (data.scheme != NOTE_URI_SCHEME || data.host != NOTE_URI_HOST) return null
-        val pathSegments = data.pathSegments
-        return pathSegments
+    internal fun noteIdFromIntentParts(
+        action: String?,
+        extraNoteId: String?,
+        dataScheme: String?,
+        dataHost: String?,
+        dataPathSegments: List<String>
+    ): String? {
+        if (action != ACTION_OPEN_NOTE) return null
+        extraNoteId?.takeIf { it.isNotBlank() }?.let { return it }
+        if (dataScheme != NOTE_URI_SCHEME || dataHost != NOTE_URI_HOST) return null
+        return dataPathSegments
             .takeIf { it.size == 2 && it[0] == NOTE_URI_NOTE_PATH }
             ?.get(1)
             ?.takeIf { it.isNotBlank() }
@@ -67,6 +82,7 @@ class DeadlineNotificationReceiver: BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val noteId = intent.getStringExtra(DeadlineNotification.EXTRA_NOTE_ID).orEmpty()
         val noteTitle = intent.getStringExtra(DeadlineNotification.EXTRA_NOTE_TITLE)
+        rescheduleRepeatingDeadline(context, intent, noteId, noteTitle)
         val contentText = context.getString(
             R.string.deadline_notification_message,
             noteTitle?.takeIf { it.isNotBlank() } ?: context.getString(R.string.app_name)
@@ -80,7 +96,7 @@ class DeadlineNotificationReceiver: BroadcastReceiver() {
         )
 
         val notification = NotificationCompat.Builder(context, DeadlineNotification.CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(R.string.app_name))
             .setContentText(contentText)
             .setAutoCancel(true)
@@ -99,8 +115,39 @@ class DeadlineNotificationReceiver: BroadcastReceiver() {
         }
     }
 
+    private fun rescheduleRepeatingDeadline(
+        context: Context,
+        intent: Intent,
+        noteId: String,
+        noteTitle: String?
+    ) {
+        val note = repeatingDeadlineNoteFromAlarm(
+            noteId = noteId,
+            noteTitle = noteTitle,
+            deadlineMillis = intent.getLongExtra(DeadlineNotification.EXTRA_DEADLINE_MILLIS, 0L),
+            repeatsDaily = intent.getBooleanExtra(DeadlineNotification.EXTRA_REPEATS_DAILY, false)
+        ) ?: return
+        DeadlineNotificationScheduler(context).schedule(note)
+    }
+
     // Добавляет флаг immutable на поддерживаемых версиях Android для безопасности PendingIntent.
     private fun immutableFlag(): Int =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
 
+}
+
+internal fun repeatingDeadlineNoteFromAlarm(
+    noteId: String,
+    noteTitle: String?,
+    deadlineMillis: Long,
+    repeatsDaily: Boolean
+): Note? {
+    if (noteId.isBlank() || !repeatsDaily || deadlineMillis <= 0L) return null
+    return Note(
+        id = noteId,
+        title = noteTitle.orEmpty(),
+        category = NoteCategory.TASKS,
+        deadlineMillis = deadlineMillis,
+        isRepeating = true
+    )
 }

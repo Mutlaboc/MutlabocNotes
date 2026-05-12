@@ -102,6 +102,44 @@ class DeadlineNotificationSchedulerTest {
     }
 
     @Test
+    fun repeatingPastDeadlineRollsForwardToNextDailyNineAm() {
+        val backend = FakeDeadlineAlarmBackend()
+        val scheduler = scheduler(backend)
+
+        val result = scheduler.schedule(
+            task(
+                deadlineMillis = pastDeadlineMillis,
+                isRepeating = true
+            )
+        )
+
+        assertEquals(DeadlineScheduleResult.ScheduledExact, result)
+        assertEquals(
+            calendarMillis(2026, Calendar.JANUARY, 11, 9),
+            backend.exactCalls.single().triggerAtMillis
+        )
+    }
+
+    @Test
+    fun scheduleAllAggregatesExactAlarmPermissionWarning() {
+        val backend = FakeDeadlineAlarmBackend(
+            sdkInt = Build.VERSION_CODES.S,
+            canScheduleExactAlarms = false
+        )
+        val scheduler = scheduler(backend)
+
+        val result = scheduler.scheduleAll(
+            listOf(
+                task(id = "needs-permission", deadlineMillis = futureDeadlineMillis),
+                task(id = "plain-note", category = NoteCategory.NOTES, deadlineMillis = futureDeadlineMillis)
+            )
+        )
+
+        assertEquals(DeadlineScheduleResult.ScheduledInexactPermissionRequired, result)
+        assertEquals(listOf("needs-permission"), backend.inexactCalls.map { it.note.id })
+    }
+
+    @Test
     fun scheduleAllCancelsExistingAlarmsBeforeReschedulingCurrentNotes() {
         val backend = FakeDeadlineAlarmBackend()
         val scheduler = scheduler(backend)
@@ -136,14 +174,16 @@ class DeadlineNotificationSchedulerTest {
         id: String = "task",
         category: NoteCategory = NoteCategory.TASKS,
         deadlineMillis: Long? = futureDeadlineMillis,
-        isCompleted: Boolean = false
+        isCompleted: Boolean = false,
+        isRepeating: Boolean = false
     ): Note {
         return Note(
             id = id,
             title = "Task",
             category = category,
             deadlineMillis = deadlineMillis,
-            isCompleted = isCompleted
+            isCompleted = isCompleted,
+            isRepeating = isRepeating
         )
     }
 

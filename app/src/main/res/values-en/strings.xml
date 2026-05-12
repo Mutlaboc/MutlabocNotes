@@ -64,7 +64,7 @@
     <string name="switch_user">Switch user</string>
     <string name="active_tasks">Active tasks</string>
     <string name="note_deadline_value">Deadline: %1$s</string>
-    <string name="note_repeating">Repeats</string>
+    <string name="note_repeating">Repeats daily</string>
     <string name="checklist_preview_item">- %1$s</string>
     <string name="more_items_indicator">...</string>
 
@@ -78,7 +78,7 @@
     <string name="checklist_add_item">Add</string>
     <string name="checklist_delete_item">Delete item</string>
     <string name="deadline_label">Deadline</string>
-    <string name="repeat_label">Repeat</string>
+    <string name="repeat_label">Repeat daily</string>
     <string name="coin_count_label">Coin count</string>
     <string name="note_delete_title">Delete note?</string>
     <string name="note_delete_message">This action cannot be undone.</string>

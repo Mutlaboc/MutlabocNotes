@@ -187,27 +187,26 @@ fun MyApp(
     }
 
     LaunchedEffect(authState, notesUiState, pendingNotificationNoteId, isWaitingForNotificationNotes) {
-        val targetNoteId = pendingNotificationNoteId ?: return@LaunchedEffect
-        if (!isWaitingForNotificationNotes || authState !is AuthState.Authenticated) {
-            return@LaunchedEffect
-        }
-
-        when (val state = notesUiState) {
-            is NotesUiState.Content -> {
+        when (
+            val decision = pendingNotificationNavigationDecision(
+                authState = authState,
+                notesUiState = notesUiState,
+                pendingNotificationNoteId = pendingNotificationNoteId,
+                isWaitingForNotificationNotes = isWaitingForNotificationNotes
+            )
+        ) {
+            is PendingNotificationNavigationDecision.OpenNote -> {
                 isWaitingForNotificationNotes = false
-                onPendingNotificationHandled(targetNoteId)
-                if (state.notes.any { it.id == targetNoteId }) {
-                    navController.navigate("edit/${Uri.encode(targetNoteId)}") {
-                        launchSingleTop = true
-                    }
+                onPendingNotificationHandled(decision.noteId)
+                navController.navigate("edit/${Uri.encode(decision.noteId)}") {
+                    launchSingleTop = true
                 }
             }
-            NotesUiState.Empty -> {
+            is PendingNotificationNavigationDecision.ClearPending -> {
                 isWaitingForNotificationNotes = false
-                onPendingNotificationHandled(targetNoteId)
+                onPendingNotificationHandled(decision.noteId)
             }
-            is NotesUiState.Error,
-            NotesUiState.Loading -> Unit
+            PendingNotificationNavigationDecision.Wait -> Unit
         }
     }
 
@@ -391,5 +390,38 @@ fun MyApp(
                 )
             }
         }
+    }
+}
+
+internal sealed interface PendingNotificationNavigationDecision {
+    data object Wait : PendingNotificationNavigationDecision
+    data class ClearPending(val noteId: String) : PendingNotificationNavigationDecision
+    data class OpenNote(val noteId: String) : PendingNotificationNavigationDecision
+}
+
+internal fun pendingNotificationNavigationDecision(
+    authState: AuthState,
+    notesUiState: NotesUiState,
+    pendingNotificationNoteId: String?,
+    isWaitingForNotificationNotes: Boolean
+): PendingNotificationNavigationDecision {
+    val targetNoteId = pendingNotificationNoteId
+        ?.takeIf { it.isNotBlank() }
+        ?: return PendingNotificationNavigationDecision.Wait
+    if (!isWaitingForNotificationNotes || authState !is AuthState.Authenticated) {
+        return PendingNotificationNavigationDecision.Wait
+    }
+
+    return when (notesUiState) {
+        is NotesUiState.Content -> {
+            if (notesUiState.notes.any { it.id == targetNoteId }) {
+                PendingNotificationNavigationDecision.OpenNote(targetNoteId)
+            } else {
+                PendingNotificationNavigationDecision.ClearPending(targetNoteId)
+            }
+        }
+        NotesUiState.Empty -> PendingNotificationNavigationDecision.ClearPending(targetNoteId)
+        is NotesUiState.Error,
+        NotesUiState.Loading -> PendingNotificationNavigationDecision.Wait
     }
 }

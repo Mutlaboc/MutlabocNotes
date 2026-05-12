@@ -180,9 +180,11 @@ class AppContainerWiringTest {
         assertTrue(mainActivity.contains("DeadlineNotification.noteIdFromIntent(intent)"))
         assertTrue(mainActivity.contains("override fun onNewIntent(intent: Intent)"))
         assertTrue(mainActivity.contains("pendingNotificationNoteId: String? = null"))
-        assertTrue(mainActivity.contains("onPendingNotificationHandled(targetNoteId)"))
-        assertTrue(mainActivity.contains("state.notes.any { it.id == targetNoteId }"))
-        assertTrue(mainActivity.contains("navController.navigate(\"edit/\${Uri.encode(targetNoteId)}\")"))
+        assertTrue(mainActivity.contains("pendingNotificationNavigationDecision("))
+        assertTrue(mainActivity.contains("onPendingNotificationHandled(decision.noteId)"))
+        assertTrue(mainActivity.contains("PendingNotificationNavigationDecision.OpenNote"))
+        assertTrue(mainActivity.contains("PendingNotificationNavigationDecision.ClearPending"))
+        assertTrue(mainActivity.contains("navController.navigate(\"edit/\${Uri.encode(decision.noteId)}\")"))
     }
 
     @Test
@@ -198,6 +200,25 @@ class AppContainerWiringTest {
         assertTrue(receiver.contains("putExtra(EXTRA_NOTE_ID, noteId)"))
         assertTrue(receiver.contains("PendingIntent.getActivity"))
         assertTrue(receiver.contains("DeadlineNotification.requestCodeForId(noteId)"))
+    }
+
+    @Test
+    fun deadlineNotificationUsesMonochromeIconAndCarriesRepeatExtras() {
+        val receiver = projectFile(
+            "app/src/main/java/com/example/mutlabocsnotes/DeadlineNotificationReceiver.kt"
+        ).readText()
+        val scheduler = projectFile(
+            "app/src/main/java/com/example/mutlabocsnotes/DeadlineNotificationScheduler.kt"
+        ).readText()
+        val icon = projectFile("app/src/main/res/drawable/ic_notification.xml")
+
+        assertTrue(icon.isFile)
+        assertTrue(receiver.contains(".setSmallIcon(R.drawable.ic_notification)"))
+        assertTrue(receiver.contains("EXTRA_DEADLINE_MILLIS"))
+        assertTrue(receiver.contains("EXTRA_REPEATS_DAILY"))
+        assertTrue(receiver.contains("repeatingDeadlineNoteFromAlarm("))
+        assertTrue(scheduler.contains("putExtra(DeadlineNotification.EXTRA_DEADLINE_MILLIS"))
+        assertTrue(scheduler.contains("putExtra(DeadlineNotification.EXTRA_REPEATS_DAILY"))
     }
 
     @Test

@@ -61,25 +61,11 @@ class DeadlineNotificationScheduler internal constructor(
         val deadlineMillis = note.deadlineMillis ?: return DeadlineScheduleResult.NotScheduled
         if (note.isCompleted) return DeadlineScheduleResult.NotScheduled
 
-        val triggerCalendar = Calendar.getInstance().apply {
-            timeInMillis = deadlineMillis
-            set(Calendar.HOUR_OF_DAY, 9)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        val now = nowProvider()
-        if (triggerCalendar.timeInMillis <= now) {
-            if (note.isRepeating) {
-                while (triggerCalendar.timeInMillis <= now) {
-                    triggerCalendar.add(Calendar.DAY_OF_YEAR, 1)
-                }
-            } else {
-                return DeadlineScheduleResult.NotScheduled
-            }
-        }
-
-        val triggerAtMillis = triggerCalendar.timeInMillis
+        val triggerAtMillis = nextDailyDeadlineTriggerMillis(
+            deadlineMillis = deadlineMillis,
+            nowMillis = nowProvider(),
+            repeatsDaily = note.isRepeating
+        ) ?: return DeadlineScheduleResult.NotScheduled
         if (requiresExactAlarmPermission() && !alarmBackend.canScheduleExactAlarms()) {
             alarmBackend.scheduleInexact(triggerAtMillis, note)
             return DeadlineScheduleResult.ScheduledInexactPermissionRequired
@@ -112,6 +98,27 @@ class DeadlineNotificationScheduler internal constructor(
     private fun requiresExactAlarmPermission(): Boolean {
         return alarmBackend.sdkInt >= Build.VERSION_CODES.S
     }
+}
+
+internal fun nextDailyDeadlineTriggerMillis(
+    deadlineMillis: Long,
+    nowMillis: Long,
+    repeatsDaily: Boolean
+): Long? {
+    val triggerCalendar = Calendar.getInstance().apply {
+        timeInMillis = deadlineMillis
+        set(Calendar.HOUR_OF_DAY, 9)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+    if (triggerCalendar.timeInMillis <= nowMillis) {
+        if (!repeatsDaily) return null
+        while (triggerCalendar.timeInMillis <= nowMillis) {
+            triggerCalendar.add(Calendar.DAY_OF_YEAR, 1)
+        }
+    }
+    return triggerCalendar.timeInMillis
 }
 
 internal interface DeadlineAlarmBackend {
@@ -241,6 +248,8 @@ private class AndroidDeadlineAlarmBackend(
         val intent = Intent(context, DeadlineNotificationReceiver::class.java).apply {
             putExtra(DeadlineNotification.EXTRA_NOTE_ID, note.id)
             putExtra(DeadlineNotification.EXTRA_NOTE_TITLE, note.title)
+            putExtra(DeadlineNotification.EXTRA_DEADLINE_MILLIS, note.deadlineMillis ?: 0L)
+            putExtra(DeadlineNotification.EXTRA_REPEATS_DAILY, note.isRepeating)
         }
         return PendingIntent.getBroadcast(
             context,
