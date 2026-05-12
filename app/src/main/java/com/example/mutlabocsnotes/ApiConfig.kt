@@ -2,5 +2,5 @@ package com.example.mutlabocsnotes
 
 // URL backend-сервера
 object ApiConfig {
-    const val BASE_URL = "https://homenoteapp.ru/"
+    val BASE_URL: String = BuildConfig.BACKEND_BASE_URL
 }

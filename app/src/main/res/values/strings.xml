@@ -1,6 +1,5 @@
 <resources>
     <string name="app_name">Mutlaboc\'s notes</string>
-    <string name="google_web_client_id" translatable="false">822837772778-f7lc8b9nnbpn1u65njf7agkj392dub8c.apps.googleusercontent.com</string>
 
     <string name="action_settings">Настройки</string>
     <string name="action_back">Назад</string>

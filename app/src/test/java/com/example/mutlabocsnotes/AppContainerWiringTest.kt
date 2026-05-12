@@ -53,6 +53,33 @@ class AppContainerWiringTest {
     }
 
     @Test
+    fun configValues_comeFromGeneratedBuildConfigAndGradle() {
+        val apiConfig = projectFile(
+            "app/src/main/java/com/example/mutlabocsnotes/ApiConfig.kt"
+        ).readText()
+        val appContainer = projectFile(
+            "app/src/main/java/com/example/mutlabocsnotes/AppContainer.kt"
+        ).readText()
+        val mainKotlinSources = projectFile("app/src/main/java")
+            .walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .joinToString("\n") { it.readText() }
+        val strings = projectFile("app/src/main/res/values/strings.xml").readText()
+        val gradleProperties = projectFile("gradle.properties").readText()
+
+        assertFalse(mainKotlinSources.contains(PRODUCTION_BACKEND_URL))
+        assertTrue(apiConfig.contains("val BASE_URL: String = BuildConfig.BACKEND_BASE_URL"))
+        assertTrue(appContainer.contains("AuthRepository.createAuthApi(ApiConfig.BASE_URL)"))
+        assertTrue(appContainer.contains("baseUrl = ApiConfig.BASE_URL"))
+        assertFalse(strings.contains(PRODUCTION_GOOGLE_WEB_CLIENT_ID))
+        assertFalse(
+            gradleProperties.lineSequence().any {
+                it.trim().startsWith("YANDEX_CLIENT_ID=")
+            }
+        )
+    }
+
+    @Test
     fun viewModelFactory_createsRootViewModels() = runTest(mainDispatcherRule.dispatcher) {
         val factory = MutlabocNotesViewModelFactory(
             application = Application(),
@@ -219,6 +246,12 @@ class AppContainerWiringTest {
                 .filter { it.isFile && it.extension == "kt" }
                 .toList()
         }
+    }
+
+    private companion object {
+        const val PRODUCTION_BACKEND_URL = "https://homenoteapp.ru/"
+        const val PRODUCTION_GOOGLE_WEB_CLIENT_ID =
+            "822837772778-f7lc8b9nnbpn1u65njf7agkj392dub8c.apps.googleusercontent.com"
     }
 }
 
