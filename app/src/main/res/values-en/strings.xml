@@ -70,14 +70,18 @@
 
     <string name="edit_note_title">Edit note</string>
     <string name="note_title_label">Title</string>
+    <string name="note_title_required">Enter a title</string>
     <string name="note_content_label">Content</string>
     <string name="note_category_shopping">Shopping</string>
     <string name="note_category_tasks">Tasks</string>
     <string name="note_category_notes">Notes</string>
     <string name="checklist_add_item">Add</string>
+    <string name="checklist_delete_item">Delete item</string>
     <string name="deadline_label">Deadline</string>
     <string name="repeat_label">Repeat</string>
     <string name="coin_count_label">Coin count</string>
+    <string name="note_delete_title">Delete note?</string>
+    <string name="note_delete_message">This action cannot be undone.</string>
 
     <string name="home_info_title">Home information</string>
     <string name="home_info_empty">No cards to display</string>

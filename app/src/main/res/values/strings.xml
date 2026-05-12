@@ -71,14 +71,18 @@
 
     <string name="edit_note_title">Редактирование заметки</string>
     <string name="note_title_label">Заголовок</string>
+    <string name="note_title_required">Введите заголовок</string>
     <string name="note_content_label">Содержимое</string>
     <string name="note_category_shopping">Покупки</string>
     <string name="note_category_tasks">Дела</string>
     <string name="note_category_notes">Заметки</string>
     <string name="checklist_add_item">Добавить</string>
+    <string name="checklist_delete_item">Удалить пункт</string>
     <string name="deadline_label">Дедлайн</string>
     <string name="repeat_label">Повторять</string>
     <string name="coin_count_label">Количество монет</string>
+    <string name="note_delete_title">Удалить заметку?</string>
+    <string name="note_delete_message">Это действие нельзя отменить.</string>
 
     <string name="home_info_title">Информация о доме</string>
     <string name="home_info_empty">Нет карточек для отображения</string>
