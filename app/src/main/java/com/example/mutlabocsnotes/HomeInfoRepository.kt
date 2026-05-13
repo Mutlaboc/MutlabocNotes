@@ -8,8 +8,8 @@ import kotlinx.coroutines.withContext
 
 interface HomeInfoDataSource {
     suspend fun getAllCards(): Result<List<HomeInfoCard>>
-    suspend fun insert(card: HomeInfoCard): Result<String>
-    suspend fun update(card: HomeInfoCard): Result<Unit>
+    suspend fun insert(card: HomeInfoCard): Result<HomeInfoCard>
+    suspend fun update(card: HomeInfoCard): Result<HomeInfoCard>
     suspend fun delete(cardId: String): Result<Unit>
 }
 
@@ -28,25 +28,25 @@ class HomeInfoRepository(
         }
     }
 
-    // Создаёт карточку и возвращает id, который назначил backend.
-    override suspend fun insert(card: HomeInfoCard): Result<String> = withContext(Dispatchers.IO) {
+    // Creates a card and returns the backend-canonical response, including server timestamps.
+    override suspend fun insert(card: HomeInfoCard): Result<HomeInfoCard> = withContext(Dispatchers.IO) {
         return@withContext try {
             val created = api.createHomeCard(card.toUpsertRequestDto())
-            Result.success(created.id)
+            Result.success(created.toDomain())
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    // Обновляет карточку только если у неё уже есть серверный id.
-    override suspend fun update(card: HomeInfoCard): Result<Unit> = withContext(Dispatchers.IO) {
+    // Updates a card and returns the backend-canonical response, including server timestamps.
+    override suspend fun update(card: HomeInfoCard): Result<HomeInfoCard> = withContext(Dispatchers.IO) {
         if (card.id.isBlank()) {
             return@withContext Result.failure(IllegalArgumentException("Пустой идентификатор карточки"))
         }
 
         return@withContext try {
-            api.updateHomeCard(card.id, card.toUpsertRequestDto())
-            Result.success(Unit)
+            val updated = api.updateHomeCard(card.id, card.toUpsertRequestDto())
+            Result.success(updated.toDomain())
         } catch (e: Exception) {
             Result.failure(e)
         }

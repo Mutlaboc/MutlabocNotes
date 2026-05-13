@@ -44,9 +44,8 @@ class HomeInfoViewModel(
         viewModelScope.launch(ioDispatcher) {
             val result = repository.insert(card)
             launch(Dispatchers.Main) {
-                result.onSuccess { id ->
-                    val cardWithId = card.copy(id = id)
-                    val cards = currentCards() + cardWithId
+                result.onSuccess { created ->
+                    val cards = currentCards() + created
                     applyCards(cards.sortedByDescending { it.updatedAt })
                 }.onFailure { error ->
                     showMessage(error)
@@ -64,9 +63,9 @@ class HomeInfoViewModel(
         viewModelScope.launch(ioDispatcher) {
             val result = repository.update(card)
             launch(Dispatchers.Main) {
-                result.onSuccess {
+                result.onSuccess { updated ->
                     val cards = currentCards().map { existing ->
-                        if (existing.id == card.id) card else existing
+                        if (existing.id == updated.id) updated else existing
                     }
                     applyCards(cards.sortedByDescending { it.updatedAt })
                 }.onFailure { error ->

@@ -87,14 +87,15 @@ class HomeInfoViewModelTest {
     fun addCard_successAddsCreatedCardAndKeepsSortOrder() = runTest(mainDispatcherRule.dispatcher) {
         val existing = card(id = "existing", updatedAt = 10)
         val created = card(title = "Created", updatedAt = 20)
+        val serverCreated = created.copy(id = "created-id", updatedAt = 30)
         loadContent(existing)
-        repository.insertResult = Result.success("created-id")
+        repository.insertResult = Result.success(serverCreated)
 
         viewModel.addCard(created)
         advanceUntilIdle()
 
         val state = viewModel.uiState as HomeInfoUiState.Content
-        assertEquals(listOf(created.copy(id = "created-id"), existing), state.cards)
+        assertEquals(listOf(serverCreated, existing), state.cards)
         assertEquals(listOf(created), repository.insertCalls)
         assertEquals(null, viewModel.uiMessage)
     }
@@ -119,7 +120,7 @@ class HomeInfoViewModelTest {
         val second = card(id = "second", updatedAt = 20)
         val updatedFirst = first.copy(title = "Updated", updatedAt = 30)
         loadContent(second, first)
-        repository.updateResult = Result.success(Unit)
+        repository.updateResult = Result.success(updatedFirst)
 
         viewModel.updateCard(updatedFirst)
         advanceUntilIdle()
@@ -211,8 +212,8 @@ class HomeInfoViewModelTest {
 
 private class FakeHomeInfoDataSource : HomeInfoDataSource {
     var cardsResult: Result<List<HomeInfoCard>> = Result.success(emptyList())
-    var insertResult: Result<String> = Result.failure(IllegalStateException("not set"))
-    var updateResult: Result<Unit> = Result.failure(IllegalStateException("not set"))
+    var insertResult: Result<HomeInfoCard> = Result.failure(IllegalStateException("not set"))
+    var updateResult: Result<HomeInfoCard> = Result.failure(IllegalStateException("not set"))
     var deleteResult: Result<Unit> = Result.failure(IllegalStateException("not set"))
     val insertCalls = mutableListOf<HomeInfoCard>()
     val updateCalls = mutableListOf<HomeInfoCard>()
@@ -220,12 +221,12 @@ private class FakeHomeInfoDataSource : HomeInfoDataSource {
 
     override suspend fun getAllCards(): Result<List<HomeInfoCard>> = cardsResult
 
-    override suspend fun insert(card: HomeInfoCard): Result<String> {
+    override suspend fun insert(card: HomeInfoCard): Result<HomeInfoCard> {
         insertCalls.add(card)
         return insertResult
     }
 
-    override suspend fun update(card: HomeInfoCard): Result<Unit> {
+    override suspend fun update(card: HomeInfoCard): Result<HomeInfoCard> {
         updateCalls.add(card)
         return updateResult
     }

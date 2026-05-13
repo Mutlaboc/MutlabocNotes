@@ -32,7 +32,9 @@ object ApiErrorMapper {
 
                 "invalid_request",
                 "invalid_note_id",
-                "invalid_card_id" -> R.string.api_error_validation
+                "invalid_card_id",
+                "note_not_found",
+                "card_not_found" -> R.string.api_error_validation
 
                 "internal_server_error" -> R.string.api_error_server
 

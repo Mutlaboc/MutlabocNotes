@@ -307,8 +307,10 @@ private class WiringFakeNotesDataSource : NotesDataSource {
 
 private class WiringFakeHomeInfoDataSource : HomeInfoDataSource {
     override suspend fun getAllCards(): Result<List<HomeInfoCard>> = Result.success(emptyList())
-    override suspend fun insert(card: HomeInfoCard): Result<String> = Result.success("card-id")
-    override suspend fun update(card: HomeInfoCard): Result<Unit> = Result.success(Unit)
+    override suspend fun insert(card: HomeInfoCard): Result<HomeInfoCard> =
+        Result.success(card.copy(id = "card-id"))
+
+    override suspend fun update(card: HomeInfoCard): Result<HomeInfoCard> = Result.success(card)
     override suspend fun delete(cardId: String): Result<Unit> = Result.success(Unit)
 }
 
