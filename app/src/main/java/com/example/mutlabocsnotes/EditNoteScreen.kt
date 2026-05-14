@@ -26,13 +26,10 @@ import androidx.compose.material.OutlinedButton
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
-import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.TopAppBar
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,11 +39,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -115,7 +110,6 @@ internal fun prepareNoteForSave(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditNoteScreen(
     note: Note?,
@@ -299,13 +293,6 @@ private fun NoteTitleField(
         value = title,
         onValueChange = onTitleChange,
         label = { Text(stringResource(R.string.note_title_label)) },
-        textStyle = TextStyle(color = Color.Black),
-        colors = TextFieldDefaults.outlinedTextFieldColors(
-            textColor = Color.Black,
-            focusedLabelColor = Color.Black,
-            unfocusedLabelColor = Color.Gray,
-            cursorColor = Color.Black
-        ),
         modifier = Modifier
             .fillMaxWidth()
             .testTag(EDIT_NOTE_TITLE_FIELD_TEST_TAG),
@@ -320,7 +307,6 @@ private fun NoteTitleField(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategoryPicker(
     selectedCategory: NoteCategory,
@@ -333,17 +319,32 @@ private fun CategoryPicker(
     )
     Row {
         categories.forEach { (category, labelResId) ->
-            FilterChip(
-                selected = selectedCategory == category,
-                onClick = { onCategorySelected(category) },
-                label = { Text(stringResource(labelResId)) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = Color(0xFFBBDEFB)
-                ),
-                modifier = Modifier
-                    .padding(end = 8.dp)
-                    .testTag(editNoteCategoryChipTestTag(category))
-            )
+            val categoryColors = noteCategoryColors(category)
+            val modifier = Modifier
+                .padding(end = 8.dp)
+                .testTag(editNoteCategoryChipTestTag(category))
+            if (selectedCategory == category) {
+                Button(
+                    onClick = { onCategorySelected(category) },
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = categoryColors.container,
+                        contentColor = categoryColors.content
+                    ),
+                    modifier = modifier
+                ) {
+                    Text(stringResource(labelResId))
+                }
+            } else {
+                OutlinedButton(
+                    onClick = { onCategorySelected(category) },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = categoryColors.content
+                    ),
+                    modifier = modifier
+                ) {
+                    Text(stringResource(labelResId))
+                }
+            }
         }
     }
 }
@@ -371,13 +372,6 @@ private fun ChecklistEditor(
                 OutlinedTextField(
                     value = item.text,
                     onValueChange = { text -> onItemTextChange(index, text) },
-                    textStyle = TextStyle(color = Color.Black),
-                    colors = TextFieldDefaults.outlinedTextFieldColors(
-                        textColor = Color.Black,
-                        focusedLabelColor = Color.Black,
-                        unfocusedLabelColor = Color.Gray,
-                        cursorColor = Color.Black
-                    ),
                     modifier = Modifier
                         .weight(1f)
                         .padding(start = 8.dp)
@@ -468,13 +462,6 @@ private fun DeadlinePicker(
             value = deadlineText,
             onValueChange = {},
             label = { Text(stringResource(R.string.deadline_label)) },
-            textStyle = TextStyle(color = Color.Black),
-            colors = TextFieldDefaults.outlinedTextFieldColors(
-                textColor = Color.Black,
-                focusedLabelColor = Color.Black,
-                unfocusedLabelColor = Color.Gray,
-                cursorColor = Color.Black
-            ),
             modifier = Modifier.weight(1f),
             readOnly = true,
             interactionSource = dateFieldInteractionSource
@@ -498,8 +485,7 @@ private fun NoteContentField(
     OutlinedTextField(
         value = content,
         onValueChange = onContentChange,
-        label = { Text(stringResource(R.string.note_content_label), color = Color.Black) },
-        textStyle = TextStyle(color = Color.Black),
+        label = { Text(stringResource(R.string.note_content_label)) },
         modifier = Modifier
             .fillMaxWidth()
             .fillMaxHeight(0.4f)
@@ -521,13 +507,6 @@ private fun CoinCountDebugField(
             }
         },
         label = { Text(stringResource(R.string.coin_count_label)) },
-        textStyle = TextStyle(color = Color.Black),
-        colors = TextFieldDefaults.outlinedTextFieldColors(
-            textColor = Color.Black,
-            focusedLabelColor = Color.Black,
-            unfocusedLabelColor = Color.Gray,
-            cursorColor = Color.Black
-        ),
         modifier = Modifier
             .fillMaxWidth()
             .testTag(EDIT_NOTE_COIN_COUNT_FIELD_TEST_TAG),

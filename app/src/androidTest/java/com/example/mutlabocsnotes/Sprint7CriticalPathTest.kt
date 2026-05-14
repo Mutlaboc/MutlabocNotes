@@ -289,12 +289,12 @@ class Sprint7CriticalPathTest {
             return Result.success(emptyList())
         }
 
-        override suspend fun insert(card: HomeInfoCard): Result<String> {
-            return Result.success(card.id.ifBlank { "created-card" })
+        override suspend fun insert(card: HomeInfoCard): Result<HomeInfoCard> {
+            return Result.success(card.copy(id = card.id.ifBlank { "created-card" }))
         }
 
-        override suspend fun update(card: HomeInfoCard): Result<Unit> {
-            return Result.success(Unit)
+        override suspend fun update(card: HomeInfoCard): Result<HomeInfoCard> {
+            return Result.success(card)
         }
 
         override suspend fun delete(cardId: String): Result<Unit> {

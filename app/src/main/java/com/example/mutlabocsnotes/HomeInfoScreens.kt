@@ -47,7 +47,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -329,7 +328,7 @@ fun EditHomeInfoCardScreen(
             if (isTitleError) {
                 Text(
                     text = stringResource(R.string.home_info_title_required),
-                    color = Color.Red
+                    color = MaterialTheme.colors.error
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))

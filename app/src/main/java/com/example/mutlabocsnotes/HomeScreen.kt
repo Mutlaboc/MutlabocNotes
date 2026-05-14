@@ -45,7 +45,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -428,18 +427,15 @@ fun NoteItem(
     modifier: Modifier = Modifier,
     onCompletionChange: (Boolean) -> Unit
 ) {
-    val backgroundColor = when (note.category) {
-        NoteCategory.SHOPPING -> Color(0xFFD9F0FF)
-        NoteCategory.TASKS -> Color(0xFFFFE2E2)
-        NoteCategory.NOTES -> Color(0xFFE1F5E3)
-    }
+    val categoryColors = noteCategoryColors(note.category)
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Surface(
-            color = backgroundColor,
+            color = categoryColors.container,
+            contentColor = categoryColors.content,
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
