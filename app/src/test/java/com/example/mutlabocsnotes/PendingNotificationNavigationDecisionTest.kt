@@ -31,7 +31,7 @@ class PendingNotificationNavigationDecisionTest {
         assertEquals(
             PendingNotificationNavigationDecision.Wait,
             pendingNotificationNavigationDecision(
-                authState = AuthState.Unauthenticated(),
+                authState = AuthState.Unauthenticated,
                 notesUiState = NotesUiState.Content(listOf(Note(id = "target")), totalCoins = 0),
                 pendingNotificationNoteId = "target",
                 isWaitingForNotificationNotes = false

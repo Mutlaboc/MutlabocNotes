@@ -231,7 +231,13 @@ fun MyApp(
                     onSignUp = authViewModel::signUp,
                     onGoogleIdToken = authViewModel::signInWithGoogle,
                     onYandexAccessToken = authViewModel::signInWithYandex,
-                    onClearError = authViewModel::clearError
+                    onGoogleTokenEmpty = authViewModel::onGoogleTokenEmpty,
+                    onGoogleSignInFailed = authViewModel::onGoogleSignInFailed,
+                    onYandexTokenEmpty = authViewModel::onYandexTokenEmpty,
+                    onYandexSignInFailed = authViewModel::onYandexSignInFailed,
+                    onYandexSignInCancelled = authViewModel::onYandexSignInCancelled,
+                    onMessageShown = authViewModel::onMessageShown,
+                    onClearInlineError = authViewModel::clearInlineError
                 )
             }
 

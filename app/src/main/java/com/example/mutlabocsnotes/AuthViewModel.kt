@@ -35,13 +35,14 @@ class AuthViewModel(
                 }
                 .onFailure {
                     uiState = AuthUiState(
-                        authState = AuthState.Unauthenticated()
+                        authState = AuthState.Unauthenticated
                     )
                 }
         }
     }
 
     fun signIn(email: String, password: String) {
+        clearInlineError()
         if (!validateCredentials(email, password)) return
 
         submitAuth {
@@ -50,6 +51,7 @@ class AuthViewModel(
     }
 
     fun signUp(email: String, password: String) {
+        clearInlineError()
         if (!validateCredentials(email, password)) return
 
         submitAuth {
@@ -59,7 +61,7 @@ class AuthViewModel(
 
     fun signInWithGoogle(idToken: String) {
         if (idToken.isBlank()) {
-            showAuthError(R.string.auth_error_google_token_empty)
+            showSnackbarMessage(R.string.auth_error_google_token_empty)
             return
         }
 
@@ -70,7 +72,7 @@ class AuthViewModel(
 
     fun signInWithYandex(accessToken: String) {
         if (accessToken.isBlank()) {
-            showAuthError(R.string.auth_error_yandex_token_empty)
+            showSnackbarMessage(R.string.auth_error_yandex_token_empty)
             return
         }
 
@@ -83,7 +85,7 @@ class AuthViewModel(
         viewModelScope.launch {
             repository.logout()
             uiState = AuthUiState(
-                authState = AuthState.Unauthenticated()
+                authState = AuthState.Unauthenticated
             )
         }
     }
@@ -91,23 +93,49 @@ class AuthViewModel(
     fun handleSessionExpired() {
         repository.clearLocalSession()
         uiState = AuthUiState(
-            authState = AuthState.Unauthenticated(
-                errorMessage = UiText.StringResource(R.string.api_error_unauthorized)
+            authState = AuthState.Unauthenticated,
+            uiMessage = UiMessage(
+                id = UiMessageId.next(),
+                text = UiText.StringResource(R.string.api_error_unauthorized)
             )
         )
     }
 
-    fun clearError() {
-        if (uiState.authState is AuthState.Unauthenticated) {
-            uiState = uiState.copy(
-                authState = AuthState.Unauthenticated()
-            )
+    fun onGoogleTokenEmpty() {
+        showSnackbarMessage(R.string.auth_error_google_token_empty)
+    }
+
+    fun onGoogleSignInFailed() {
+        showSnackbarMessage(R.string.auth_error_google_sign_in_failed)
+    }
+
+    fun onYandexTokenEmpty() {
+        showSnackbarMessage(R.string.auth_error_yandex_token_empty)
+    }
+
+    fun onYandexSignInFailed() {
+        showSnackbarMessage(R.string.auth_error_yandex_sign_in_failed)
+    }
+
+    fun onYandexSignInCancelled() {
+        showSnackbarMessage(R.string.auth_error_yandex_sign_in_cancelled)
+    }
+
+    fun onMessageShown(messageId: Long) {
+        if (uiState.uiMessage?.id == messageId) {
+            uiState = uiState.copy(uiMessage = null)
+        }
+    }
+
+    fun clearInlineError() {
+        if (uiState.inlineErrorMessage != null) {
+            uiState = uiState.copy(inlineErrorMessage = null)
         }
     }
 
     private fun validateCredentials(email: String, password: String): Boolean {
         if (email.isBlank() || password.length < 8) {
-            showAuthError(R.string.auth_error_invalid_credentials)
+            showInlineError(R.string.auth_error_invalid_credentials)
             return false
         }
 
@@ -117,7 +145,7 @@ class AuthViewModel(
     private fun submitAuth(block: suspend () -> Result<AuthorizedSession>) {
         viewModelScope.launch {
             uiState = AuthUiState(
-                authState = AuthState.Unauthenticated(),
+                authState = AuthState.Unauthenticated,
                 isLoading = true
             )
 
@@ -128,20 +156,48 @@ class AuthViewModel(
                     )
                 }
                 .onFailure { error ->
-                    uiState = AuthUiState(
-                        authState = AuthState.Unauthenticated(
-                            errorMessage = ApiErrorMapper.map(error)
-                        ),
-                        isLoading = false
-                    )
+                    showAuthFailure(error)
                 }
         }
     }
 
-    private fun showAuthError(messageResId: Int) {
+    private fun showAuthFailure(error: Throwable) {
+        val message = ApiErrorMapper.map(error)
+        if (message.isInvalidCredentialsError()) {
+            uiState = AuthUiState(
+                authState = AuthState.Unauthenticated,
+                inlineErrorMessage = message
+            )
+        } else {
+            uiState = AuthUiState(
+                authState = AuthState.Unauthenticated,
+                uiMessage = UiMessage(
+                    id = UiMessageId.next(),
+                    text = message
+                )
+            )
+        }
+    }
+
+    private fun showInlineError(messageResId: Int) {
         uiState = AuthUiState(
-            authState = AuthState.Unauthenticated(UiText.StringResource(messageResId)),
-            isLoading = false
+            authState = AuthState.Unauthenticated,
+            inlineErrorMessage = UiText.StringResource(messageResId)
         )
+    }
+
+    private fun showSnackbarMessage(messageResId: Int) {
+        uiState = uiState.copy(
+            authState = AuthState.Unauthenticated,
+            isLoading = false,
+            uiMessage = UiMessage(
+                id = UiMessageId.next(),
+                text = UiText.StringResource(messageResId)
+            )
+        )
+    }
+
+    private fun UiText.isInvalidCredentialsError(): Boolean {
+        return this is UiText.StringResource && resId == R.string.auth_error_invalid_credentials
     }
 }

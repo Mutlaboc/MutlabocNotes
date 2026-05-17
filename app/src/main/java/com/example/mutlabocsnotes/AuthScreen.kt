@@ -1,8 +1,6 @@
 package com.example.mutlabocsnotes
 
 import android.util.Log
-import android.widget.Toast
-import android.widget.Toast.LENGTH_SHORT
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
@@ -14,10 +12,12 @@ import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,6 +43,9 @@ import com.yandex.authsdk.YandexAuthSdk
 const val AUTH_EMAIL_FIELD_TEST_TAG = "auth_email_field"
 const val AUTH_PASSWORD_FIELD_TEST_TAG = "auth_password_field"
 const val AUTH_SIGN_IN_BUTTON_TEST_TAG = "auth_sign_in_button"
+const val AUTH_SIGN_UP_BUTTON_TEST_TAG = "auth_sign_up_button"
+const val AUTH_GOOGLE_SIGN_IN_BUTTON_TEST_TAG = "auth_google_sign_in_button"
+const val AUTH_YANDEX_SIGN_IN_BUTTON_TEST_TAG = "auth_yandex_sign_in_button"
 const val AUTH_ERROR_MESSAGE_TEST_TAG = "auth_error_message"
 
 @Composable
@@ -52,7 +55,13 @@ fun AuthScreen(
     onSignUp: (email: String, password: String) -> Unit,
     onGoogleIdToken: (String) -> Unit,
     onYandexAccessToken: (String) -> Unit,
-    onClearError: () -> Unit
+    onGoogleTokenEmpty: () -> Unit,
+    onGoogleSignInFailed: () -> Unit,
+    onYandexTokenEmpty: () -> Unit,
+    onYandexSignInFailed: () -> Unit,
+    onYandexSignInCancelled: () -> Unit,
+    onMessageShown: (Long) -> Unit,
+    onClearInlineError: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -60,21 +69,21 @@ fun AuthScreen(
 
     val isPreview = LocalInspectionMode.current
     val context = LocalContext.current
+    val scaffoldState = rememberScaffoldState()
     val googleWebClientId = stringResource(id = R.string.google_web_client_id)
-    val errorMessage = uiState.errorMessage?.asString()
-    val googleTokenEmptyMessage = stringResource(R.string.auth_error_google_token_empty)
+    val inlineErrorMessage = uiState.inlineErrorMessage?.asString()
+    val snackbarMessage = uiState.uiMessage?.text?.asString()
     val googleSignInFailedMessage = stringResource(R.string.auth_error_google_sign_in_failed)
-    val yandexTokenEmptyMessage = stringResource(R.string.auth_error_yandex_token_empty)
     val yandexSignInFailedMessage = stringResource(R.string.auth_error_yandex_sign_in_failed)
-    val yandexSignInCancelledMessage = stringResource(R.string.auth_error_yandex_sign_in_cancelled)
 
-    LaunchedEffect(uiState.errorMessage) {
-        val message = errorMessage ?: return@LaunchedEffect
-        Toast.makeText(context, message, LENGTH_SHORT).show()
-        onClearError()
+    LaunchedEffect(uiState.uiMessage?.id) {
+        val message = uiState.uiMessage ?: return@LaunchedEffect
+        val text = snackbarMessage ?: return@LaunchedEffect
+        scaffoldState.snackbarHostState.showSnackbar(text)
+        onMessageShown(message.id)
     }
 
-    val googleSignInClient = remember {
+    val googleSignInClient = remember(context, googleWebClientId, isPreview) {
         if (isPreview) {
             null
         } else {
@@ -104,15 +113,11 @@ fun AuthScreen(
                 if (!idToken.isNullOrBlank()) {
                     onGoogleIdToken(idToken)
                 } else {
-                    Toast.makeText(context, googleTokenEmptyMessage, LENGTH_SHORT).show()
+                    onGoogleTokenEmpty()
                 }
             } else {
                 Log.e("Auth", googleSignInFailedMessage, task.exception)
-                Toast.makeText(
-                    context,
-                    task.exception?.localizedMessage ?: googleSignInFailedMessage,
-                    LENGTH_SHORT
-                ).show()
+                onGoogleSignInFailed()
             }
         }
     }
@@ -123,7 +128,7 @@ fun AuthScreen(
                 is YandexAuthResult.Success -> {
                     val accessToken = result.token.value.trim()
                     if (accessToken.isBlank()) {
-                        Toast.makeText(context, yandexTokenEmptyMessage, LENGTH_SHORT).show()
+                        onYandexTokenEmpty()
                     } else {
                         onYandexAccessToken(accessToken)
                     }
@@ -131,15 +136,11 @@ fun AuthScreen(
 
                 is YandexAuthResult.Failure -> {
                     Log.e("Auth", yandexSignInFailedMessage, result.exception)
-                    Toast.makeText(
-                        context,
-                        result.exception.localizedMessage ?: yandexSignInFailedMessage,
-                        LENGTH_SHORT
-                    ).show()
+                    onYandexSignInFailed()
                 }
 
                 YandexAuthResult.Cancelled -> {
-                    Toast.makeText(context, yandexSignInCancelledMessage, LENGTH_SHORT).show()
+                    onYandexSignInCancelled()
                 }
             }
         }
@@ -147,113 +148,137 @@ fun AuthScreen(
         null
     }
 
-    Column(modifier = Modifier.padding(16.dp)) {
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
+    Scaffold(scaffoldState = scaffoldState) { paddingValues ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .testTag(AUTH_EMAIL_FIELD_TEST_TAG),
-            label = { Text(stringResource(R.string.auth_email_label)) },
-            enabled = !uiState.isLoading
-        )
-        Spacer(Modifier.padding(6.dp))
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag(AUTH_PASSWORD_FIELD_TEST_TAG),
-            label = { Text(stringResource(R.string.auth_password_label)) },
-            visualTransformation = if (passwordVisible) {
-                VisualTransformation.None
-            } else {
-                PasswordVisualTransformation()
-            },
-            trailingIcon = {
-                val description = if (passwordVisible) {
-                    stringResource(R.string.auth_hide_password)
-                } else {
-                    stringResource(R.string.auth_show_password)
-                }
-                IconButton(
-                    onClick = { passwordVisible = !passwordVisible },
-                    enabled = !uiState.isLoading
-                ) {
-                    Icon(
-                        imageVector = if (passwordVisible) {
-                            Icons.Default.VisibilityOff
-                        } else {
-                            Icons.Default.Visibility
-                        },
-                        contentDescription = description
-                    )
-                }
-            },
-            enabled = !uiState.isLoading
-        )
-        Spacer(Modifier.padding(6.dp))
-        Button(
-            onClick = { onSignIn(email.trim(), password) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag(AUTH_SIGN_IN_BUTTON_TEST_TAG),
-            enabled = !uiState.isLoading
+                .padding(paddingValues)
+                .padding(16.dp)
         ) {
-            Text(
-                if (uiState.isLoading) {
-                    stringResource(R.string.auth_signing_in)
-                } else {
-                    stringResource(R.string.auth_sign_in)
-                }
-            )
-        }
-        if (errorMessage != null) {
-            Text(
-                text = errorMessage,
-                color = MaterialTheme.colors.error,
+            OutlinedTextField(
+                value = email,
+                onValueChange = {
+                    email = it
+                    onClearInlineError()
+                },
                 modifier = Modifier
-                    .padding(top = 8.dp)
-                    .testTag(AUTH_ERROR_MESSAGE_TEST_TAG)
+                    .fillMaxWidth()
+                    .testTag(AUTH_EMAIL_FIELD_TEST_TAG),
+                label = { Text(stringResource(R.string.auth_email_label)) },
+                enabled = !uiState.isLoading
             )
-        }
+            Spacer(Modifier.padding(6.dp))
+            OutlinedTextField(
+                value = password,
+                onValueChange = {
+                    password = it
+                    onClearInlineError()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(AUTH_PASSWORD_FIELD_TEST_TAG),
+                label = { Text(stringResource(R.string.auth_password_label)) },
+                visualTransformation = if (passwordVisible) {
+                    VisualTransformation.None
+                } else {
+                    PasswordVisualTransformation()
+                },
+                trailingIcon = {
+                    val description = if (passwordVisible) {
+                        stringResource(R.string.auth_hide_password)
+                    } else {
+                        stringResource(R.string.auth_show_password)
+                    }
+                    IconButton(
+                        onClick = { passwordVisible = !passwordVisible },
+                        enabled = !uiState.isLoading
+                    ) {
+                        Icon(
+                            imageVector = if (passwordVisible) {
+                                Icons.Default.VisibilityOff
+                            } else {
+                                Icons.Default.Visibility
+                            },
+                            contentDescription = description
+                        )
+                    }
+                },
+                enabled = !uiState.isLoading
+            )
+            Spacer(Modifier.padding(6.dp))
+            Button(
+                onClick = {
+                    onClearInlineError()
+                    onSignIn(email.trim(), password)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(AUTH_SIGN_IN_BUTTON_TEST_TAG),
+                enabled = !uiState.isLoading
+            ) {
+                Text(
+                    if (uiState.isLoading) {
+                        stringResource(R.string.auth_signing_in)
+                    } else {
+                        stringResource(R.string.auth_sign_in)
+                    }
+                )
+            }
+            if (inlineErrorMessage != null) {
+                Text(
+                    text = inlineErrorMessage,
+                    color = MaterialTheme.colors.error,
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .testTag(AUTH_ERROR_MESSAGE_TEST_TAG)
+                )
+            }
 
-        Spacer(Modifier.padding(6.dp))
+            Spacer(Modifier.padding(6.dp))
 
-        Button(
-            onClick = { onSignUp(email.trim(), password) },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !uiState.isLoading
-        ) {
-            Text(stringResource(R.string.auth_sign_up))
-        }
+            Button(
+                onClick = {
+                    onClearInlineError()
+                    onSignUp(email.trim(), password)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(AUTH_SIGN_UP_BUTTON_TEST_TAG),
+                enabled = !uiState.isLoading
+            ) {
+                Text(stringResource(R.string.auth_sign_up))
+            }
 
-        Spacer(Modifier.padding(6.dp))
+            Spacer(Modifier.padding(6.dp))
 
-        Button(
-            onClick = {
-                if (!isPreview) {
-                    googleSignInClient?.signInIntent?.let(googleLauncher::launch)
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !uiState.isLoading
-        ) {
-            Text(stringResource(R.string.auth_sign_in_google))
-        }
+            Button(
+                onClick = {
+                    if (!isPreview) {
+                        googleSignInClient?.signInIntent?.let(googleLauncher::launch)
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(AUTH_GOOGLE_SIGN_IN_BUTTON_TEST_TAG),
+                enabled = !uiState.isLoading
+            ) {
+                Text(stringResource(R.string.auth_sign_in_google))
+            }
 
-        Spacer(Modifier.padding(6.dp))
+            Spacer(Modifier.padding(6.dp))
 
-        Button(
-            onClick = {
-                if (!isPreview) {
-                    yandexLauncher?.launch(YandexAuthLoginOptions())
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !uiState.isLoading
-        ) {
-            Text(stringResource(R.string.auth_sign_in_yandex))
+            Button(
+                onClick = {
+                    if (!isPreview) {
+                        yandexLauncher?.launch(YandexAuthLoginOptions())
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(AUTH_YANDEX_SIGN_IN_BUTTON_TEST_TAG),
+                enabled = !uiState.isLoading
+            ) {
+                Text(stringResource(R.string.auth_sign_in_yandex))
+            }
         }
     }
 }
@@ -267,12 +292,18 @@ fun AuthScreen(
 fun AuthScreenPreview() {
     MaterialTheme {
         AuthScreen(
-            uiState = AuthUiState(authState = AuthState.Unauthenticated()),
+            uiState = AuthUiState(authState = AuthState.Unauthenticated),
             onSignIn = { _, _ -> },
             onSignUp = { _, _ -> },
             onGoogleIdToken = {},
             onYandexAccessToken = {},
-            onClearError = {}
+            onGoogleTokenEmpty = {},
+            onGoogleSignInFailed = {},
+            onYandexTokenEmpty = {},
+            onYandexSignInFailed = {},
+            onYandexSignInCancelled = {},
+            onMessageShown = {},
+            onClearInlineError = {}
         )
     }
 }

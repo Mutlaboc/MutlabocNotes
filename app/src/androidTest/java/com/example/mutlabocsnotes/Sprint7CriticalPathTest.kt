@@ -34,15 +34,20 @@ class Sprint7CriticalPathTest {
             MaterialTheme {
                 AuthScreen(
                     uiState = AuthUiState(
-                        authState = AuthState.Unauthenticated(
-                            errorMessage = UiText.StringResource(R.string.auth_error_invalid_credentials)
-                        )
+                        authState = AuthState.Unauthenticated,
+                        inlineErrorMessage = UiText.StringResource(R.string.auth_error_invalid_credentials)
                     ),
                     onSignIn = { _, _ -> },
                     onSignUp = { _, _ -> },
                     onGoogleIdToken = {},
                     onYandexAccessToken = {},
-                    onClearError = {}
+                    onGoogleTokenEmpty = {},
+                    onGoogleSignInFailed = {},
+                    onYandexTokenEmpty = {},
+                    onYandexSignInFailed = {},
+                    onYandexSignInCancelled = {},
+                    onMessageShown = {},
+                    onClearInlineError = {}
                 )
             }
         }

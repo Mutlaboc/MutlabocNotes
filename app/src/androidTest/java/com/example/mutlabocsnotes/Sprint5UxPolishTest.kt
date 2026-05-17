@@ -3,6 +3,7 @@ package com.example.mutlabocsnotes
 import androidx.compose.material.MaterialTheme
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -70,12 +71,18 @@ class Sprint5UxPolishTest {
         composeRule.setContent {
             MaterialTheme {
                 AuthScreen(
-                    uiState = AuthUiState(authState = AuthState.Unauthenticated()),
+                    uiState = AuthUiState(authState = AuthState.Unauthenticated),
                     onSignIn = { _, _ -> },
                     onSignUp = { _, _ -> },
                     onGoogleIdToken = {},
                     onYandexAccessToken = {},
-                    onClearError = {}
+                    onGoogleTokenEmpty = {},
+                    onGoogleSignInFailed = {},
+                    onYandexTokenEmpty = {},
+                    onYandexSignInFailed = {},
+                    onYandexSignInCancelled = {},
+                    onMessageShown = {},
+                    onClearInlineError = {}
                 )
             }
         }
@@ -89,6 +96,111 @@ class Sprint5UxPolishTest {
 
         composeRule.onNodeWithText(password).assertIsDisplayed()
         composeRule.onNodeWithContentDescription(hidePassword).assertIsDisplayed()
+    }
+
+    @Test
+    fun authLoading_disablesButtons() {
+        composeRule.setContent {
+            MaterialTheme {
+                AuthScreen(
+                    uiState = AuthUiState(
+                        authState = AuthState.Unauthenticated,
+                        isLoading = true
+                    ),
+                    onSignIn = { _, _ -> },
+                    onSignUp = { _, _ -> },
+                    onGoogleIdToken = {},
+                    onYandexAccessToken = {},
+                    onGoogleTokenEmpty = {},
+                    onGoogleSignInFailed = {},
+                    onYandexTokenEmpty = {},
+                    onYandexSignInFailed = {},
+                    onYandexSignInCancelled = {},
+                    onMessageShown = {},
+                    onClearInlineError = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(AUTH_SIGN_IN_BUTTON_TEST_TAG).assertIsNotEnabled()
+        composeRule.onNodeWithTag(AUTH_SIGN_UP_BUTTON_TEST_TAG).assertIsNotEnabled()
+        composeRule.onNodeWithTag(AUTH_GOOGLE_SIGN_IN_BUTTON_TEST_TAG).assertIsNotEnabled()
+        composeRule.onNodeWithTag(AUTH_YANDEX_SIGN_IN_BUTTON_TEST_TAG).assertIsNotEnabled()
+    }
+
+    @Test
+    fun authSignIn_trimsEmailBeforeCallback() {
+        var submittedEmail: String? = null
+        var submittedPassword: String? = null
+
+        composeRule.setContent {
+            MaterialTheme {
+                AuthScreen(
+                    uiState = AuthUiState(authState = AuthState.Unauthenticated),
+                    onSignIn = { email, password ->
+                        submittedEmail = email
+                        submittedPassword = password
+                    },
+                    onSignUp = { _, _ -> },
+                    onGoogleIdToken = {},
+                    onYandexAccessToken = {},
+                    onGoogleTokenEmpty = {},
+                    onGoogleSignInFailed = {},
+                    onYandexTokenEmpty = {},
+                    onYandexSignInFailed = {},
+                    onYandexSignInCancelled = {},
+                    onMessageShown = {},
+                    onClearInlineError = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(AUTH_EMAIL_FIELD_TEST_TAG).performTextInput(" user@example.com ")
+        composeRule.onNodeWithTag(AUTH_PASSWORD_FIELD_TEST_TAG).performTextInput("secret123")
+        composeRule.onNodeWithTag(AUTH_SIGN_IN_BUTTON_TEST_TAG).performClick()
+
+        composeRule.runOnIdle {
+            assertEquals("user@example.com", submittedEmail)
+            assertEquals("secret123", submittedPassword)
+        }
+    }
+
+    @Test
+    fun authSnackbar_rendersUiMessage() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val message = context.getString(R.string.api_error_network)
+
+        composeRule.setContent {
+            MaterialTheme {
+                AuthScreen(
+                    uiState = AuthUiState(
+                        authState = AuthState.Unauthenticated,
+                        uiMessage = UiMessage(
+                            id = 100L,
+                            text = UiText.StringResource(R.string.api_error_network)
+                        )
+                    ),
+                    onSignIn = { _, _ -> },
+                    onSignUp = { _, _ -> },
+                    onGoogleIdToken = {},
+                    onYandexAccessToken = {},
+                    onGoogleTokenEmpty = {},
+                    onGoogleSignInFailed = {},
+                    onYandexTokenEmpty = {},
+                    onYandexSignInFailed = {},
+                    onYandexSignInCancelled = {},
+                    onMessageShown = {},
+                    onClearInlineError = {}
+                )
+            }
+        }
+
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithText(message)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        }
+        composeRule.onNodeWithText(message).assertIsDisplayed()
     }
 
     @Test

@@ -11,12 +11,17 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.ResponseBody.Companion.toResponseBody
+import retrofit2.HttpException
+import retrofit2.Response
 import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -71,16 +76,17 @@ class AuthViewModelTest {
         viewModel.restoreSession()
         advanceUntilIdle()
 
-        assertEquals(AuthState.Unauthenticated(), viewModel.uiState.authState)
+        assertEquals(AuthState.Unauthenticated, viewModel.uiState.authState)
         assertFalse(viewModel.uiState.isLoading)
     }
 
     @Test
-    fun handleSessionExpired_logsOutAndSetsUnauthenticatedState() {
+    fun handleSessionExpired_logsOutSetsUnauthenticatedStateAndEmitsSnackbar() {
         viewModel.handleSessionExpired()
 
         assertTrue(repository.clearLocalSessionCalled)
-        assertUnauthenticatedError(R.string.api_error_unauthorized)
+        assertEquals(AuthState.Unauthenticated, viewModel.uiState.authState)
+        assertSnackbarMessage(R.string.api_error_unauthorized)
     }
 
     @Test
@@ -89,7 +95,7 @@ class AuthViewModelTest {
         advanceUntilIdle()
 
         assertEquals(0, repository.loginCalls)
-        assertUnauthenticatedError(R.string.auth_error_invalid_credentials)
+        assertInlineError(R.string.auth_error_invalid_credentials)
     }
 
     @Test
@@ -98,7 +104,7 @@ class AuthViewModelTest {
         advanceUntilIdle()
 
         assertEquals(0, repository.registerCalls)
-        assertUnauthenticatedError(R.string.auth_error_invalid_credentials)
+        assertInlineError(R.string.auth_error_invalid_credentials)
     }
 
     @Test
@@ -121,7 +127,22 @@ class AuthViewModelTest {
         advanceUntilIdle()
 
         assertEquals(1, repository.loginCalls)
-        assertUnauthenticatedError(R.string.api_error_network)
+        assertSnackbarMessage(R.string.api_error_network)
+        assertFalse(viewModel.uiState.isLoading)
+    }
+
+    @Test
+    fun signIn_invalidCredentialsFromBackend_setsInlineErrorAndStopsLoading() = runTest(mainDispatcherRule.dispatcher) {
+        repository.loginResult = Result.failure(
+            httpException(401, """{"code":"invalid_email_or_password"}""")
+        )
+
+        viewModel.signIn("user@example.com", "12345678")
+        advanceUntilIdle()
+
+        assertEquals(1, repository.loginCalls)
+        assertInlineError(R.string.auth_error_invalid_credentials)
+        assertNull(viewModel.uiState.uiMessage)
         assertFalse(viewModel.uiState.isLoading)
     }
 
@@ -158,7 +179,7 @@ class AuthViewModelTest {
 
             assertEquals(1, repository.googleCalls)
             assertEquals("google-token", repository.lastGoogleToken)
-            assertUnauthenticatedError(R.string.api_error_network)
+            assertSnackbarMessage(R.string.api_error_network)
             assertFalse(viewModel.uiState.isLoading)
         }
 
@@ -183,7 +204,7 @@ class AuthViewModelTest {
 
             assertEquals(1, repository.yandexCalls)
             assertEquals("yandex-token", repository.lastYandexToken)
-            assertUnauthenticatedError(R.string.api_error_network)
+            assertSnackbarMessage(R.string.api_error_network)
             assertFalse(viewModel.uiState.isLoading)
         }
 
@@ -193,7 +214,7 @@ class AuthViewModelTest {
         advanceUntilIdle()
 
         assertEquals(0, repository.googleCalls)
-        assertUnauthenticatedError(R.string.auth_error_google_token_empty)
+        assertSnackbarMessage(R.string.auth_error_google_token_empty)
     }
 
     @Test
@@ -202,7 +223,51 @@ class AuthViewModelTest {
         advanceUntilIdle()
 
         assertEquals(0, repository.yandexCalls)
-        assertUnauthenticatedError(R.string.auth_error_yandex_token_empty)
+        assertSnackbarMessage(R.string.auth_error_yandex_token_empty)
+    }
+
+    @Test
+    fun socialUiFailures_emitSnackbarMessages() = runTest(mainDispatcherRule.dispatcher) {
+        viewModel.onGoogleTokenEmpty()
+        assertSnackbarMessage(R.string.auth_error_google_token_empty)
+
+        viewModel.onGoogleSignInFailed()
+        assertSnackbarMessage(R.string.auth_error_google_sign_in_failed)
+
+        viewModel.onYandexTokenEmpty()
+        assertSnackbarMessage(R.string.auth_error_yandex_token_empty)
+
+        viewModel.onYandexSignInFailed()
+        assertSnackbarMessage(R.string.auth_error_yandex_sign_in_failed)
+
+        viewModel.onYandexSignInCancelled()
+        assertSnackbarMessage(R.string.auth_error_yandex_sign_in_cancelled)
+    }
+
+    @Test
+    fun messageShown_clearsMatchingSnackbarMessageOnly() = runTest(mainDispatcherRule.dispatcher) {
+        viewModel.onGoogleSignInFailed()
+        val firstMessageId = checkNotNull(viewModel.uiState.uiMessage).id
+
+        viewModel.onMessageShown(firstMessageId + 1)
+        assertSnackbarMessage(R.string.auth_error_google_sign_in_failed)
+
+        viewModel.onMessageShown(firstMessageId)
+
+        assertNull(viewModel.uiState.uiMessage)
+    }
+
+    @Test
+    fun clearInlineError_removesInlineErrorWithoutClearingSnackbar() = runTest(mainDispatcherRule.dispatcher) {
+        viewModel.signIn("user@example.com", "short")
+        viewModel.onGoogleSignInFailed()
+        assertInlineError(R.string.auth_error_invalid_credentials)
+        assertSnackbarMessage(R.string.auth_error_google_sign_in_failed)
+
+        viewModel.clearInlineError()
+
+        assertNull(viewModel.uiState.inlineErrorMessage)
+        assertSnackbarMessage(R.string.auth_error_google_sign_in_failed)
     }
 
     @Test
@@ -211,14 +276,29 @@ class AuthViewModelTest {
         advanceUntilIdle()
 
         assertTrue(repository.logoutCalled)
-        assertEquals(AuthState.Unauthenticated(), viewModel.uiState.authState)
+        assertEquals(AuthState.Unauthenticated, viewModel.uiState.authState)
         assertFalse(viewModel.uiState.isLoading)
     }
 
-    private fun assertUnauthenticatedError(expectedResId: Int) {
-        val state = viewModel.uiState.authState as AuthState.Unauthenticated
-        val message = state.errorMessage as UiText.StringResource
+    private fun assertInlineError(expectedResId: Int) {
+        assertEquals(AuthState.Unauthenticated, viewModel.uiState.authState)
+        val message = checkNotNull(viewModel.uiState.inlineErrorMessage) as UiText.StringResource
         assertEquals(expectedResId, message.resId)
+    }
+
+    private fun assertSnackbarMessage(expectedResId: Int) {
+        assertEquals(AuthState.Unauthenticated, viewModel.uiState.authState)
+        val message = checkNotNull(viewModel.uiState.uiMessage).text as UiText.StringResource
+        assertEquals(expectedResId, message.resId)
+    }
+
+    private fun httpException(code: Int, body: String = "error"): HttpException {
+        return HttpException(
+            Response.error<Unit>(
+                code,
+                body.toResponseBody("application/json".toMediaType())
+            )
+        )
     }
 }
 
