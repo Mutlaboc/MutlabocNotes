@@ -32,7 +32,7 @@ class HomeInfoViewModel(
 
             launch(Dispatchers.Main) {
                 result.onSuccess { loadedCards ->
-                    applyCards(loadedCards.sortedByDescending { it.updatedAt })
+                    applyCards(loadedCards)
                 }.onFailure { error ->
                     uiState = HomeInfoUiState.Error(ApiErrorMapper.map(error))
                 }
@@ -46,7 +46,7 @@ class HomeInfoViewModel(
             launch(Dispatchers.Main) {
                 result.onSuccess { created ->
                     val cards = currentCards() + created
-                    applyCards(cards.sortedByDescending { it.updatedAt })
+                    applyCards(cards)
                 }.onFailure { error ->
                     showMessage(error)
                 }
@@ -67,7 +67,7 @@ class HomeInfoViewModel(
                     val cards = currentCards().map { existing ->
                         if (existing.id == updated.id) updated else existing
                     }
-                    applyCards(cards.sortedByDescending { it.updatedAt })
+                    applyCards(cards)
                 }.onFailure { error ->
                     showMessage(error)
                 }
@@ -104,10 +104,13 @@ class HomeInfoViewModel(
     }
 
     private fun applyCards(cards: List<HomeInfoCard>) {
-        uiState = if (cards.isEmpty()) {
+        val canonicalCards = cards
+            .sortedByDescending { it.updatedAt }
+            .distinctBy { it.id }
+        uiState = if (canonicalCards.isEmpty()) {
             HomeInfoUiState.Empty
         } else {
-            HomeInfoUiState.Content(cards)
+            HomeInfoUiState.Content(canonicalCards)
         }
     }
 

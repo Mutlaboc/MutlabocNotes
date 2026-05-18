@@ -89,6 +89,8 @@
     <string name="home_info_section">Раздел</string>
     <string name="home_info_all_sections">Все</string>
     <string name="home_info_links_count">Ссылок: %1$d</string>
+    <string name="home_info_open_link">Открыть ссылку</string>
+    <string name="home_info_link_warning">Проверьте ссылку: она может открыться некорректно</string>
     <string name="home_info_field_value">%1$s: %2$s</string>
     <string name="home_info_new_card">Новая карточка</string>
     <string name="home_info_edit_card">Редактирование</string>

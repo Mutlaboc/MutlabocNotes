@@ -46,6 +46,20 @@ class HomeInfoViewModelTest {
     }
 
     @Test
+    fun loadCards_deduplicatesByIdAndKeepsNewestSortedCards() = runTest(mainDispatcherRule.dispatcher) {
+        val staleDuplicate = card(id = "meter", title = "Old meter", updatedAt = 1)
+        val other = card(id = "other", title = "Other", updatedAt = 2)
+        val freshDuplicate = card(id = "meter", title = "Fresh meter", updatedAt = 3)
+        repository.cardsResult = Result.success(listOf(staleDuplicate, other, freshDuplicate))
+
+        viewModel.loadCards()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState as HomeInfoUiState.Content
+        assertEquals(listOf(freshDuplicate, other), state.cards)
+    }
+
+    @Test
     fun loadCards_emptySuccessSetsEmptyState() = runTest(mainDispatcherRule.dispatcher) {
         repository.cardsResult = Result.success(emptyList())
 

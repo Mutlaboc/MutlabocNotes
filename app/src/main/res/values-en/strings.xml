@@ -90,6 +90,8 @@
     <string name="home_info_section">Section</string>
     <string name="home_info_all_sections">All</string>
     <string name="home_info_links_count">Links: %1$d</string>
+    <string name="home_info_open_link">Open link</string>
+    <string name="home_info_link_warning">Check this link: it may not open correctly</string>
     <string name="home_info_field_value">%1$s: %2$s</string>
     <string name="home_info_new_card">New card</string>
     <string name="home_info_edit_card">Edit card</string>

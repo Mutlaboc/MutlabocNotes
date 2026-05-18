@@ -109,6 +109,10 @@ internal fun applicationDetailsSettingsIntent(packageName: String): Intent {
     }
 }
 
+internal fun homeInfoLinkIntent(link: String): Intent {
+    return Intent(Intent.ACTION_VIEW, Uri.parse(link))
+}
+
 @Composable
 fun MyApp(
     viewModelFactory: ViewModelProvider.Factory,
@@ -325,6 +329,11 @@ fun MyApp(
                     onAddClick = { navController.navigate("home_info_edit") },
                     onCardClick = { cardId ->
                         navController.navigate("home_info_edit/$cardId")
+                    },
+                    onLinkClick = { link ->
+                        runCatching {
+                            context.startActivity(homeInfoLinkIntent(link))
+                        }
                     },
                     onBack = { navController.popBackStack() }
                 )

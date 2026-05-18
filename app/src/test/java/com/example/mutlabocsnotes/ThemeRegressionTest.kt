@@ -20,12 +20,12 @@ class ThemeRegressionTest {
 
     @Test
     fun homeInfoValidation_usesThemeErrorColor() {
-        val homeInfoScreens = projectFile(
-            "app/src/main/java/com/example/mutlabocsnotes/HomeInfoScreens.kt"
+        val editHomeInfoCardScreen = projectFile(
+            "app/src/main/java/com/example/mutlabocsnotes/EditHomeInfoCardScreen.kt"
         ).readText()
 
-        assertFalse(homeInfoScreens.contains("Color.Red"))
-        assertTrue(homeInfoScreens.contains("MaterialTheme.colors.error"))
+        assertFalse(editHomeInfoCardScreen.contains("Color.Red"))
+        assertTrue(editHomeInfoCardScreen.contains("MaterialTheme.colors.error"))
     }
 
     @Test

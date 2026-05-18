@@ -150,6 +150,7 @@ android {
                 )
                 resValue("string", "google_web_client_id", config.googleWebClientId)
                 manifestPlaceholders["YANDEX_CLIENT_ID"] = config.yandexClientId
+                manifestPlaceholders["USES_CLEARTEXT_TRAFFIC"] = (flavorName == "dev").toString()
             }
         }
     }
