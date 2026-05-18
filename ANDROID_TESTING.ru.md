@@ -61,8 +61,7 @@ device. Запустите его минимум один раз на каждо
 - Home card CRUD проходит успешно.
 - Logout проходит успешно, и тот же refresh token не может восстановить session.
 
-Текущий checked-in `ApiConfig.BASE_URL` указывает на `https://homenoteapp.ru/`.
-Эта issue не меняет этот URL, не добавляет product flavors и не вводит automatic staging
-switching. Если RC тестируется против staging, используйте утвержденный командой local
-build или environment override process и запишите точный backend URL в
-`RELEASE_CHECKLIST.md`.
+`ApiConfig.BASE_URL` берётся из выбранного Gradle flavor через `BuildConfig`.
+Для RC testing предпочитайте `stageDebug` против staging и `prodRelease` для signed
+production artifact. Запишите точный backend URL, flavor, version code, version name
+и artifact в `RELEASE_CHECKLIST.md`.

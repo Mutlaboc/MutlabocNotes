@@ -153,6 +153,45 @@ class AuthRepositoryTest {
     }
 
     @Test
+    fun restoreSession_revokedRefreshTokenClearsSession() = runTest(mainDispatcherRule.dispatcher) {
+        sessionStore.saveSession("expired-access", "revoked-refresh", "old@example.com")
+        api.meThrowables.add(unauthorized())
+        api.refreshThrowable = unauthorized()
+
+        val result = repository.restoreSession()
+
+        assertTrue(result.isFailure)
+        assertEquals(RefreshTokenRequestDto("revoked-refresh"), api.lastRefreshRequest)
+        assertNull(sessionStore.storedAccessToken)
+        assertNull(sessionStore.storedRefreshToken)
+        assertNull(sessionStore.storedEmail)
+        assertEquals(1, sessionStore.clearCalls)
+    }
+
+    @Test
+    fun restoreSession_refreshResultDoesNotOverwriteChangedSession() = runTest(mainDispatcherRule.dispatcher) {
+        sessionStore.saveSession("expired-access", "saved-refresh", "old@example.com")
+        api.meThrowables.add(unauthorized())
+        api.meResponses.add(meResponse("fresh@example.com"))
+        api.refreshResponse = authResponse(
+            accessToken = "fresh-access",
+            refreshToken = "fresh-refresh",
+            email = "fresh@example.com"
+        )
+        api.onRefresh = {
+            sessionStore.saveSession("new-access", "new-refresh", "new@example.com")
+        }
+
+        val result = repository.restoreSession()
+
+        assertTrue(result.isFailure)
+        assertEquals("new-access", sessionStore.storedAccessToken)
+        assertEquals("new-refresh", sessionStore.storedRefreshToken)
+        assertEquals("new@example.com", sessionStore.storedEmail)
+        assertEquals(0, sessionStore.clearCalls)
+    }
+
+    @Test
     fun restoreSession_failureClearsSession() = runTest(mainDispatcherRule.dispatcher) {
         // Любой не-refreshable сбой restore очищает локальную сессию.
         sessionStore.saveSession("access", "refresh", "user@example.com")
@@ -248,6 +287,8 @@ private class FakeAuthApi : AuthApi {
     var lastLogoutRequest: LogoutRequestDto? = null
     var logoutCalls: Int = 0
     var logoutThrowable: Throwable? = null
+    var refreshThrowable: Throwable? = null
+    var onRefresh: (() -> Unit)? = null
     val meAuthorizationCalls = mutableListOf<String>()
     val meResponses = mutableListOf<MeResponseDto>()
     val meThrowables = mutableListOf<Throwable>()
@@ -274,6 +315,8 @@ private class FakeAuthApi : AuthApi {
 
     override suspend fun refresh(request: RefreshTokenRequestDto): AuthResponseDto {
         lastRefreshRequest = request
+        refreshThrowable?.let { throw it }
+        onRefresh?.invoke()
         return refreshResponse
     }
 
@@ -305,6 +348,39 @@ private class FakeAuthSessionStore : AuthSessionStore {
         this.storedAccessToken = accessToken
         this.storedRefreshToken = refreshToken
         this.storedEmail = email
+    }
+
+    override fun getSessionSnapshot(): AuthSessionSnapshot? {
+        val accessToken = storedAccessToken?.takeIf { it.isNotBlank() } ?: return null
+        val refreshToken = storedRefreshToken?.takeIf { it.isNotBlank() } ?: return null
+        return AuthSessionSnapshot(
+            accessToken = accessToken,
+            refreshToken = refreshToken,
+            email = storedEmail
+        )
+    }
+
+    override fun saveSessionIfRefreshTokenMatches(
+        expectedRefreshToken: String,
+        accessToken: String,
+        refreshToken: String,
+        email: String?
+    ): Boolean {
+        if (storedRefreshToken != expectedRefreshToken) {
+            return false
+        }
+
+        saveSession(accessToken, refreshToken, email)
+        return true
+    }
+
+    override fun clearSessionIfRefreshTokenMatches(expectedRefreshToken: String): Boolean {
+        if (storedRefreshToken != expectedRefreshToken) {
+            return false
+        }
+
+        clear()
+        return true
     }
 
     override fun getAccessToken(): String? = storedAccessToken

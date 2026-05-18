@@ -166,6 +166,7 @@ fun MyApp(
             is AuthState.Unauthenticated -> {
                 isWaitingForNotificationNotes = false
                 notesViewModel.clearAll()
+                homeInfoViewModel.clearAll()
                 navController.navigate("auth") {
                     popUpTo("bootstrap") { inclusive = false }
                     launchSingleTop = true

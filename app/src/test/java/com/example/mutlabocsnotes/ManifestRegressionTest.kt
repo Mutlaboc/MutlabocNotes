@@ -59,13 +59,57 @@ class ManifestRegressionTest {
         assertNotNull(callbackData)
     }
 
+    @Test
+    fun legacyBackupRulesExcludeSessionAndAlarmBookkeeping() {
+        val backupRules = xmlDocumentElement(
+            File("src/main/res/xml/backup_rules.xml"),
+            File("app/src/main/res/xml/backup_rules.xml")
+        )
+
+        val excludedPaths = backupRules.children("exclude")
+            .map { it.attribute("domain") to it.attribute("path") }
+            .toSet()
+        val includedPaths = backupRules.children("include")
+            .map { it.attribute("domain") to it.attribute("path") }
+            .toSet()
+
+        assertTrue(excludedPaths.contains("sharedpref" to "secure_session.xml"))
+        assertTrue(excludedPaths.contains("sharedpref" to "deadline_notification_alarms.xml"))
+        assertTrue(includedPaths.contains("file" to "datastore/user_preferences.preferences_pb"))
+    }
+
+    @Test
+    fun androidTwelveBackupRulesExcludeSessionAndAlarmBookkeeping() {
+        val dataExtractionRules = xmlDocumentElement(
+            File("src/main/res/xml/data_extraction_rules.xml"),
+            File("app/src/main/res/xml/data_extraction_rules.xml")
+        )
+
+        listOf("cloud-backup", "device-transfer").forEach { ruleName ->
+            val rule = dataExtractionRules.children(ruleName).single()
+            val excludedPaths = rule.children("exclude")
+                .map { it.attribute("domain") to it.attribute("path") }
+                .toSet()
+            val includedPaths = rule.children("include")
+                .map { it.attribute("domain") to it.attribute("path") }
+                .toSet()
+
+            assertTrue(excludedPaths.contains("sharedpref" to "secure_session.xml"))
+            assertTrue(excludedPaths.contains("sharedpref" to "deadline_notification_alarms.xml"))
+            assertTrue(includedPaths.contains("file" to "datastore/user_preferences.preferences_pb"))
+        }
+    }
+
     private val manifest: Element by lazy {
-        val source = listOf(
+        xmlDocumentElement(
             File("src/main/AndroidManifest.xml"),
             File("app/src/main/AndroidManifest.xml")
-        ).first { it.isFile }
+        )
+    }
 
-        DocumentBuilderFactory.newInstance()
+    private fun xmlDocumentElement(vararg candidates: File): Element {
+        val source = candidates.first { it.isFile }
+        return DocumentBuilderFactory.newInstance()
             .apply { isNamespaceAware = true }
             .newDocumentBuilder()
             .parse(source)
@@ -85,6 +129,10 @@ class ManifestRegressionTest {
 
     private fun Element.androidAttribute(name: String): String {
         return getAttributeNS(ANDROID_NAMESPACE, name)
+    }
+
+    private fun Element.attribute(name: String): String {
+        return getAttribute(name)
     }
 
     private fun org.w3c.dom.NodeList.asSequence(): Sequence<Node> {

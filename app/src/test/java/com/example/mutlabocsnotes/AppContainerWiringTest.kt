@@ -169,6 +169,9 @@ class AppContainerWiringTest {
 
         assertTrue(mainActivity.contains("is AuthState.Unauthenticated ->"))
         assertTrue(mainActivity.contains("notesViewModel.clearAll()"))
+        assertTrue(mainActivity.contains("homeInfoViewModel.clearAll()"))
+        assertTrue(mainActivity.contains("""navController.navigate("auth")"""))
+        assertTrue(mainActivity.contains("""popUpTo("bootstrap")"""))
     }
 
     @Test

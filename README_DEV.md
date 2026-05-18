@@ -96,4 +96,39 @@ DEV_YANDEX_CLIENT_ID=...
 
 ## Release signing
 
-Release signing config не меняется в рамках этой задачи. Если signing config понадобится для production-релиза, храните keystore, passwords и aliases вне репозитория и подключайте их через `local.properties`, CI secrets или отдельную защищенную конфигурацию сборки.
+Release signing config подключается только когда заданы все обязательные значения. Keystore,
+passwords и alias не коммитятся в репозиторий.
+
+Локальная production-сборка может использовать `local.properties` или Gradle properties:
+
+```properties
+ANDROID_KEYSTORE_FILE=C\:\\secure\\mutlaboc-notes-release.jks
+ANDROID_KEYSTORE_PASSWORD=...
+ANDROID_KEY_ALIAS=...
+ANDROID_KEY_PASSWORD=...
+```
+
+```powershell
+.\gradlew.bat :app:bundleProdRelease :app:assembleProdRelease `
+  -PANDROID_KEYSTORE_FILE=C:\secure\mutlaboc-notes-release.jks `
+  -PANDROID_KEYSTORE_PASSWORD=... `
+  -PANDROID_KEY_ALIAS=... `
+  -PANDROID_KEY_PASSWORD=... `
+  -PPROD_BACKEND_URL=https://homenoteapp.ru/ `
+  -PPROD_GOOGLE_WEB_CLIENT_ID=... `
+  -PPROD_YANDEX_CLIENT_ID=...
+```
+
+Если signing values не заданы или keystore file недоступен, `release` build type остаётся без
+signingConfig. Это позволяет запускать local validation вроде `:app:assembleProdRelease` без
+секретов.
+
+GitHub Actions release workflow ожидает secrets:
+
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+- `PROD_BACKEND_URL`
+- `PROD_GOOGLE_WEB_CLIENT_ID`
+- `PROD_YANDEX_CLIENT_ID`

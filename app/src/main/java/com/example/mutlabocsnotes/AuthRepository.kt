@@ -20,6 +20,8 @@ data class AuthorizedSession(
     val email: String
 )
 
+private class SessionChangedException : IllegalStateException("Saved session changed")
+
 interface AuthSessionRepository {
     suspend fun login(email: String, password: String): Result<AuthorizedSession>
     suspend fun register(email: String, password: String): Result<AuthorizedSession>
@@ -64,29 +66,29 @@ class AuthRepository(
     }
 
     override suspend fun restoreSession(): Result<AuthorizedSession> = withContext(ioDispatcher) {
-        val accessToken = sessionManager.getAccessToken()
-            ?: return@withContext Result.failure(IllegalStateException("No saved access token"))
-        val refreshToken = sessionManager.getRefreshToken()
-            ?: return@withContext Result.failure(IllegalStateException("No saved refresh token"))
+        val savedSession = sessionManager.getSessionSnapshot()
+            ?: return@withContext Result.failure(IllegalStateException("No saved session"))
 
         return@withContext runCatching {
             try {
-                val me = api.me("Bearer $accessToken")
-                sessionManager.saveSession(
-                    accessToken = accessToken,
-                    refreshToken = refreshToken,
+                val me = api.me("Bearer ${savedSession.accessToken}")
+                saveRestoredSessionOrThrow(
+                    expectedRefreshToken = savedSession.refreshToken,
+                    accessToken = savedSession.accessToken,
+                    refreshToken = savedSession.refreshToken,
                     email = me.email
                 )
                 AuthorizedSession(email = me.email)
             } catch (e: HttpException) {
                 if (e.code() != 401) throw e
 
-                val refreshed = api.refresh(RefreshTokenRequestDto(refreshToken))
+                val refreshed = api.refresh(RefreshTokenRequestDto(savedSession.refreshToken))
                 val newAccessToken = refreshed.accessToken
                 val newRefreshToken = refreshed.refreshToken
                 val me = api.me("Bearer $newAccessToken")
 
-                sessionManager.saveSession(
+                saveRestoredSessionOrThrow(
+                    expectedRefreshToken = savedSession.refreshToken,
                     accessToken = newAccessToken,
                     refreshToken = newRefreshToken,
                     email = me.email
@@ -95,7 +97,9 @@ class AuthRepository(
                 AuthorizedSession(email = me.email)
             }
         }.onFailure {
-            sessionManager.clear()
+            if (it !is SessionChangedException) {
+                sessionManager.clearSessionIfRefreshTokenMatches(savedSession.refreshToken)
+            }
         }
     }
 
@@ -138,6 +142,23 @@ class AuthRepository(
             )
 
             AuthorizedSession(email = email)
+        }
+    }
+
+    private fun saveRestoredSessionOrThrow(
+        expectedRefreshToken: String,
+        accessToken: String,
+        refreshToken: String,
+        email: String
+    ) {
+        val saved = sessionManager.saveSessionIfRefreshTokenMatches(
+            expectedRefreshToken = expectedRefreshToken,
+            accessToken = accessToken,
+            refreshToken = refreshToken,
+            email = email
+        )
+        if (!saved) {
+            throw SessionChangedException()
         }
     }
 

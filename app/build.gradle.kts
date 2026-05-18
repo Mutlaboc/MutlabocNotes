@@ -1,3 +1,4 @@
+import java.io.File
 import java.util.Properties
 
 plugins {
@@ -17,8 +18,10 @@ val localProperties = Properties().apply {
 fun configProperty(name: String): String? {
     val gradleProperty = providers.gradleProperty(name).orNull
     val localProperty = localProperties.getProperty(name)
+    val environmentProperty = providers.environmentVariable(name).orNull
     return gradleProperty?.takeIf { it.isNotBlank() }
         ?: localProperty?.takeIf { it.isNotBlank() }
+        ?: environmentProperty?.takeIf { it.isNotBlank() }
 }
 
 fun String.asBuildConfigString(): String {
@@ -30,6 +33,44 @@ data class EnvironmentConfig(
     val googleWebClientId: String,
     val yandexClientId: String
 )
+
+data class ReleaseSigningConfig(
+    val storeFile: File,
+    val storePassword: String,
+    val keyAlias: String,
+    val keyPassword: String
+)
+
+fun releaseSigningConfig(): ReleaseSigningConfig? {
+    val storeFilePath = configProperty("ANDROID_KEYSTORE_FILE")
+    val storePassword = configProperty("ANDROID_KEYSTORE_PASSWORD")
+    val keyAlias = configProperty("ANDROID_KEY_ALIAS")
+    val keyPassword = configProperty("ANDROID_KEY_PASSWORD")
+
+    if (
+        storeFilePath.isNullOrBlank() ||
+        storePassword.isNullOrBlank() ||
+        keyAlias.isNullOrBlank() ||
+        keyPassword.isNullOrBlank()
+    ) {
+        return null
+    }
+
+    val signingStoreFile = File(storeFilePath).let { file ->
+        if (file.isAbsolute) file else rootProject.file(storeFilePath)
+    }
+
+    return if (signingStoreFile.isFile) {
+        ReleaseSigningConfig(
+            storeFile = signingStoreFile,
+            storePassword = storePassword,
+            keyAlias = keyAlias,
+            keyPassword = keyPassword
+        )
+    } else {
+        null
+    }
+}
 
 val productionBackendBaseUrl =
     configProperty("PROD_BACKEND_URL")
@@ -71,6 +112,7 @@ val environmentConfigs = mapOf(
         backendFallback = productionBackendBaseUrl
     )
 )
+val releaseSigning = releaseSigningConfig()
 
 android {
     namespace = "com.example.mutlabocsnotes"
@@ -112,9 +154,23 @@ android {
         }
     }
 
+    signingConfigs {
+        if (releaseSigning != null) {
+            create("release") {
+                storeFile = releaseSigning.storeFile
+                storePassword = releaseSigning.storePassword
+                keyAlias = releaseSigning.keyAlias
+                keyPassword = releaseSigning.keyPassword
+            }
+        }
+    }
+
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
+            if (releaseSigning != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -179,6 +235,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.okhttp.mockwebserver)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

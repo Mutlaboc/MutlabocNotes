@@ -62,7 +62,7 @@ Run the Android app against the backend environment selected for the RC and veri
 - Home card CRUD succeeds.
 - Logout succeeds and the same refresh token cannot restore the session.
 
-The current checked-in `ApiConfig.BASE_URL` points at `https://homenoteapp.ru/`.
-This issue does not change that URL, add product flavors, or introduce automatic staging
-switching. If the RC is tested against staging, use the team's approved local build or
-environment override process and record the exact backend URL in `RELEASE_CHECKLIST.md`.
+`ApiConfig.BASE_URL` comes from the selected Gradle flavor through `BuildConfig`.
+For RC testing, prefer `stageDebug` against staging and `prodRelease` for the signed
+production artifact. Record the exact backend URL, flavor, version code, version name,
+and artifact in `RELEASE_CHECKLIST.md`.

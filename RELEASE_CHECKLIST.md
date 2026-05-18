@@ -1,18 +1,21 @@
-# Release candidate checklist
+# Sprint 10 Android release checklist
 
-Use this document for the Sprint 8 release-candidate pass. Every unchecked item needs an
-owner or a linked blocker before go/no-go.
+Use this document for the first production release candidate. Every open item needs an
+owner, evidence, and either a pass result or a linked blocker before go/no-go.
 
 ## RC entry criteria
 
 | Gate | Owner | Evidence | Status |
 | --- | --- | --- | --- |
 | Android branch is rebased or merged onto the intended release branch | TBD | Commit SHA / PR | TBD |
-| `.\gradlew.bat assembleDevDebug testDevDebugUnitTest lintDevDebug` passes | TBD | Local or CI run link | TBD |
+| `.\gradlew.bat :app:testDevDebugUnitTest` passes | TBD | Local log or CI run link | TBD |
+| `.\gradlew.bat :app:lintDevDebug` passes | TBD | Local log or CI run link | TBD |
+| `.\gradlew.bat :app:assembleProdRelease` passes without local signing values | TBD | Local log | TBD |
+| Signed `prodRelease` APK/AAB is built with release signing inputs | TBD | GitHub Actions run or local artifact path | TBD |
 | `.\gradlew.bat :app:connectedDevDebugAndroidTest` passes on at least one target device | TBD | Run notes | TBD |
-| Backend staging environment is identified | TBD | URL / deployment reference | TBD |
-| Backend migration and rollback runbook is reviewed | TBD | `notes-backend/RELEASE_RUNBOOK.md` revision | TBD |
-| Test accounts and social auth configuration are ready | TBD | Account references, no secrets | TBD |
+| Backend tests pass in `notes-backend` | TBD | `.\gradlew.bat test` log or CI run link | TBD |
+| Backend staging deploy runbook is reviewed | TBD | `notes-backend/RELEASE_RUNBOOK.md` revision | TBD |
+| Test accounts and Google/Yandex auth configuration are ready | TBD | Account references, no secrets | TBD |
 
 ## Android QA matrix
 
@@ -24,26 +27,29 @@ owner or a linked blocker before go/no-go.
 
 Required scenario coverage for each row:
 
-- Auth: register/login, invalid credentials, social auth availability, `/auth/me` restore.
-- Notes: create, edit, delete, list refresh, completion toggle.
-- Home cards: create, edit, delete, list refresh.
-- Settings: theme, language, persistence after restart.
-- Logout: user returns to auth and refresh token cannot restore the session.
-- Failure paths: offline mode, backend unavailable, expired or unauthorized session.
+- Auth: register/login, invalid credentials, Google/Yandex auth availability, `/auth/me` restore.
+- Notes: create, edit, delete, list refresh, empty state, validation errors, completion toggle.
+- Home cards: create, edit, delete, list refresh, invalid or missing data handling.
+- Notifications: one-time deadline notification, repeating deadline notification, tap opens the note, exact-alarm permission fallback.
+- Settings: dark theme, light theme, language switch, persistence after app restart.
+- Logout: user returns to auth, protected screens are inaccessible, and refresh token cannot restore the session.
+- Failure paths: offline mode, backend unavailable, expired or unauthorized session, retry after recovery.
 
-## Backend compatibility matrix
+## Backend and release compatibility
 
-Run against staging before production rollout. Record the Android build, backend artifact,
-database backup reference, and result for each row.
+Run against staging before production rollout. Record Android build, backend artifact,
+database backup reference, rollback owner, and result for each row.
 
 | Compatibility check | Android build | Backend artifact | Required smoke | Result | Blockers |
 | --- | --- | --- | --- | --- | --- |
-| Previous Android build + new backend | TBD | TBD | Auth, `/auth/me`, notes, home-cards, logout | TBD | TBD |
-| New Android build + current backend | TBD | TBD | Auth, `/auth/me`, notes, home-cards, logout | TBD | TBD |
+| Previous Android build + new backend | TBD | TBD | Auth, `/auth/me`, notes, completion, home-cards, logout | TBD | TBD |
+| New Android build + current backend | TBD | TBD | Auth, `/auth/me`, notes, completion, home-cards, logout | TBD | TBD |
 | New Android build + new backend | TBD | TBD | Full Android RC matrix | TBD | TBD |
 
 Minimum backend endpoint coverage:
 
+- `GET /health`
+- `GET /health/db`
 - `POST /auth/register`
 - `POST /auth/login`
 - `GET /auth/me`
@@ -53,15 +59,34 @@ Minimum backend endpoint coverage:
 - `PATCH /notes/{id}/completion`
 - `GET/POST/PUT/DELETE /home-cards`
 
+## Release policy
+
+- `versionCode` increases monotonically for every production artifact.
+- `versionName` follows semantic versioning and starts at `1.0.0`.
+- Update `CHANGELOG.md` before creating a signed artifact.
+- Tag accepted production artifacts as `android-v{versionName}` after go/no-go approval.
+- R8/minify remains disabled for this release; treat enabling it as a separate release-hardening task.
+- Release signing uses external inputs only: `ANDROID_KEYSTORE_FILE`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`. GitHub Actions decodes `ANDROID_KEYSTORE_BASE64` into the keystore file.
+
+## Crash and logging strategy
+
+No crash telemetry SDK is included in this release. For production crash intake, record:
+
+- App version name, version code, Git SHA, build artifact, device model, Android API, language, and theme.
+- Reproduction steps, screenshots or screen recording, expected result, and actual result.
+- `adb logcat` excerpt around the failure with tokens, passwords, emails, and other PII removed.
+- Backend timestamp, environment, and request context when the issue involves network behavior.
+
 ## Go/no-go gates
 
 Release may proceed only when:
 
 - Android 12, 13, and 14 rows are complete or explicitly waived by the release owner.
+- Clean build, unit tests, lint, connected smoke, backend tests, and manual regression evidence are recorded.
 - No P0/P1 blockers remain open.
 - Backend migration status is verified on staging.
-- Rollback owner, artifact reference, and database backup reference are recorded.
-- Staging smoke passes for auth, notes, home-cards, and logout.
+- Rollback owner, artifact reference, database backup reference, and previous known-good backend artifact are recorded.
+- Signed prod APK/AAB is archived and traceable to commit SHA, version code, and version name.
 
 ## Rollout record
 
@@ -69,11 +94,14 @@ Release may proceed only when:
 | --- | --- |
 | Release owner | TBD |
 | Android commit SHA | TBD |
-| Android build artifact | TBD |
+| Android versionCode / versionName | TBD |
+| Android signed APK/AAB artifact | TBD |
 | Backend artifact/container | TBD |
 | Backend environment URL | TBD |
 | Database backup reference | TBD |
+| Previous known-good backend artifact | TBD |
 | Rollback owner | TBD |
 | Go/no-go decision | TBD |
+| Git tag | `android-vTBD` |
 | Production rollout time | TBD |
 | Post-rollout validation result | TBD |
