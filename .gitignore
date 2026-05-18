@@ -1,5 +1,6 @@
 # Gradle / Android build outputs
 .gradle/
+.kotlin/
 /build/
 **/build/
 .externalNativeBuild/
@@ -33,3 +34,5 @@ local.properties
 # Local project artifacts
 /docs/
 /tools/
+hs_err_pid*.log
+replay_pid*.log

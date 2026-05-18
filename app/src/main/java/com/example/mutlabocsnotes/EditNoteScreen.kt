@@ -1,49 +1,28 @@
 package com.example.mutlabocsnotes
 
-import android.app.DatePickerDialog
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.AlertDialog
 import androidx.compose.material.Button
-import androidx.compose.material.Checkbox
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedButton
-import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import java.util.Calendar
 
@@ -281,277 +260,4 @@ fun EditNoteScreen(
             onDismiss = { showDeleteDialog = false }
         )
     }
-}
-
-@Composable
-private fun NoteTitleField(
-    title: String,
-    isError: Boolean,
-    onTitleChange: (String) -> Unit
-) {
-    OutlinedTextField(
-        value = title,
-        onValueChange = onTitleChange,
-        label = { Text(stringResource(R.string.note_title_label)) },
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag(EDIT_NOTE_TITLE_FIELD_TEST_TAG),
-        isError = isError
-    )
-    if (isError) {
-        Text(
-            text = stringResource(R.string.note_title_required),
-            color = MaterialTheme.colors.error,
-            modifier = Modifier.testTag(EDIT_NOTE_TITLE_ERROR_TEST_TAG)
-        )
-    }
-}
-
-@Composable
-private fun CategoryPicker(
-    selectedCategory: NoteCategory,
-    onCategorySelected: (NoteCategory) -> Unit
-) {
-    val categories = listOf(
-        NoteCategory.SHOPPING to R.string.note_category_shopping,
-        NoteCategory.TASKS to R.string.note_category_tasks,
-        NoteCategory.NOTES to R.string.note_category_notes
-    )
-    Row {
-        categories.forEach { (category, labelResId) ->
-            val categoryColors = noteCategoryColors(category)
-            val modifier = Modifier
-                .padding(end = 8.dp)
-                .testTag(editNoteCategoryChipTestTag(category))
-            if (selectedCategory == category) {
-                Button(
-                    onClick = { onCategorySelected(category) },
-                    colors = ButtonDefaults.buttonColors(
-                        backgroundColor = categoryColors.container,
-                        contentColor = categoryColors.content
-                    ),
-                    modifier = modifier
-                ) {
-                    Text(stringResource(labelResId))
-                }
-            } else {
-                OutlinedButton(
-                    onClick = { onCategorySelected(category) },
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = categoryColors.content
-                    ),
-                    modifier = modifier
-                ) {
-                    Text(stringResource(labelResId))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ChecklistEditor(
-    checklistItems: List<ChecklistItem>,
-    onItemTextChange: (Int, String) -> Unit,
-    onItemCheckedChange: (Int, Boolean) -> Unit,
-    onAddItem: () -> Unit,
-    onRemoveItem: (Int) -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        checklistItems.forEachIndexed { index, item ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 4.dp)
-            ) {
-                Checkbox(
-                    checked = item.isChecked,
-                    onCheckedChange = { checked -> onItemCheckedChange(index, checked) }
-                )
-                OutlinedTextField(
-                    value = item.text,
-                    onValueChange = { text -> onItemTextChange(index, text) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 8.dp)
-                        .testTag(editNoteChecklistItemFieldTestTag(index))
-                )
-                IconButton(
-                    onClick = { onRemoveItem(index) },
-                    modifier = Modifier.testTag(editNoteChecklistItemDeleteButtonTestTag(index))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = stringResource(R.string.checklist_delete_item)
-                    )
-                }
-            }
-        }
-        Button(
-            onClick = onAddItem,
-            modifier = Modifier.testTag(EDIT_NOTE_CHECKLIST_ADD_BUTTON_TEST_TAG)
-        ) {
-            Text(stringResource(R.string.checklist_add_item))
-        }
-    }
-}
-
-@Composable
-private fun DeadlinePicker(
-    selectedDeadlineMillis: Long,
-    todayMillis: Long,
-    isRepeating: Boolean,
-    onDeadlineSelected: (Long) -> Unit,
-    onRepeatingChange: (Boolean) -> Unit
-) {
-    val context = LocalContext.current
-    val datePickerDialog = remember(context) {
-        val calendar = Calendar.getInstance().apply {
-            timeInMillis = selectedDeadlineMillis
-        }
-        DatePickerDialog(
-            context,
-            { _, year, month, dayOfMonth ->
-                val pickedCalendar = Calendar.getInstance().apply {
-                    set(Calendar.YEAR, year)
-                    set(Calendar.MONTH, month)
-                    set(Calendar.DAY_OF_MONTH, dayOfMonth)
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
-                onDeadlineSelected(pickedCalendar.timeInMillis)
-            },
-            calendar.get(Calendar.YEAR),
-            calendar.get(Calendar.MONTH),
-            calendar.get(Calendar.DAY_OF_MONTH)
-        ).apply {
-            datePicker.minDate = todayMillis
-        }
-    }
-    val dateFieldInteractionSource = remember { MutableInteractionSource() }
-    LaunchedEffect(dateFieldInteractionSource, selectedDeadlineMillis) {
-        dateFieldInteractionSource.interactions.collect { interaction ->
-            if (interaction is PressInteraction.Release) {
-                val calendar = Calendar.getInstance().apply {
-                    timeInMillis = selectedDeadlineMillis
-                }
-                datePickerDialog.updateDate(
-                    calendar.get(Calendar.YEAR),
-                    calendar.get(Calendar.MONTH),
-                    calendar.get(Calendar.DAY_OF_MONTH)
-                )
-                datePickerDialog.show()
-            }
-        }
-    }
-    val deadlineText = remember(selectedDeadlineMillis) {
-        val calendar = Calendar.getInstance().apply {
-            timeInMillis = selectedDeadlineMillis
-        }
-        "%02d.%02d.%04d".format(
-            calendar.get(Calendar.DAY_OF_MONTH),
-            calendar.get(Calendar.MONTH) + 1,
-            calendar.get(Calendar.YEAR)
-        )
-    }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(
-            value = deadlineText,
-            onValueChange = {},
-            label = { Text(stringResource(R.string.deadline_label)) },
-            modifier = Modifier.weight(1f),
-            readOnly = true,
-            interactionSource = dateFieldInteractionSource
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(
-                checked = isRepeating,
-                onCheckedChange = onRepeatingChange
-            )
-            Text(stringResource(R.string.repeat_label))
-        }
-    }
-}
-
-@Composable
-private fun NoteContentField(
-    content: String,
-    onContentChange: (String) -> Unit
-) {
-    OutlinedTextField(
-        value = content,
-        onValueChange = onContentChange,
-        label = { Text(stringResource(R.string.note_content_label)) },
-        modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxHeight(0.4f)
-            .testTag(EDIT_NOTE_CONTENT_FIELD_TEST_TAG),
-        maxLines = Int.MAX_VALUE
-    )
-}
-
-@Composable
-private fun CoinCountDebugField(
-    coinCountText: String,
-    onCoinCountChange: (String) -> Unit
-) {
-    OutlinedTextField(
-        value = coinCountText,
-        onValueChange = { value ->
-            if (value.all { it.isDigit() }) {
-                onCoinCountChange(value)
-            }
-        },
-        label = { Text(stringResource(R.string.coin_count_label)) },
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag(EDIT_NOTE_COIN_COUNT_FIELD_TEST_TAG),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-    )
-}
-
-@Composable
-private fun DeleteNoteDialog(
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.note_delete_title)) },
-        text = { Text(stringResource(R.string.note_delete_message)) },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                modifier = Modifier.testTag(EDIT_NOTE_DELETE_CONFIRM_BUTTON_TEST_TAG)
-            ) {
-                Text(stringResource(R.string.action_delete))
-            }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
-            }
-        }
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun EditNoteScreenPreview() {
-    val sampleNote = Note(
-        id = "1",
-        title = "Sample",
-        content = "Content",
-        category = NoteCategory.NOTES,
-        coinCount = 3
-    )
-    EditNoteScreen(
-        note = sampleNote,
-        onSaveClick = { _ -> },
-        onDeleteClick = { }
-    )
 }

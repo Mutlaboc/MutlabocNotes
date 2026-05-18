@@ -9,13 +9,13 @@ class ThemeRegressionTest {
 
     @Test
     fun editNoteScreen_doesNotOverrideFieldColorsWithFixedBlackOrGray() {
-        val editNoteScreen = projectFile(
-            "app/src/main/java/com/example/mutlabocsnotes/EditNoteScreen.kt"
-        ).readText()
+        val editNoteSources = mainSourceFiles()
+            .filter { it.name.startsWith("EditNote") || it.name == "DeadlinePicker.kt" }
+            .joinToString("\n") { it.readText() }
 
-        assertFalse(editNoteScreen.contains("Color.Black"))
-        assertFalse(editNoteScreen.contains("Color.Gray"))
-        assertFalse(editNoteScreen.contains("outlinedTextFieldColors"))
+        assertFalse(editNoteSources.contains("Color.Black"))
+        assertFalse(editNoteSources.contains("Color.Gray"))
+        assertFalse(editNoteSources.contains("outlinedTextFieldColors"))
     }
 
     @Test
@@ -45,18 +45,24 @@ class ThemeRegressionTest {
 
     @Test
     fun noteItem_usesSharedCategoryColors() {
-        val homeScreen = projectFile(
-            "app/src/main/java/com/example/mutlabocsnotes/HomeScreen.kt"
+        val noteItem = projectFile(
+            "app/src/main/java/com/example/mutlabocsnotes/NoteItem.kt"
         ).readText()
         val categoryTheme = projectFile(
             "app/src/main/java/com/example/mutlabocsnotes/NoteCategoryTheme.kt"
         )
 
         assertTrue(categoryTheme.isFile)
-        assertTrue(homeScreen.contains("noteCategoryColors(note.category)"))
-        assertFalse(homeScreen.contains("Color(0xFFD9F0FF)"))
-        assertFalse(homeScreen.contains("Color(0xFFFFE2E2)"))
-        assertFalse(homeScreen.contains("Color(0xFFE1F5E3)"))
+        assertTrue(noteItem.contains("noteCategoryColors(note.category)"))
+        assertFalse(noteItem.contains("Color(0xFFD9F0FF)"))
+        assertFalse(noteItem.contains("Color(0xFFFFE2E2)"))
+        assertFalse(noteItem.contains("Color(0xFFE1F5E3)"))
+    }
+
+    private fun mainSourceFiles(): Sequence<File> {
+        return projectFile("app/src/main/java")
+            .walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
     }
 
     private fun projectFile(path: String): File {

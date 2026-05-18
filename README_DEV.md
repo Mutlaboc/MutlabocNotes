@@ -1,6 +1,16 @@
 # README для разработки
 
-Документ описывает конфигурацию Android-сборок Mutlaboc Notes после разделения окружений.
+Документ описывает локальную разработку Android-приложения Mutlaboc Notes, его окружения, связь с backend, тесты и release build.
+
+## Ветки и рабочий процесс
+
+Основная рабочая ветка Android-приложения - `develop`. Перед началом задачи проверьте состояние:
+
+```powershell
+git status --short --branch
+```
+
+Не коммитьте локальные артефакты IDE, Gradle, Kotlin compiler session files, JVM crash logs и replay logs. Они игнорируются через `.gitignore`.
 
 ## Окружения и сборки
 
@@ -26,13 +36,15 @@
 .\gradlew.bat :app:testProdDebugUnitTest
 ```
 
+В Android Studio для локальной разработки выбирайте variant `devDebug`.
+
 ## Backend URL
 
-Backend URL задается через Gradle properties. Приоритет значений:
+Backend URL задаётся через Gradle properties. Приоритет значений:
 
 1. Параметр командной строки или CI, например `-PPROD_BACKEND_URL=https://example.com/`.
 2. `local.properties` в корне проекта.
-3. Production fallback, зашитый в Gradle-конфигурации.
+3. Production fallback, заданный в Gradle-конфигурации.
 
 Поддерживаемые ключи:
 
@@ -48,7 +60,7 @@ PROD_BACKEND_URL=https://homenoteapp.ru/
 DEV_BACKEND_URL=http://10.0.2.2:8080/
 ```
 
-Если `STAGE_BACKEND_URL` или `PROD_BACKEND_URL` не заданы, сборка использует production fallback. Это сделано намеренно для текущего issue.
+Если `STAGE_BACKEND_URL` или `PROD_BACKEND_URL` не заданы, сборка использует production fallback. Это ожидаемое поведение текущей конфигурации.
 
 ## OAuth client IDs
 
@@ -94,10 +106,41 @@ DEV_YANDEX_CLIENT_ID=...
   -PPROD_YANDEX_CLIENT_ID=...
 ```
 
+## Запуск backend
+
+Backend находится в соседнем репозитории `D:\Projects\notes-backend`. Android-репозиторий не дублирует backend deployment runbook, а ссылается на документы backend-проекта:
+
+- `D:\Projects\notes-backend\README.md` - локальный build/run.
+- `D:\Projects\notes-backend\RELEASE_RUNBOOK.ru.md` - rollout, migrations, staging smoke и rollback.
+
+Минимальная локальная проверка backend:
+
+```powershell
+cd D:\Projects\notes-backend
+.\gradlew.bat test
+.\gradlew.bat run
+```
+
+Backend ожидает переменные `DB_JDBC_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, а также OAuth-настройки Google/Yandex для social auth.
+
+## Тесты
+
+Базовый набор Android unit-тестов:
+
+```powershell
+.\gradlew.bat :app:testDevDebugUnitTest
+```
+
+Перед release-кандидатом дополнительно проверьте:
+
+- `.\gradlew.bat :app:testStageDebugUnitTest`
+- `.\gradlew.bat :app:testProdDebugUnitTest`
+- `.\gradlew.bat :app:assembleProdRelease`
+- emulator smoke для auth, notes, completed notes, home info, settings и notification navigation.
+
 ## Release signing
 
-Release signing config подключается только когда заданы все обязательные значения. Keystore,
-passwords и alias не коммитятся в репозиторий.
+Release signing config подключается только когда заданы все обязательные значения. Keystore, passwords и alias не коммитятся в репозиторий.
 
 Локальная production-сборка может использовать `local.properties` или Gradle properties:
 
@@ -119,9 +162,7 @@ ANDROID_KEY_PASSWORD=...
   -PPROD_YANDEX_CLIENT_ID=...
 ```
 
-Если signing values не заданы или keystore file недоступен, `release` build type остаётся без
-signingConfig. Это позволяет запускать local validation вроде `:app:assembleProdRelease` без
-секретов.
+Если signing values не заданы или keystore file недоступен, `release` build type остаётся без `signingConfig`. Это позволяет запускать local validation вроде `:app:assembleProdRelease` без секретов.
 
 GitHub Actions release workflow ожидает secrets:
 
@@ -132,3 +173,7 @@ GitHub Actions release workflow ожидает secrets:
 - `PROD_BACKEND_URL`
 - `PROD_GOOGLE_WEB_CLIENT_ID`
 - `PROD_YANDEX_CLIENT_ID`
+
+## Архитектура и сопровождение
+
+Подробная схема Android-зависимостей, auth/session refresh, repositories, ViewModel factory, settings, notifications и связи с backend описана в `ARCHITECTURE.ru.md`.
