@@ -28,6 +28,43 @@ fun String.asBuildConfigString(): String {
     return "\"" + replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 }
 
+val broadValidationTasks = setOf("assemble", "build", "check", "test", "lint")
+val requestedTaskNames = gradle.startParameter.taskNames.map { it.substringAfterLast(":") }
+
+fun String.asFlavorTaskPart(): String =
+    replaceFirstChar { firstChar -> firstChar.uppercase() }
+
+fun taskRequestsFlavor(flavorName: String): Boolean {
+    val flavorTaskPart = flavorName.asFlavorTaskPart()
+    return requestedTaskNames.any { taskName ->
+        taskName.contains(flavorTaskPart)
+    }
+}
+
+fun taskRequestsAllFlavors(): Boolean {
+    return requestedTaskNames.any { taskName ->
+        taskName in broadValidationTasks
+    }
+}
+
+fun shouldRequireFlavorConfig(flavorName: String): Boolean {
+    if (requestedTaskNames.isEmpty()) {
+        return false
+    }
+    return taskRequestsFlavor(flavorName) || taskRequestsAllFlavors()
+}
+
+fun requiredConfigProperty(flavorName: String, name: String): String {
+    configProperty(name)?.let { return it }
+    if (shouldRequireFlavorConfig(flavorName)) {
+        throw GradleException(
+            "Missing $name for $flavorName flavor. Set it in local.properties, " +
+                "a Gradle property (-P$name=...), or an environment variable."
+        )
+    }
+    return ""
+}
+
 data class EnvironmentConfig(
     val backendBaseUrl: String,
     val googleWebClientId: String,
@@ -72,44 +109,33 @@ fun releaseSigningConfig(): ReleaseSigningConfig? {
     }
 }
 
-val productionBackendBaseUrl =
-    configProperty("PROD_BACKEND_URL")
-        ?: configProperty("BACKEND_URL")
-        ?: "https://homenoteapp.ru/"
-val productionGoogleWebClientId =
-    configProperty("PROD_GOOGLE_WEB_CLIENT_ID")
-        ?: configProperty("GOOGLE_WEB_CLIENT_ID")
-        ?: "822837772778-f7lc8b9nnbpn1u65njf7agkj392dub8c.apps.googleusercontent.com"
-val productionYandexClientId =
-    configProperty("PROD_YANDEX_CLIENT_ID")
-        ?: configProperty("YANDEX_CLIENT_ID")
-        ?: "776676c1ec6c4097ba260b05824f3a39"
-
 fun environmentConfig(
+    flavorName: String,
     prefix: String,
-    backendFallback: String
+    backendFallback: String? = null
 ): EnvironmentConfig {
     return EnvironmentConfig(
-        backendBaseUrl = configProperty("${prefix}_BACKEND_URL") ?: backendFallback,
-        googleWebClientId = configProperty("${prefix}_GOOGLE_WEB_CLIENT_ID")
-            ?: productionGoogleWebClientId,
-        yandexClientId = configProperty("${prefix}_YANDEX_CLIENT_ID")
-            ?: productionYandexClientId
+        backendBaseUrl = configProperty("${prefix}_BACKEND_URL")
+            ?: backendFallback
+            ?: requiredConfigProperty(flavorName, "${prefix}_BACKEND_URL"),
+        googleWebClientId = requiredConfigProperty(flavorName, "${prefix}_GOOGLE_WEB_CLIENT_ID"),
+        yandexClientId = requiredConfigProperty(flavorName, "${prefix}_YANDEX_CLIENT_ID")
     )
 }
 
 val environmentConfigs = mapOf(
     "dev" to environmentConfig(
+        flavorName = "dev",
         prefix = "DEV",
         backendFallback = "http://10.0.2.2:8080/"
     ),
     "stage" to environmentConfig(
-        prefix = "STAGE",
-        backendFallback = productionBackendBaseUrl
+        flavorName = "stage",
+        prefix = "STAGE"
     ),
     "prod" to environmentConfig(
-        prefix = "PROD",
-        backendFallback = productionBackendBaseUrl
+        flavorName = "prod",
+        prefix = "PROD"
     )
 )
 val releaseSigning = releaseSigningConfig()

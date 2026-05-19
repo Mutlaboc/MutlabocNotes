@@ -44,8 +44,14 @@ Android repo не содержит backend-код. Сервис находитс
 Flavors:
 
 - `dev`: локальная разработка, default `http://10.0.2.2:8080/` для Android Emulator.
-- `stage`: staging, берёт `STAGE_BACKEND_URL` или production fallback.
-- `prod`: production, берёт `PROD_BACKEND_URL` или production fallback.
+- `stage`: staging, требует `STAGE_BACKEND_URL`, `STAGE_GOOGLE_WEB_CLIENT_ID` и `STAGE_YANDEX_CLIENT_ID`.
+- `prod`: production, требует `PROD_BACKEND_URL`, `PROD_GOOGLE_WEB_CLIENT_ID` и `PROD_YANDEX_CLIENT_ID`.
+
+Backend URL и OAuth client IDs являются build-time config: они передаются через
+Gradle и встраиваются в APK выбранного flavor. OAuth client IDs не являются
+серверными секретами, но задаются отдельно для каждого окружения, чтобы dev,
+stage и prod не смешивали настройки. Production fallback в Android Gradle config
+не используется.
 
 Основные переменные Android: `DEV_BACKEND_URL`, `STAGE_BACKEND_URL`, `PROD_BACKEND_URL`, `*_GOOGLE_WEB_CLIENT_ID`, `*_YANDEX_CLIENT_ID`, release signing keys. Backend-переменные (`DB_JDBC_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, OAuth client IDs/secrets) описаны в `notes-backend/README.md` и `notes-backend/RELEASE_RUNBOOK.ru.md`.
 

@@ -44,14 +44,17 @@ Backend URL задаётся через Gradle properties. Приоритет з
 
 1. Параметр командной строки или CI, например `-PPROD_BACKEND_URL=https://example.com/`.
 2. `local.properties` в корне проекта.
-3. Production fallback, заданный в Gradle-конфигурации.
+
+Для `stage` и `prod` значение обязательно. Если `STAGE_BACKEND_URL` или
+`PROD_BACKEND_URL` не задан, соответствующая сборка падает с понятной ошибкой.
+Для `dev` остаётся безопасный локальный default `http://10.0.2.2:8080/`.
 
 Поддерживаемые ключи:
 
 ```properties
 DEV_BACKEND_URL=http://10.0.2.2:8080/
 STAGE_BACKEND_URL=https://stage.example.com/
-PROD_BACKEND_URL=https://homenoteapp.ru/
+PROD_BACKEND_URL=https://api.example.com/
 ```
 
 Для Android Emulator локальный backend на машине разработчика доступен как:
@@ -60,13 +63,31 @@ PROD_BACKEND_URL=https://homenoteapp.ru/
 DEV_BACKEND_URL=http://10.0.2.2:8080/
 ```
 
-Если `STAGE_BACKEND_URL` или `PROD_BACKEND_URL` не заданы, сборка использует production fallback. Это ожидаемое поведение текущей конфигурации.
+Для физического телефона по USB можно пробросить порт backend:
+
+```powershell
+adb reverse tcp:8080 tcp:8080
+```
+
+После этого для `devDebug` можно указать:
+
+```properties
+DEV_BACKEND_URL=http://127.0.0.1:8080/
+```
+
+Для физического телефона в одной Wi-Fi сети используйте IP компьютера:
+
+```properties
+DEV_BACKEND_URL=http://192.168.1.50:8080/
+```
 
 ## OAuth client IDs
 
-Google и Yandex client IDs передаются через Gradle в `BuildConfig`, resources и manifest placeholders.
+Google и Yandex client IDs передаются через Gradle в `BuildConfig`, resources
+и manifest placeholders. Эти значения встраиваются в APK на этапе сборки,
+поэтому APK уже содержит backend URL и OAuth client IDs для выбранного flavor.
 
-Рекомендуемые ключи для окружений:
+Обязательные ключи для окружений:
 
 ```properties
 DEV_GOOGLE_WEB_CLIENT_ID=...
@@ -77,14 +98,10 @@ PROD_GOOGLE_WEB_CLIENT_ID=...
 PROD_YANDEX_CLIENT_ID=...
 ```
 
-Также поддерживаются общие ключи, если один client ID используется для всех окружений:
-
-```properties
-GOOGLE_WEB_CLIENT_ID=...
-YANDEX_CLIENT_ID=...
-```
-
-OAuth client IDs являются идентификаторами приложения, а не полноценными секретами вроде private key. Тем не менее для разных окружений их лучше задавать через `local.properties`, параметры Gradle или CI secrets, чтобы не смешивать dev/stage/prod настройки.
+OAuth client IDs являются идентификаторами приложения, а не полноценными
+секретами вроде private key. Их всё равно нужно задавать отдельно для каждого
+окружения через `local.properties`, параметры Gradle или CI secrets, чтобы не
+смешивать dev/stage/prod настройки.
 
 ## Пример local.properties
 
@@ -97,11 +114,19 @@ DEV_GOOGLE_WEB_CLIENT_ID=...
 DEV_YANDEX_CLIENT_ID=...
 ```
 
+Для проверки `stageDebug` на подключенном телефоне:
+
+```properties
+STAGE_BACKEND_URL=https://stage.example.com/
+STAGE_GOOGLE_WEB_CLIENT_ID=...
+STAGE_YANDEX_CLIENT_ID=...
+```
+
 Для CI те же значения можно передавать как Gradle properties:
 
 ```powershell
 .\gradlew.bat :app:assembleProdRelease `
-  -PPROD_BACKEND_URL=https://homenoteapp.ru/ `
+  -PPROD_BACKEND_URL=https://api.example.com/ `
   -PPROD_GOOGLE_WEB_CLIENT_ID=... `
   -PPROD_YANDEX_CLIENT_ID=...
 ```
@@ -157,12 +182,12 @@ ANDROID_KEY_PASSWORD=...
   -PANDROID_KEYSTORE_PASSWORD=... `
   -PANDROID_KEY_ALIAS=... `
   -PANDROID_KEY_PASSWORD=... `
-  -PPROD_BACKEND_URL=https://homenoteapp.ru/ `
+  -PPROD_BACKEND_URL=https://api.example.com/ `
   -PPROD_GOOGLE_WEB_CLIENT_ID=... `
   -PPROD_YANDEX_CLIENT_ID=...
 ```
 
-Если signing values не заданы или keystore file недоступен, `release` build type остаётся без `signingConfig`. Это позволяет запускать local validation вроде `:app:assembleProdRelease` без секретов.
+Если signing values не заданы или keystore file недоступен, `release` build type остаётся без `signingConfig`. Production URL и OAuth client IDs всё равно обязательны для `prod`-сборок.
 
 GitHub Actions release workflow ожидает secrets:
 

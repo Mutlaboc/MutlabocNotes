@@ -54,6 +54,7 @@ class AppContainerWiringTest {
 
     @Test
     fun configValues_comeFromGeneratedBuildConfigAndGradle() {
+        val buildGradle = projectFile("app/build.gradle.kts").readText()
         val apiConfig = projectFile(
             "app/src/main/java/com/example/mutlabocsnotes/ApiConfig.kt"
         ).readText()
@@ -68,6 +69,18 @@ class AppContainerWiringTest {
         val gradleProperties = projectFile("gradle.properties").readText()
 
         assertFalse(mainKotlinSources.contains(PRODUCTION_BACKEND_URL))
+        assertFalse(buildGradle.contains(PRODUCTION_BACKEND_URL))
+        assertFalse(buildGradle.contains(PRODUCTION_GOOGLE_WEB_CLIENT_ID))
+        assertFalse(buildGradle.contains(PRODUCTION_YANDEX_CLIENT_ID))
+        assertFalse(buildGradle.contains("""configProperty("BACKEND_URL")"""))
+        assertFalse(buildGradle.contains("""configProperty("GOOGLE_WEB_CLIENT_ID")"""))
+        assertFalse(buildGradle.contains("""configProperty("YANDEX_CLIENT_ID")"""))
+        assertFalse(buildGradle.contains("productionBackendBaseUrl"))
+        assertFalse(buildGradle.contains("productionGoogleWebClientId"))
+        assertFalse(buildGradle.contains("productionYandexClientId"))
+        assertTrue(buildGradle.contains("fun requiredConfigProperty("))
+        assertTrue(buildGradle.contains("Missing \$name for \$flavorName flavor"))
+        assertTrue(buildGradle.contains("backendFallback = \"http://10.0.2.2:8080/\""))
         assertTrue(apiConfig.contains("val BASE_URL: String = BuildConfig.BACKEND_BASE_URL"))
         assertTrue(appContainer.contains("AuthRepository.createAuthApi(ApiConfig.BASE_URL)"))
         assertTrue(appContainer.contains("baseUrl = ApiConfig.BASE_URL"))
@@ -276,6 +289,7 @@ class AppContainerWiringTest {
         const val PRODUCTION_BACKEND_URL = "https://homenoteapp.ru/"
         const val PRODUCTION_GOOGLE_WEB_CLIENT_ID =
             "822837772778-f7lc8b9nnbpn1u65njf7agkj392dub8c.apps.googleusercontent.com"
+        const val PRODUCTION_YANDEX_CLIENT_ID = "776676c1ec6c4097ba260b05824f3a39"
     }
 }
 
