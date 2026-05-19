@@ -3,6 +3,7 @@ package com.example.mutlabocsnotes.network
 import com.example.mutlabocsnotes.ChecklistItem
 import com.example.mutlabocsnotes.Note
 import com.example.mutlabocsnotes.NoteCategory
+import com.example.mutlabocsnotes.RepeatRule
 
 // Модель данных, общая для слоёв этого модуля.
 data class ChecklistItemDto(
@@ -18,7 +19,7 @@ data class NoteDto(
     val category: String,
     val checklist: List<ChecklistItemDto>,
     val deadlineMillis: Long?,
-    val isRepeating: Boolean,
+    val repeatRule: String?,
     val coinCount: Int,
     val isCompleted: Boolean,
 )
@@ -30,7 +31,7 @@ data class NoteUpsertRequestDto(
     val category: String,
     val checklist: List<ChecklistItemDto>,
     val deadlineMillis: Long?,
-    val isRepeating: Boolean,
+    val repeatRule: String,
     val coinCount: Int,
     val isCompleted: Boolean,
 )
@@ -43,6 +44,11 @@ data class NoteCompletionRequestDto(
 private fun String.toNoteCategory(): NoteCategory {
     return runCatching { NoteCategory.valueOf(this) }
         .getOrDefault(NoteCategory.NOTES)
+}
+
+private fun String?.toRepeatRule(): RepeatRule {
+    return runCatching { RepeatRule.valueOf(this.orEmpty()) }
+        .getOrDefault(RepeatRule.NONE)
 }
 
 // Преобразует доменную модель в её DTO-представление.
@@ -65,7 +71,7 @@ fun NoteDto.toDomain(): Note = Note(
     category = category.toNoteCategory(),
     checklist = checklist.map { it.toDomain() },
     deadlineMillis = deadlineMillis,
-    isRepeating = isRepeating,
+    repeatRule = repeatRule.toRepeatRule(),
     coinCount = coinCount,
     isCompleted = isCompleted
 )
@@ -77,7 +83,7 @@ fun Note.toUpsertRequestDto(): NoteUpsertRequestDto = NoteUpsertRequestDto(
     category = category.name,
     checklist = checklist.map { it.toDto() },
     deadlineMillis = deadlineMillis,
-    isRepeating = isRepeating,
+    repeatRule = repeatRule.name,
     coinCount = coinCount,
     isCompleted = isCompleted
 )

@@ -61,10 +61,10 @@ class DeadlineNotificationScheduler internal constructor(
         val deadlineMillis = note.deadlineMillis ?: return DeadlineScheduleResult.NotScheduled
         if (note.isCompleted) return DeadlineScheduleResult.NotScheduled
 
-        val triggerAtMillis = nextDailyDeadlineTriggerMillis(
+        val triggerAtMillis = nextDeadlineTriggerMillis(
             deadlineMillis = deadlineMillis,
             nowMillis = nowProvider(),
-            repeatsDaily = note.isRepeating
+            repeatRule = note.repeatRule
         ) ?: return DeadlineScheduleResult.NotScheduled
         if (requiresExactAlarmPermission() && !alarmBackend.canScheduleExactAlarms()) {
             alarmBackend.scheduleInexact(triggerAtMillis, note)
@@ -100,10 +100,10 @@ class DeadlineNotificationScheduler internal constructor(
     }
 }
 
-internal fun nextDailyDeadlineTriggerMillis(
+internal fun nextDeadlineTriggerMillis(
     deadlineMillis: Long,
     nowMillis: Long,
-    repeatsDaily: Boolean
+    repeatRule: RepeatRule
 ): Long? {
     val triggerCalendar = Calendar.getInstance().apply {
         timeInMillis = deadlineMillis
@@ -113,12 +113,56 @@ internal fun nextDailyDeadlineTriggerMillis(
         set(Calendar.MILLISECOND, 0)
     }
     if (triggerCalendar.timeInMillis <= nowMillis) {
-        if (!repeatsDaily) return null
-        while (triggerCalendar.timeInMillis <= nowMillis) {
-            triggerCalendar.add(Calendar.DAY_OF_YEAR, 1)
+        when (repeatRule) {
+            RepeatRule.NONE -> return null
+            RepeatRule.DAILY -> {
+                while (triggerCalendar.timeInMillis <= nowMillis) {
+                    triggerCalendar.add(Calendar.DAY_OF_YEAR, 1)
+                }
+            }
+            RepeatRule.WEEKLY -> {
+                while (triggerCalendar.timeInMillis <= nowMillis) {
+                    triggerCalendar.add(Calendar.WEEK_OF_YEAR, 1)
+                }
+            }
+            RepeatRule.MONTHLY -> return nextMonthlyDeadlineTriggerMillis(
+                baseTriggerCalendar = triggerCalendar,
+                nowMillis = nowMillis
+            )
         }
     }
     return triggerCalendar.timeInMillis
+}
+
+private fun nextMonthlyDeadlineTriggerMillis(
+    baseTriggerCalendar: Calendar,
+    nowMillis: Long
+): Long {
+    val anchorDay = baseTriggerCalendar.get(Calendar.DAY_OF_MONTH)
+    var year = baseTriggerCalendar.get(Calendar.YEAR)
+    var month = baseTriggerCalendar.get(Calendar.MONTH)
+
+    while (true) {
+        val candidate = Calendar.getInstance().apply {
+            clear()
+            set(Calendar.YEAR, year)
+            set(Calendar.MONTH, month)
+            set(Calendar.DAY_OF_MONTH, 1)
+            set(Calendar.HOUR_OF_DAY, 9)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            set(Calendar.DAY_OF_MONTH, minOf(anchorDay, getActualMaximum(Calendar.DAY_OF_MONTH)))
+        }
+        if (candidate.timeInMillis > nowMillis) {
+            return candidate.timeInMillis
+        }
+        month += 1
+        if (month > Calendar.DECEMBER) {
+            month = Calendar.JANUARY
+            year += 1
+        }
+    }
 }
 
 internal interface DeadlineAlarmBackend {
@@ -249,7 +293,7 @@ private class AndroidDeadlineAlarmBackend(
             putExtra(DeadlineNotification.EXTRA_NOTE_ID, note.id)
             putExtra(DeadlineNotification.EXTRA_NOTE_TITLE, note.title)
             putExtra(DeadlineNotification.EXTRA_DEADLINE_MILLIS, note.deadlineMillis ?: 0L)
-            putExtra(DeadlineNotification.EXTRA_REPEATS_DAILY, note.isRepeating)
+            putExtra(DeadlineNotification.EXTRA_REPEAT_RULE, note.repeatRule.name)
         }
         return PendingIntent.getBroadcast(
             context,

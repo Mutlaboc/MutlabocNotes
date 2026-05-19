@@ -65,7 +65,7 @@ class NotesRepositoryTest {
                 category = NoteCategory.TASKS.name,
                 checklist = emptyList(),
                 deadlineMillis = null,
-                isRepeating = false,
+                repeatRule = RepeatRule.NONE.name,
                 coinCount = 4,
                 isCompleted = false
             ),
@@ -175,7 +175,7 @@ class NotesRepositoryTest {
         category = NoteCategory.TASKS.name,
         checklist = emptyList(),
         deadlineMillis = null,
-        isRepeating = false,
+        repeatRule = RepeatRule.NONE.name,
         coinCount = coinCount,
         isCompleted = false
     )
@@ -236,7 +236,7 @@ private class FakeNotesApi : NotesApi {
         category = NoteCategory.TASKS.name,
         checklist = emptyList<ChecklistItemDto>(),
         deadlineMillis = null,
-        isRepeating = false,
+        repeatRule = RepeatRule.NONE.name,
         coinCount = 0,
         isCompleted = false
     )

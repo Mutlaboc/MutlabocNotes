@@ -109,7 +109,7 @@ class DeadlineNotificationSchedulerTest {
         val result = scheduler.schedule(
             task(
                 deadlineMillis = pastDeadlineMillis,
-                isRepeating = true
+                repeatRule = RepeatRule.DAILY
             )
         )
 
@@ -118,6 +118,34 @@ class DeadlineNotificationSchedulerTest {
             calendarMillis(2026, Calendar.JANUARY, 11, 9),
             backend.exactCalls.single().triggerAtMillis
         )
+    }
+
+    @Test
+    fun weeklyPastDeadlineRollsForwardToNextMatchingWeekdayNineAm() {
+        val trigger = nextDeadlineTriggerMillis(
+            deadlineMillis = calendarMillis(2026, Calendar.JANUARY, 9, 12),
+            nowMillis = calendarMillis(2026, Calendar.JANUARY, 10, 12),
+            repeatRule = RepeatRule.WEEKLY
+        )
+
+        assertEquals(calendarMillis(2026, Calendar.JANUARY, 16, 9), trigger)
+    }
+
+    @Test
+    fun monthlyPastDeadlineUsesLastValidDayThenOriginalAnchorWhenPossible() {
+        val februaryTrigger = nextDeadlineTriggerMillis(
+            deadlineMillis = calendarMillis(2026, Calendar.JANUARY, 31, 12),
+            nowMillis = calendarMillis(2026, Calendar.FEBRUARY, 1, 12),
+            repeatRule = RepeatRule.MONTHLY
+        )
+        val marchTrigger = nextDeadlineTriggerMillis(
+            deadlineMillis = calendarMillis(2026, Calendar.JANUARY, 31, 12),
+            nowMillis = calendarMillis(2026, Calendar.MARCH, 1, 12),
+            repeatRule = RepeatRule.MONTHLY
+        )
+
+        assertEquals(calendarMillis(2026, Calendar.FEBRUARY, 28, 9), februaryTrigger)
+        assertEquals(calendarMillis(2026, Calendar.MARCH, 31, 9), marchTrigger)
     }
 
     @Test
@@ -175,7 +203,7 @@ class DeadlineNotificationSchedulerTest {
         category: NoteCategory = NoteCategory.TASKS,
         deadlineMillis: Long? = futureDeadlineMillis,
         isCompleted: Boolean = false,
-        isRepeating: Boolean = false
+        repeatRule: RepeatRule = RepeatRule.NONE
     ): Note {
         return Note(
             id = id,
@@ -183,7 +211,7 @@ class DeadlineNotificationSchedulerTest {
             category = category,
             deadlineMillis = deadlineMillis,
             isCompleted = isCompleted,
-            isRepeating = isRepeating
+            repeatRule = repeatRule
         )
     }
 

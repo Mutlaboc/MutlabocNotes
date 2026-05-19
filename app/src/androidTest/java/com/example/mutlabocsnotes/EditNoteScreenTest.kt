@@ -124,7 +124,7 @@ class EditNoteScreenTest {
             assertEquals(NoteCategory.NOTES, note.category)
             assertEquals(emptyList<ChecklistItem>(), note.checklist)
             assertEquals(null, note.deadlineMillis)
-            assertEquals(false, note.isRepeating)
+            assertEquals(RepeatRule.NONE, note.repeatRule)
         }
     }
 
@@ -139,7 +139,7 @@ class EditNoteScreenTest {
                 category = NoteCategory.TASKS,
                 checklist = listOf(ChecklistItem(text = "hidden")),
                 deadlineMillis = DEADLINE,
-                isRepeating = true,
+                repeatRule = RepeatRule.WEEKLY,
                 coinCount = 2
             ),
             onSaveClick = { savedNote = it }
@@ -153,7 +153,29 @@ class EditNoteScreenTest {
             assertEquals(NoteCategory.TASKS, note.category)
             assertEquals(emptyList<ChecklistItem>(), note.checklist)
             assertEquals(DEADLINE, note.deadlineMillis)
-            assertEquals(true, note.isRepeating)
+            assertEquals(RepeatRule.WEEKLY, note.repeatRule)
+        }
+    }
+
+    @Test
+    fun repeatRuleDropdownSelectsMonthlyBeforeSave() {
+        var savedNote: Note? = null
+        setEditNoteContent(
+            note = Note(
+                id = "task",
+                title = "Task",
+                category = NoteCategory.TASKS,
+                deadlineMillis = DEADLINE
+            ),
+            onSaveClick = { savedNote = it }
+        )
+
+        composeRule.onNodeWithTag(REPEAT_RULE_DROPDOWN_TEST_TAG).performScrollTo().performClick()
+        composeRule.onNodeWithTag(repeatRuleOptionTestTag(RepeatRule.MONTHLY)).performClick()
+        clickSave()
+
+        composeRule.runOnIdle {
+            assertEquals(RepeatRule.MONTHLY, checkNotNull(savedNote).repeatRule)
         }
     }
 
@@ -171,7 +193,7 @@ class EditNoteScreenTest {
                     ChecklistItem(text = " ", isChecked = true)
                 ),
                 deadlineMillis = DEADLINE,
-                isRepeating = true
+                repeatRule = RepeatRule.MONTHLY
             ),
             onSaveClick = { savedNote = it }
         )
@@ -184,7 +206,7 @@ class EditNoteScreenTest {
             assertEquals(NoteCategory.SHOPPING, note.category)
             assertEquals(listOf(ChecklistItem(text = "Milk")), note.checklist)
             assertEquals(null, note.deadlineMillis)
-            assertEquals(false, note.isRepeating)
+            assertEquals(RepeatRule.NONE, note.repeatRule)
         }
     }
 

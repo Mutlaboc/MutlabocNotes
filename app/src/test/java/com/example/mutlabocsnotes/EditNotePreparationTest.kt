@@ -16,7 +16,7 @@ class EditNotePreparationTest {
             selectedCategory = NoteCategory.NOTES,
             checklistItems = emptyList(),
             selectedDeadlineMillis = DEADLINE,
-            isRepeating = true,
+            repeatRule = RepeatRule.MONTHLY,
             coinCountText = "2",
             defaultCoinCount = 1
         )
@@ -46,7 +46,7 @@ class EditNotePreparationTest {
                     ChecklistItem(text = "   ", isChecked = true)
                 ),
                 selectedDeadlineMillis = DEADLINE,
-                isRepeating = true,
+                repeatRule = RepeatRule.MONTHLY,
                 coinCountText = "4",
                 defaultCoinCount = 1
             )
@@ -57,7 +57,7 @@ class EditNotePreparationTest {
         assertEquals(NoteCategory.SHOPPING, prepared.category)
         assertEquals(listOf(ChecklistItem(text = "Milk", isChecked = false)), prepared.checklist)
         assertEquals(null, prepared.deadlineMillis)
-        assertEquals(false, prepared.isRepeating)
+        assertEquals(RepeatRule.NONE, prepared.repeatRule)
         assertEquals(4, prepared.coinCount)
         assertEquals(true, prepared.isCompleted)
     }
@@ -73,7 +73,7 @@ class EditNotePreparationTest {
                 selectedCategory = NoteCategory.TASKS,
                 checklistItems = listOf(ChecklistItem(text = "Milk")),
                 selectedDeadlineMillis = DEADLINE,
-                isRepeating = true,
+                repeatRule = RepeatRule.WEEKLY,
                 coinCountText = "bad",
                 defaultCoinCount = 3
             )
@@ -83,7 +83,7 @@ class EditNotePreparationTest {
         assertEquals(NoteCategory.TASKS, prepared.category)
         assertEquals(emptyList<ChecklistItem>(), prepared.checklist)
         assertEquals(DEADLINE, prepared.deadlineMillis)
-        assertEquals(true, prepared.isRepeating)
+        assertEquals(RepeatRule.WEEKLY, prepared.repeatRule)
         assertEquals(3, prepared.coinCount)
     }
 
@@ -98,7 +98,7 @@ class EditNotePreparationTest {
                 selectedCategory = NoteCategory.NOTES,
                 checklistItems = listOf(ChecklistItem(text = "Milk")),
                 selectedDeadlineMillis = DEADLINE,
-                isRepeating = true,
+                repeatRule = RepeatRule.MONTHLY,
                 coinCountText = "5",
                 defaultCoinCount = 1
             )
@@ -108,7 +108,7 @@ class EditNotePreparationTest {
         assertEquals(NoteCategory.NOTES, prepared.category)
         assertEquals(emptyList<ChecklistItem>(), prepared.checklist)
         assertEquals(null, prepared.deadlineMillis)
-        assertEquals(false, prepared.isRepeating)
+        assertEquals(RepeatRule.NONE, prepared.repeatRule)
         assertEquals(5, prepared.coinCount)
     }
 

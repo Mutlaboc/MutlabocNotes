@@ -118,9 +118,12 @@ private fun NoteDetails(note: Note) {
                     style = MaterialTheme.typography.caption
                 )
             }
-            if (note.isRepeating) {
+            if (note.repeatRule != RepeatRule.NONE) {
                 Text(
-                    text = stringResource(R.string.note_repeating),
+                    text = stringResource(
+                        R.string.note_repeating,
+                        stringResource(note.repeatRule.labelRes())
+                    ),
                     style = MaterialTheme.typography.caption
                 )
             }

@@ -19,6 +19,13 @@ enum class NoteCategory {
     NOTES
 }
 
+enum class RepeatRule {
+    NONE,
+    DAILY,
+    WEEKLY,
+    MONTHLY
+}
+
 /**
  * Базовая модель
  */
@@ -30,7 +37,7 @@ data class Note(
     val category: NoteCategory = NoteCategory.NOTES,
     val checklist: List<ChecklistItem> = emptyList(),
     val deadlineMillis: Long? = null,
-    val isRepeating: Boolean = false,
+    val repeatRule: RepeatRule = RepeatRule.NONE,
     val coinCount: Int = 0,
     val isCompleted: Boolean = false
 )

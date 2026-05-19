@@ -64,12 +64,12 @@ class DeadlineNotificationIntentTest {
     }
 
     @Test
-    fun repeatingDeadlineNoteFromAlarm_buildsDailyTaskOnlyForValidRepeatingAlarm() {
+    fun repeatingDeadlineNoteFromAlarm_buildsTaskOnlyForValidRepeatRuleAlarm() {
         val note = repeatingDeadlineNoteFromAlarm(
             noteId = "task",
             noteTitle = "Task",
             deadlineMillis = DEADLINE,
-            repeatsDaily = true
+            repeatRule = RepeatRule.WEEKLY
         )
 
         assertEquals(
@@ -78,7 +78,7 @@ class DeadlineNotificationIntentTest {
                 title = "Task",
                 category = NoteCategory.TASKS,
                 deadlineMillis = DEADLINE,
-                isRepeating = true
+                repeatRule = RepeatRule.WEEKLY
             ),
             note
         )
@@ -87,7 +87,7 @@ class DeadlineNotificationIntentTest {
                 noteId = "task",
                 noteTitle = "Task",
                 deadlineMillis = DEADLINE,
-                repeatsDaily = false
+                repeatRule = RepeatRule.NONE
             )
         )
         assertNull(
@@ -95,7 +95,7 @@ class DeadlineNotificationIntentTest {
                 noteId = "",
                 noteTitle = "Task",
                 deadlineMillis = DEADLINE,
-                repeatsDaily = true
+                repeatRule = RepeatRule.DAILY
             )
         )
         assertNull(
@@ -103,7 +103,7 @@ class DeadlineNotificationIntentTest {
                 noteId = "task",
                 noteTitle = "Task",
                 deadlineMillis = 0L,
-                repeatsDaily = true
+                repeatRule = RepeatRule.DAILY
             )
         )
     }

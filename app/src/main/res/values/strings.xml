@@ -64,7 +64,7 @@
     <string name="switch_user">Сменить пользователя</string>
     <string name="active_tasks">Активные задачи</string>
     <string name="note_deadline_value">Дедлайн: %1$s</string>
-    <string name="note_repeating">Повторяется ежедневно</string>
+    <string name="note_repeating">Повтор: %1$s</string>
     <string name="checklist_preview_item">- %1$s</string>
     <string name="more_items_indicator">...</string>
 
@@ -78,7 +78,11 @@
     <string name="checklist_add_item">Добавить</string>
     <string name="checklist_delete_item">Удалить пункт</string>
     <string name="deadline_label">Дедлайн</string>
-    <string name="repeat_label">Повторять ежедневно</string>
+    <string name="repeat_label">Повтор: %1$s</string>
+    <string name="repeat_rule_none">Нет</string>
+    <string name="repeat_rule_daily">Ежедневно</string>
+    <string name="repeat_rule_weekly">Еженедельно</string>
+    <string name="repeat_rule_monthly">Ежемесячно</string>
     <string name="coin_count_label">Количество монет</string>
     <string name="note_delete_title">Удалить заметку?</string>
     <string name="note_delete_message">Это действие нельзя отменить.</string>

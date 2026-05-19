@@ -231,10 +231,10 @@ class AppContainerWiringTest {
         assertTrue(icon.isFile)
         assertTrue(receiver.contains(".setSmallIcon(R.drawable.ic_notification)"))
         assertTrue(receiver.contains("EXTRA_DEADLINE_MILLIS"))
-        assertTrue(receiver.contains("EXTRA_REPEATS_DAILY"))
+        assertTrue(receiver.contains("EXTRA_REPEAT_RULE"))
         assertTrue(receiver.contains("repeatingDeadlineNoteFromAlarm("))
         assertTrue(scheduler.contains("putExtra(DeadlineNotification.EXTRA_DEADLINE_MILLIS"))
-        assertTrue(scheduler.contains("putExtra(DeadlineNotification.EXTRA_REPEATS_DAILY"))
+        assertTrue(scheduler.contains("putExtra(DeadlineNotification.EXTRA_REPEAT_RULE"))
     }
 
     @Test

@@ -7,7 +7,6 @@ import com.example.mutlabocsnotes.network.NoteDto
 import com.example.mutlabocsnotes.network.NoteUpsertRequestDto
 import com.google.gson.Gson
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class JsonContractFixtureTest {
@@ -34,12 +33,12 @@ class JsonContractFixtureTest {
         assertEquals("Groceries", response.title)
         assertEquals("SHOPPING", response.category)
         assertEquals("Milk", response.checklist.single().text)
-        assertFalse(response.isRepeating)
+        assertEquals(RepeatRule.NONE.name, response.repeatRule)
 
         assertEquals("Updated task", request.title)
         assertEquals("TASKS", request.category)
         assertEquals(3, request.coinCount)
-        assertEquals(true, request.isRepeating)
+        assertEquals(RepeatRule.WEEKLY.name, request.repeatRule)
     }
 
     @Test

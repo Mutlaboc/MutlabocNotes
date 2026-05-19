@@ -17,7 +17,7 @@ object DeadlineNotification {
     const val EXTRA_NOTE_ID = "extra_note_id"
     const val EXTRA_NOTE_TITLE = "extra_note_title"
     const val EXTRA_DEADLINE_MILLIS = "extra_deadline_millis"
-    const val EXTRA_REPEATS_DAILY = "extra_repeats_daily"
+    const val EXTRA_REPEAT_RULE = "extra_repeat_rule"
     const val ACTION_OPEN_NOTE = "com.example.mutlabocsnotes.action.OPEN_DEADLINE_NOTE"
 
     // Формирует стабильный request code уведомления по id заметки.
@@ -125,7 +125,7 @@ class DeadlineNotificationReceiver: BroadcastReceiver() {
             noteId = noteId,
             noteTitle = noteTitle,
             deadlineMillis = intent.getLongExtra(DeadlineNotification.EXTRA_DEADLINE_MILLIS, 0L),
-            repeatsDaily = intent.getBooleanExtra(DeadlineNotification.EXTRA_REPEATS_DAILY, false)
+            repeatRule = intent.getStringExtra(DeadlineNotification.EXTRA_REPEAT_RULE).toRepeatRule()
         ) ?: return
         DeadlineNotificationScheduler(context).schedule(note)
     }
@@ -140,14 +140,18 @@ internal fun repeatingDeadlineNoteFromAlarm(
     noteId: String,
     noteTitle: String?,
     deadlineMillis: Long,
-    repeatsDaily: Boolean
+    repeatRule: RepeatRule
 ): Note? {
-    if (noteId.isBlank() || !repeatsDaily || deadlineMillis <= 0L) return null
+    if (noteId.isBlank() || repeatRule == RepeatRule.NONE || deadlineMillis <= 0L) return null
     return Note(
         id = noteId,
         title = noteTitle.orEmpty(),
         category = NoteCategory.TASKS,
         deadlineMillis = deadlineMillis,
-        isRepeating = true
+        repeatRule = repeatRule
     )
 }
+
+private fun String?.toRepeatRule(): RepeatRule =
+    runCatching { RepeatRule.valueOf(this.orEmpty()) }
+        .getOrDefault(RepeatRule.NONE)

@@ -50,7 +50,7 @@ internal fun prepareNoteForSave(
     selectedCategory: NoteCategory,
     checklistItems: List<ChecklistItem>,
     selectedDeadlineMillis: Long,
-    isRepeating: Boolean,
+    repeatRule: RepeatRule,
     coinCountText: String,
     defaultCoinCount: Int
 ): Note? {
@@ -79,10 +79,10 @@ internal fun prepareNoteForSave(
         } else {
             null
         },
-        isRepeating = if (selectedCategory == NoteCategory.TASKS) {
-            isRepeating
+        repeatRule = if (selectedCategory == NoteCategory.TASKS) {
+            repeatRule
         } else {
-            false
+            RepeatRule.NONE
         },
         coinCount = coinCountText.toIntOrNull() ?: defaultCoinCount,
         isCompleted = originalNote?.isCompleted ?: false
@@ -124,8 +124,8 @@ fun EditNoteScreen(
     var selectedDeadlineMillis by remember(noteId) {
         mutableStateOf(note?.deadlineMillis ?: defaultDeadline)
     }
-    var isRepeating by remember(noteId) {
-        mutableStateOf(note?.isRepeating ?: false)
+    var repeatRule by remember(noteId) {
+        mutableStateOf(note?.repeatRule ?: RepeatRule.NONE)
     }
     val defaultCoinCount = remember(noteId) { note?.coinCount ?: (1..5).random() }
     var coinCountText by remember(noteId) {
@@ -187,9 +187,9 @@ fun EditNoteScreen(
                     DeadlinePicker(
                         selectedDeadlineMillis = selectedDeadlineMillis,
                         todayMillis = todayCalendar.timeInMillis,
-                        isRepeating = isRepeating,
+                        repeatRule = repeatRule,
                         onDeadlineSelected = { selectedDeadlineMillis = it },
-                        onRepeatingChange = { isRepeating = it }
+                        onRepeatRuleChange = { repeatRule = it }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     NoteContentField(
@@ -224,7 +224,7 @@ fun EditNoteScreen(
                             selectedCategory = selectedCategory,
                             checklistItems = checklistItems,
                             selectedDeadlineMillis = selectedDeadlineMillis,
-                            isRepeating = isRepeating,
+                            repeatRule = repeatRule,
                             coinCountText = coinCountText,
                             defaultCoinCount = defaultCoinCount
                         )
