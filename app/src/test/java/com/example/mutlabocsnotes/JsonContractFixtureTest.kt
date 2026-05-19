@@ -55,8 +55,10 @@ class JsonContractFixtureTest {
 
         assertEquals("Manuals", request.title)
         assertEquals("DOCUMENTS", request.section)
-        assertEquals(123L, request.createdAt)
-        assertEquals(456L, request.updatedAt)
+        assertEquals("serial", request.fields.single().key)
+        assertEquals("A-1", request.fields.single().value)
+        assertEquals("Changed", request.note)
+        assertEquals(listOf("https://example.com/first"), request.links)
     }
 
     @Test

@@ -29,7 +29,7 @@ class HomeInfoRepositoryTest {
     }
 
     @Test
-    fun insert_returnsCanonicalServerCardAndSendsLegacyTimestampPayload() = runTest(mainDispatcherRule.dispatcher) {
+    fun insert_returnsCanonicalServerCardAndSendsTimestampFreePayload() = runTest(mainDispatcherRule.dispatcher) {
         val clientCard = card(
             title = "Client title",
             createdAt = 123,
@@ -55,12 +55,15 @@ class HomeInfoRepositoryTest {
             ),
             result
         )
-        assertEquals(123L, api.lastCreateRequest?.createdAt)
-        assertEquals(456L, api.lastCreateRequest?.updatedAt)
+        assertEquals("Client title", api.lastCreateRequest?.title)
+        assertEquals("METERS", api.lastCreateRequest?.section)
+        assertEquals(listOf(HomeFieldDto("serial", "A-1")), api.lastCreateRequest?.fields)
+        assertEquals("Keep visible", api.lastCreateRequest?.note)
+        assertEquals(listOf("https://example.com/first"), api.lastCreateRequest?.links)
     }
 
     @Test
-    fun update_returnsCanonicalServerCard() = runTest(mainDispatcherRule.dispatcher) {
+    fun update_returnsCanonicalServerCardAndSendsTimestampFreePayload() = runTest(mainDispatcherRule.dispatcher) {
         val clientCard = card(
             id = "server-id",
             title = "Client update",
@@ -88,8 +91,11 @@ class HomeInfoRepositoryTest {
             result
         )
         assertEquals("server-id", api.lastUpdateId)
-        assertEquals(123L, api.lastUpdateRequest?.createdAt)
-        assertEquals(456L, api.lastUpdateRequest?.updatedAt)
+        assertEquals("Client update", api.lastUpdateRequest?.title)
+        assertEquals("METERS", api.lastUpdateRequest?.section)
+        assertEquals(listOf(HomeFieldDto("serial", "A-1")), api.lastUpdateRequest?.fields)
+        assertEquals("Keep visible", api.lastUpdateRequest?.note)
+        assertEquals(listOf("https://example.com/first"), api.lastUpdateRequest?.links)
     }
 
     @Test

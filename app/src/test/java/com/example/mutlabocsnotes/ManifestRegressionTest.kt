@@ -60,6 +60,21 @@ class ManifestRegressionTest {
     }
 
     @Test
+    fun stageDebugManifestAllowsLocalHttpBackends() {
+        val stageDebugManifest = xmlDocumentElement(
+            File("src/stageDebug/AndroidManifest.xml"),
+            File("app/src/stageDebug/AndroidManifest.xml")
+        )
+        val debugApplication = stageDebugManifest.children("application").single()
+
+        assertEquals("true", debugApplication.androidAttribute("usesCleartextTraffic"))
+        assertEquals(
+            "android:usesCleartextTraffic",
+            debugApplication.attributeNS(TOOLS_NAMESPACE, "replace")
+        )
+    }
+
+    @Test
     fun legacyBackupRulesExcludeSessionAndAlarmBookkeeping() {
         val backupRules = xmlDocumentElement(
             File("src/main/res/xml/backup_rules.xml"),
@@ -135,12 +150,17 @@ class ManifestRegressionTest {
         return getAttribute(name)
     }
 
+    private fun Element.attributeNS(namespace: String, name: String): String {
+        return getAttributeNS(namespace, name)
+    }
+
     private fun org.w3c.dom.NodeList.asSequence(): Sequence<Node> {
         return (0 until length).asSequence().map { item(it) }
     }
 
     private companion object {
         const val ANDROID_NAMESPACE = "http://schemas.android.com/apk/res/android"
+        const val TOOLS_NAMESPACE = "http://schemas.android.com/tools"
         const val YANDEX_CLIENT_ID_METADATA = "com.yandex.auth.CLIENT_ID"
         const val YANDEX_CLIENT_ID_PLACEHOLDER = "\${YANDEX_CLIENT_ID}"
     }

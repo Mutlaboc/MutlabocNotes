@@ -29,8 +29,6 @@ data class HomeCardUpsertRequestDto(
     val fields: List<HomeFieldDto>,
     val note: String,
     val links: List<String>,
-    val createdAt: Long,
-    val updatedAt: Long,
 )
 
 // Преобразует строку раздела из backend в enum доменной модели с безопасным fallback.
@@ -70,6 +68,4 @@ fun HomeInfoCard.toUpsertRequestDto(): HomeCardUpsertRequestDto = HomeCardUpsert
     fields = fields.map { it.toDto() },
     note = note,
     links = links,
-    createdAt = createdAt,
-    updatedAt = updatedAt,
 )
