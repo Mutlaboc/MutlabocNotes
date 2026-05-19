@@ -22,7 +22,7 @@ class HomeInfoRepository(
     // Загружает все карточки и отдаёт ошибку наружу, чтобы экран мог показать сообщение.
     override suspend fun getAllCards(): Result<List<HomeInfoCard>> = withContext(Dispatchers.IO) {
         return@withContext try {
-            Result.success(api.getHomeCards().map { it.toDomain() })
+            Result.success(api.getHomeCards().map { it.toDomain() }.canonicalCards())
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -64,5 +64,10 @@ class HomeInfoRepository(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    private fun List<HomeInfoCard>.canonicalCards(): List<HomeInfoCard> {
+        return sortedByDescending { it.updatedAt }
+            .distinctBy { it.id }
     }
 }

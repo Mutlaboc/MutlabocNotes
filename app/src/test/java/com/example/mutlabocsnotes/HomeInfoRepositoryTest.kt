@@ -29,6 +29,26 @@ class HomeInfoRepositoryTest {
     }
 
     @Test
+    fun getAll_returnsCanonicalCardsDeduplicatedByNewestUpdatedAt() = runTest(mainDispatcherRule.dispatcher) {
+        val staleDuplicate = cardDto(id = "meter", title = "Old meter", updatedAt = 1)
+        val other = cardDto(id = "other", title = "Other", updatedAt = 2)
+        val freshDuplicate = cardDto(id = "meter", title = "Fresh meter", updatedAt = 3)
+        api.cardsResponse = listOf(staleDuplicate, other, freshDuplicate)
+
+        val result = repository.getAllCards()
+
+        assertEquals(
+            Result.success(
+                listOf(
+                    card(id = "meter", title = "Fresh meter", updatedAt = 3),
+                    card(id = "other", title = "Other", updatedAt = 2)
+                )
+            ),
+            result
+        )
+    }
+
+    @Test
     fun insert_returnsCanonicalServerCardAndSendsTimestampFreePayload() = runTest(mainDispatcherRule.dispatcher) {
         val clientCard = card(
             title = "Client title",

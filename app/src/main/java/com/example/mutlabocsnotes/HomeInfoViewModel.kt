@@ -106,7 +106,6 @@ class HomeInfoViewModel(
     private fun applyCards(cards: List<HomeInfoCard>) {
         val canonicalCards = cards
             .sortedByDescending { it.updatedAt }
-            .distinctBy { it.id }
         uiState = if (canonicalCards.isEmpty()) {
             HomeInfoUiState.Empty
         } else {
