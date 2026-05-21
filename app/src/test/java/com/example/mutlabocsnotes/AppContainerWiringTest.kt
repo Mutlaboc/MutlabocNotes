@@ -286,10 +286,10 @@ class AppContainerWiringTest {
     }
 
     private companion object {
-        const val PRODUCTION_BACKEND_URL = "https://homenoteapp.ru/"
+        const val PRODUCTION_BACKEND_URL = "https://prod.example.invalid/"
         const val PRODUCTION_GOOGLE_WEB_CLIENT_ID =
-            "822837772778-f7lc8b9nnbpn1u65njf7agkj392dub8c.apps.googleusercontent.com"
-        const val PRODUCTION_YANDEX_CLIENT_ID = "776676c1ec6c4097ba260b05824f3a39"
+            "prod-google-web-client-id.apps.googleusercontent.com"
+        const val PRODUCTION_YANDEX_CLIENT_ID = "prod-yandex-client-id"
     }
 }
 

@@ -17,6 +17,7 @@ local.properties
 
 # Android Studio / IntelliJ user-specific files
 *.iml
+/.idea/
 /.idea/caches/
 /.idea/libraries/
 /.idea/modules/
