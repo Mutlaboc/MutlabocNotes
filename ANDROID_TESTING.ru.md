@@ -1,8 +1,8 @@
 # Тестирование Android-релиза
 
-Используйте этот чеклист перед продвижением release candidate. Он намеренно остается
-ручным: в рамках этого шага release hardening не меняются runtime-код, Gradle wiring,
-CI jobs или переключение backend URL.
+Используйте этот чеклист перед продвижением release candidate. Он разделяет compile
+smoke, ручную social-auth проверку и Android 12/13/14 notification regression, чтобы
+release gate не зависел от локальных секретов, но реальные OAuth-сценарии не потерялись.
 
 ## Локальные проверки перед RC
 
@@ -17,6 +17,19 @@ CI jobs или переключение backend URL.
 - Debug APK собирается успешно.
 - Unit tests проходят.
 - Новые warnings или failures не принимаются без связанного blocker.
+- Реальные Google/Yandex client IDs не требуются: `dev` flavor использует compile-safe
+  placeholders, если values не переданы явно.
+
+## Social auth smoke
+
+Перед RC отдельно проверьте Google/Yandex sign-in на `stageDebug` или другом выбранном
+окружении с настоящими OAuth client IDs:
+
+- Google sign-in возвращает id token, backend login проходит успешно.
+- Yandex sign-in возвращает access token, backend login проходит успешно.
+- Отмена, пустой token и ошибка SDK показываются через snackbar/UiMessage.
+- Client IDs берутся из `local.properties`, Gradle properties, environment variables
+  или CI secrets; placeholders из `dev` flavor для этой проверки не подходят.
 
 ## Connected smoke suite
 
@@ -46,6 +59,7 @@ device. Запустите его минимум один раз на каждо
 | Notes | Create, edit, delete, list refresh, empty state, validation errors | TBD | TBD | TBD |
 | Completion | Toggle completion, verify persistence after refresh and app restart | TBD | TBD | TBD |
 | Home cards | Create, edit, delete, list refresh, invalid or missing data handling | TBD | TBD | TBD |
+| Notifications | One-time deadline, repeating deadline, notification tap opens note, exact-alarm granted/denied fallback, re-entry from Settings | TBD | TBD | TBD |
 | Settings | Theme toggle, language switch, persisted preferences after restart | TBD | TBD | TBD |
 | Logout | Logout returns to auth, protected screens are inaccessible, refresh token is revoked | TBD | TBD | TBD |
 | Backend errors | Airplane/offline mode, backend unavailable, 401 after expired session, retry after recovery | TBD | TBD | TBD |

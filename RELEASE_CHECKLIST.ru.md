@@ -9,14 +9,15 @@
 | Gate | Owner | Evidence | Status |
 | --- | --- | --- | --- |
 | Android branch is rebased or merged onto the intended release branch | TBD | Commit SHA / PR | TBD |
-| `.\gradlew.bat :app:testDevDebugUnitTest` проходит | TBD | Local log или CI run link | TBD |
-| `.\gradlew.bat :app:lintDevDebug` проходит | TBD | Local log или CI run link | TBD |
+| `.\gradlew.bat :app:assembleDevDebug` проходит без OAuth secrets | TBD | Local log или CI run link | TBD |
+| `.\gradlew.bat :app:testDevDebugUnitTest` проходит без OAuth secrets | TBD | Local log или CI run link | TBD |
+| `.\gradlew.bat :app:lintDevDebug` проходит без OAuth secrets | TBD | Local log или CI run link | TBD |
 | `.\gradlew.bat :app:assembleProdRelease` проходит без local signing values | TBD | Local log | TBD |
 | Signed `prodRelease` APK/AAB собран с release signing inputs | TBD | GitHub Actions run или local artifact path | TBD |
 | `.\gradlew.bat :app:connectedDevDebugAndroidTest` проходит хотя бы на одном target device | TBD | Run notes | TBD |
 | Backend tests проходят в `notes-backend` | TBD | `.\gradlew.bat test` log или CI run link | TBD |
 | Backend staging deploy runbook проверен | TBD | `notes-backend/RELEASE_RUNBOOK.md` revision | TBD |
-| Test accounts и Google/Yandex auth configuration готовы | TBD | Account references, no secrets | TBD |
+| Test accounts и Google/Yandex auth configuration готовы для ручной social-auth QA | TBD | Account references, no secrets | TBD |
 
 ## Android QA matrix
 
@@ -28,10 +29,10 @@
 
 Обязательное покрытие сценариев для каждой строки:
 
-- Auth: register/login, invalid credentials, Google/Yandex auth availability, `/auth/me` restore.
+- Auth: register/login, invalid credentials, Google/Yandex auth с реальными client IDs, `/auth/me` restore.
 - Notes: create, edit, delete, list refresh, empty state, validation errors, completion toggle.
 - Home cards: create, edit, delete, list refresh, invalid or missing data handling.
-- Notifications: one-time deadline notification, repeating deadline notification, tap opens the note, exact-alarm permission fallback.
+- Notifications: one-time deadline notification, repeating deadline notification, tap opens the note, exact-alarm granted/denied fallback, re-entry из Settings.
 - Settings: dark theme, light theme, language switch, persistence after app restart.
 - Logout: пользователь возвращается на auth, protected screens недоступны, refresh token не восстанавливает session.
 - Failure paths: offline mode, backend unavailable, expired or unauthorized session, retry after recovery.
@@ -68,6 +69,8 @@ build, backend artifact, database backup reference, rollback owner и result.
 - Принятые production artifacts помечаются tag `android-v{versionName}` после go/no-go approval.
 - R8/minify остаётся выключенным для этого релиза; включение R8 считается отдельной release-hardening задачей.
 - Release signing использует только внешние inputs: `ANDROID_KEYSTORE_FILE`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`. GitHub Actions декодирует `ANDROID_KEYSTORE_BASE64` в keystore file.
+- `release` build type не должен fallback-иться на debug signing. Если release signing inputs отсутствуют, локальные release artifacts остаются unsigned.
+- `dev` flavor compile smoke может использовать placeholder OAuth client IDs; реальный Google/Yandex sign-in проверяется вручную со значениями выбранного окружения.
 
 ## Crash и logging strategy
 

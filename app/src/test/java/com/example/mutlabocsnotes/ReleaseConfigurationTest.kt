@@ -1,6 +1,7 @@
 package com.example.mutlabocsnotes
 
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 import java.io.File
 
@@ -23,6 +24,19 @@ class ReleaseConfigurationTest {
         assertTrue(buildGradle.contains("signingConfigs"))
         assertTrue(buildGradle.contains("create(\"release\")"))
         assertTrue(buildGradle.contains("signingConfig = signingConfigs.getByName(\"release\")"))
+        assertFalse(releaseBuildTypeBlock(buildGradle).contains("signingConfigs.getByName(\"debug\")"))
+    }
+
+    @Test
+    fun devFlavorHasCompileSafeOauthPlaceholders() {
+        val buildGradle = projectFile("app/build.gradle.kts").readText()
+
+        assertTrue(buildGradle.contains("DEV_GOOGLE_WEB_CLIENT_ID_PLACEHOLDER"))
+        assertTrue(buildGradle.contains("dev-google-placeholder.apps.googleusercontent.com"))
+        assertTrue(buildGradle.contains("DEV_YANDEX_CLIENT_ID_PLACEHOLDER"))
+        assertTrue(buildGradle.contains("dev-yandex-placeholder"))
+        assertTrue(buildGradle.contains("googleWebClientIdFallback = DEV_GOOGLE_WEB_CLIENT_ID_PLACEHOLDER"))
+        assertTrue(buildGradle.contains("yandexClientIdFallback = DEV_YANDEX_CLIENT_ID_PLACEHOLDER"))
     }
 
     @Test
@@ -39,6 +53,17 @@ class ReleaseConfigurationTest {
         assertTrue(workflow.contains("PROD_YANDEX_CLIENT_ID"))
         assertTrue(workflow.contains(":app:bundleProdRelease :app:assembleProdRelease"))
         assertTrue(workflow.contains("actions/upload-artifact@v4"))
+    }
+
+    @Test
+    fun androidSmokeWorkflowDoesNotRequireOauthSecretsForDevBuilds() {
+        val workflow = projectFile(".github/workflows/android-unit-tests.yml").readText()
+
+        assertTrue(workflow.contains("./gradlew assembleDevDebug testDevDebugUnitTest lintDevDebug"))
+        assertFalse(workflow.contains("secrets.DEV_GOOGLE_WEB_CLIENT_ID"))
+        assertFalse(workflow.contains("secrets.DEV_YANDEX_CLIENT_ID"))
+        assertFalse(workflow.contains("vars.DEV_GOOGLE_WEB_CLIENT_ID"))
+        assertFalse(workflow.contains("vars.DEV_YANDEX_CLIENT_ID"))
     }
 
     @Test
@@ -62,5 +87,13 @@ class ReleaseConfigurationTest {
             }
         }
         return File(directory, path)
+    }
+
+    private fun releaseBuildTypeBlock(buildGradle: String): String {
+        val start = buildGradle.indexOf("getByName(\"release\")")
+        check(start >= 0) { "release build type block not found" }
+        val nextSection = buildGradle.indexOf("\n    compileOptions", start)
+        check(nextSection > start) { "release build type block end not found" }
+        return buildGradle.substring(start, nextSection)
     }
 }

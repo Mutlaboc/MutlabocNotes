@@ -90,11 +90,11 @@ Google и Yandex client IDs передаются через Gradle в `BuildConf
 и manifest placeholders. Эти значения встраиваются в APK на этапе сборки,
 поэтому APK уже содержит backend URL и OAuth client IDs для выбранного flavor.
 
-Обязательные ключи для окружений:
+Ключи для окружений:
 
 ```properties
-DEV_GOOGLE_WEB_CLIENT_ID=...
-DEV_YANDEX_CLIENT_ID=...
+DEV_GOOGLE_WEB_CLIENT_ID=... # optional for compile smoke; required for real Google auth QA
+DEV_YANDEX_CLIENT_ID=...     # optional for compile smoke; required for real Yandex auth QA
 STAGE_GOOGLE_WEB_CLIENT_ID=...
 STAGE_YANDEX_CLIENT_ID=...
 PROD_GOOGLE_WEB_CLIENT_ID=...
@@ -102,9 +102,11 @@ PROD_YANDEX_CLIENT_ID=...
 ```
 
 OAuth client IDs являются идентификаторами приложения, а не полноценными
-секретами вроде private key. Их всё равно нужно задавать отдельно для каждого
-окружения через `local.properties`, параметры Gradle или CI secrets, чтобы не
-смешивать dev/stage/prod настройки.
+секретами вроде private key. Для `dev` flavor в Gradle есть compile-safe placeholders,
+чтобы `assembleDevDebug`, `testDevDebugUnitTest` и `lintDevDebug` были воспроизводимы
+без локальных секретов. Для реальной проверки Google/Yandex sign-in задавайте dev IDs
+явно через `local.properties`, Gradle properties или environment variables. Для
+`stage` и `prod` значения остаются обязательными, чтобы не смешивать окружения.
 
 ## Пример local.properties
 
@@ -156,8 +158,13 @@ Backend ожидает переменные `DB_JDBC_URL`, `DB_USERNAME`, `DB_PA
 Базовый набор Android unit-тестов:
 
 ```powershell
+.\gradlew.bat :app:assembleDevDebug
 .\gradlew.bat :app:testDevDebugUnitTest
+.\gradlew.bat :app:lintDevDebug
 ```
+
+Эти dev smoke-команды не требуют реальных Google/Yandex client IDs: если значения не
+заданы, используются placeholders, пригодные только для сборки и unit/lint checks.
 
 Перед release-кандидатом дополнительно проверьте:
 
@@ -165,6 +172,7 @@ Backend ожидает переменные `DB_JDBC_URL`, `DB_USERNAME`, `DB_PA
 - `.\gradlew.bat :app:testProdDebugUnitTest`
 - `.\gradlew.bat :app:assembleProdRelease`
 - emulator smoke для auth, notes, completed notes, home info, settings и notification navigation.
+- ручной Google/Yandex sign-in smoke с настоящими OAuth client IDs для выбранного окружения.
 
 ## Release signing
 
@@ -190,7 +198,7 @@ ANDROID_KEY_PASSWORD=...
   -PPROD_YANDEX_CLIENT_ID=...
 ```
 
-Если signing values не заданы или keystore file недоступен, `release` build type остаётся без `signingConfig`. Production URL и OAuth client IDs всё равно обязательны для `prod`-сборок.
+Если signing values не заданы или keystore file недоступен, `release` build type остаётся без `signingConfig` и не использует debug signing fallback. Production URL и OAuth client IDs всё равно обязательны для `prod`-сборок.
 
 GitHub Actions release workflow ожидает secrets:
 

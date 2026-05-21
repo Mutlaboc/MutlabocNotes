@@ -78,6 +78,10 @@ data class ReleaseSigningConfig(
     val keyPassword: String
 )
 
+val DEV_GOOGLE_WEB_CLIENT_ID_PLACEHOLDER =
+    "dev-google-placeholder.apps.googleusercontent.com"
+val DEV_YANDEX_CLIENT_ID_PLACEHOLDER = "dev-yandex-placeholder"
+
 fun releaseSigningConfig(): ReleaseSigningConfig? {
     val storeFilePath = configProperty("ANDROID_KEYSTORE_FILE")
     val storePassword = configProperty("ANDROID_KEYSTORE_PASSWORD")
@@ -112,14 +116,20 @@ fun releaseSigningConfig(): ReleaseSigningConfig? {
 fun environmentConfig(
     flavorName: String,
     prefix: String,
-    backendFallback: String? = null
+    backendFallback: String? = null,
+    googleWebClientIdFallback: String? = null,
+    yandexClientIdFallback: String? = null
 ): EnvironmentConfig {
     return EnvironmentConfig(
         backendBaseUrl = configProperty("${prefix}_BACKEND_URL")
             ?: backendFallback
             ?: requiredConfigProperty(flavorName, "${prefix}_BACKEND_URL"),
-        googleWebClientId = requiredConfigProperty(flavorName, "${prefix}_GOOGLE_WEB_CLIENT_ID"),
-        yandexClientId = requiredConfigProperty(flavorName, "${prefix}_YANDEX_CLIENT_ID")
+        googleWebClientId = configProperty("${prefix}_GOOGLE_WEB_CLIENT_ID")
+            ?: googleWebClientIdFallback
+            ?: requiredConfigProperty(flavorName, "${prefix}_GOOGLE_WEB_CLIENT_ID"),
+        yandexClientId = configProperty("${prefix}_YANDEX_CLIENT_ID")
+            ?: yandexClientIdFallback
+            ?: requiredConfigProperty(flavorName, "${prefix}_YANDEX_CLIENT_ID")
     )
 }
 
@@ -127,7 +137,9 @@ val environmentConfigs = mapOf(
     "dev" to environmentConfig(
         flavorName = "dev",
         prefix = "DEV",
-        backendFallback = "http://10.0.2.2:8080/"
+        backendFallback = "http://10.0.2.2:8080/",
+        googleWebClientIdFallback = DEV_GOOGLE_WEB_CLIENT_ID_PLACEHOLDER,
+        yandexClientIdFallback = DEV_YANDEX_CLIENT_ID_PLACEHOLDER
     ),
     "stage" to environmentConfig(
         flavorName = "stage",
@@ -202,7 +214,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
         }
     }
 

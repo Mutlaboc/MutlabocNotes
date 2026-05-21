@@ -32,15 +32,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Run assemble, dev debug unit tests, and lint
-        env:
-          DEV_GOOGLE_WEB_CLIENT_ID: ${{ vars.DEV_GOOGLE_WEB_CLIENT_ID || secrets.DEV_GOOGLE_WEB_CLIENT_ID }}
-          DEV_YANDEX_CLIENT_ID: ${{ vars.DEV_YANDEX_CLIENT_ID || secrets.DEV_YANDEX_CLIENT_ID }}
-        run: |
-          if [[ -z "$DEV_GOOGLE_WEB_CLIENT_ID" || -z "$DEV_YANDEX_CLIENT_ID" ]]; then
-            echo "DEV_GOOGLE_WEB_CLIENT_ID and DEV_YANDEX_CLIENT_ID are required for dev smoke builds." >&2
-            exit 1
-          fi
-          ./gradlew assembleDevDebug testDevDebugUnitTest lintDevDebug
+        run: ./gradlew assembleDevDebug testDevDebugUnitTest lintDevDebug
 
       - name: Upload unit test results
         if: always()
