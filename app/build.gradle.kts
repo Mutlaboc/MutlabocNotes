@@ -1,13 +1,157 @@
-// Набор плагинов для Android-приложения, Kotlin, обработки аннотаций и Compose.
-plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id ("kotlin-kapt")
-    id("org.jetbrains.kotlin.plugin.compose")
+import java.io.File
+import java.util.Properties
 
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.kapt)
+    alias(libs.plugins.compose.compiler)
 }
 
-// Конфигурация Android-модуля: id пакета, версии SDK, типы сборок и Compose.
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.isFile) {
+        localPropertiesFile.inputStream().use { load(it) }
+    }
+}
+
+fun configProperty(name: String): String? {
+    val gradleProperty = providers.gradleProperty(name).orNull
+    val localProperty = localProperties.getProperty(name)
+    val environmentProperty = providers.environmentVariable(name).orNull
+    return gradleProperty?.takeIf { it.isNotBlank() }
+        ?: localProperty?.takeIf { it.isNotBlank() }
+        ?: environmentProperty?.takeIf { it.isNotBlank() }
+}
+
+fun String.asBuildConfigString(): String {
+    return "\"" + replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+}
+
+val broadValidationTasks = setOf("assemble", "build", "check", "test", "lint")
+val requestedTaskNames = gradle.startParameter.taskNames.map { it.substringAfterLast(":") }
+
+fun String.asFlavorTaskPart(): String =
+    replaceFirstChar { firstChar -> firstChar.uppercase() }
+
+fun taskRequestsFlavor(flavorName: String): Boolean {
+    val flavorTaskPart = flavorName.asFlavorTaskPart()
+    return requestedTaskNames.any { taskName ->
+        taskName.contains(flavorTaskPart)
+    }
+}
+
+fun taskRequestsAllFlavors(): Boolean {
+    return requestedTaskNames.any { taskName ->
+        taskName in broadValidationTasks
+    }
+}
+
+fun shouldRequireFlavorConfig(flavorName: String): Boolean {
+    if (requestedTaskNames.isEmpty()) {
+        return false
+    }
+    return taskRequestsFlavor(flavorName) || taskRequestsAllFlavors()
+}
+
+fun requiredConfigProperty(flavorName: String, name: String): String {
+    configProperty(name)?.let { return it }
+    if (shouldRequireFlavorConfig(flavorName)) {
+        throw GradleException(
+            "Missing $name for $flavorName flavor. Set it in local.properties, " +
+                "a Gradle property (-P$name=...), or an environment variable."
+        )
+    }
+    return ""
+}
+
+data class EnvironmentConfig(
+    val backendBaseUrl: String,
+    val googleWebClientId: String,
+    val yandexClientId: String
+)
+
+data class ReleaseSigningConfig(
+    val storeFile: File,
+    val storePassword: String,
+    val keyAlias: String,
+    val keyPassword: String
+)
+
+val DEV_GOOGLE_WEB_CLIENT_ID_PLACEHOLDER =
+    "dev-google-placeholder.apps.googleusercontent.com"
+val DEV_YANDEX_CLIENT_ID_PLACEHOLDER = "dev-yandex-placeholder"
+
+fun releaseSigningConfig(): ReleaseSigningConfig? {
+    val storeFilePath = configProperty("ANDROID_KEYSTORE_FILE")
+    val storePassword = configProperty("ANDROID_KEYSTORE_PASSWORD")
+    val keyAlias = configProperty("ANDROID_KEY_ALIAS")
+    val keyPassword = configProperty("ANDROID_KEY_PASSWORD")
+
+    if (
+        storeFilePath.isNullOrBlank() ||
+        storePassword.isNullOrBlank() ||
+        keyAlias.isNullOrBlank() ||
+        keyPassword.isNullOrBlank()
+    ) {
+        return null
+    }
+
+    val signingStoreFile = File(storeFilePath).let { file ->
+        if (file.isAbsolute) file else rootProject.file(storeFilePath)
+    }
+
+    return if (signingStoreFile.isFile) {
+        ReleaseSigningConfig(
+            storeFile = signingStoreFile,
+            storePassword = storePassword,
+            keyAlias = keyAlias,
+            keyPassword = keyPassword
+        )
+    } else {
+        null
+    }
+}
+
+fun environmentConfig(
+    flavorName: String,
+    prefix: String,
+    backendFallback: String? = null,
+    googleWebClientIdFallback: String? = null,
+    yandexClientIdFallback: String? = null
+): EnvironmentConfig {
+    return EnvironmentConfig(
+        backendBaseUrl = configProperty("${prefix}_BACKEND_URL")
+            ?: backendFallback
+            ?: requiredConfigProperty(flavorName, "${prefix}_BACKEND_URL"),
+        googleWebClientId = configProperty("${prefix}_GOOGLE_WEB_CLIENT_ID")
+            ?: googleWebClientIdFallback
+            ?: requiredConfigProperty(flavorName, "${prefix}_GOOGLE_WEB_CLIENT_ID"),
+        yandexClientId = configProperty("${prefix}_YANDEX_CLIENT_ID")
+            ?: yandexClientIdFallback
+            ?: requiredConfigProperty(flavorName, "${prefix}_YANDEX_CLIENT_ID")
+    )
+}
+
+val environmentConfigs = mapOf(
+    "dev" to environmentConfig(
+        flavorName = "dev",
+        prefix = "DEV",
+        backendFallback = "http://10.0.2.2:8080/",
+        googleWebClientIdFallback = DEV_GOOGLE_WEB_CLIENT_ID_PLACEHOLDER,
+        yandexClientIdFallback = DEV_YANDEX_CLIENT_ID_PLACEHOLDER
+    ),
+    "stage" to environmentConfig(
+        flavorName = "stage",
+        prefix = "STAGE"
+    ),
+    "prod" to environmentConfig(
+        flavorName = "prod",
+        prefix = "PROD"
+    )
+)
+val releaseSigning = releaseSigningConfig()
+
 android {
     namespace = "com.example.mutlabocsnotes"
     compileSdk = 34
@@ -16,22 +160,56 @@ android {
         applicationId = "com.example.mutlabocsnotes"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
 
-        // Берём идентификатор OAuth-клиента из локальных/CI-свойств, с резервным значением для разработки.
-        val yandexClientId =
-            (project.findProperty("YANDEX_CLIENT_ID") as String?) ?: "776676c1ec6c4097ba260b05824f3a39"
+    flavorDimensions += "environment"
+    productFlavors {
+        environmentConfigs.forEach { (flavorName, config) ->
+            create(flavorName) {
+                dimension = "environment"
+                buildConfigField(
+                    "String",
+                    "BACKEND_BASE_URL",
+                    config.backendBaseUrl.asBuildConfigString()
+                )
+                buildConfigField(
+                    "String",
+                    "GOOGLE_WEB_CLIENT_ID",
+                    config.googleWebClientId.asBuildConfigString()
+                )
+                buildConfigField(
+                    "String",
+                    "YANDEX_CLIENT_ID",
+                    config.yandexClientId.asBuildConfigString()
+                )
+                resValue("string", "google_web_client_id", config.googleWebClientId)
+                manifestPlaceholders["YANDEX_CLIENT_ID"] = config.yandexClientId
+                manifestPlaceholders["USES_CLEARTEXT_TRAFFIC"] = (flavorName == "dev").toString()
+            }
+        }
+    }
 
-        manifestPlaceholders["YANDEX_CLIENT_ID"] = yandexClientId
-        buildConfigField("String", "YANDEX_CLIENT_ID", "\"$yandexClientId\"")
+    signingConfigs {
+        if (releaseSigning != null) {
+            create("release") {
+                storeFile = releaseSigning.storeFile
+                storePassword = releaseSigning.storePassword
+                keyAlias = releaseSigning.keyAlias
+                keyPassword = releaseSigning.keyPassword
+            }
+        }
     }
 
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
+            if (releaseSigning != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -54,56 +232,52 @@ android {
         buildConfig = true
     }
 
+    androidResources {
+        generateLocaleConfig = true
+    }
 }
 
-// Зависимости функциональности, сгруппированные по платформе, сети, хранению и тестам.
 dependencies {
-
-    implementation(libs.androidx.material3.android)
-    val composeBom = platform("androidx.compose:compose-bom:2025.01.00")
+    val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
     testImplementation(composeBom)
     androidTestImplementation(composeBom)
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.security.crypto)
 
-    implementation("com.google.android.gms:play-services-auth:21.3.0")
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.material)
+    implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.androidx.compose.ui.tooling.preview)
 
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
-    implementation("com.squareup.retrofit2:retrofit:2.11.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation(libs.material)
+    implementation(libs.play.services.auth)
+    implementation(libs.yandex.authsdk)
 
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("io.coil-kt:coil-compose:2.6.0")
-    implementation("io.coil-kt:coil-gif:2.6.0")
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging.interceptor)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
 
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.material:material")
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    kapt(libs.androidx.room.compiler)
 
-    implementation("androidx.core:core-ktx:1.10.1")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("com.google.android.material:material:1.9.0")
-    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
-
-    implementation("androidx.navigation:navigation-compose:2.5.3")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
-    implementation("androidx.activity:activity-compose:1.7.2")
-
-    testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
-
-    implementation ("androidx.room:room-runtime:2.6.1")
-    kapt ("androidx.room:room-compiler:2.6.1")
-    implementation ("androidx.room:room-ktx:2.6.1")
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.material:material")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-
-    implementation("com.yandex.android:authsdk:3.1.3")
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.okhttp.mockwebserver)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

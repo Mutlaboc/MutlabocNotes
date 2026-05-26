@@ -25,38 +25,45 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
-// Composable-функция для отображения экрана настроек.
+const val SETTINGS_LOGOUT_BUTTON_TEST_TAG = "settings_logout_button"
+const val SETTINGS_THEME_SWITCH_TEST_TAG = "settings_theme_switch"
+
 @Composable
-fun SettingsScreen (
+fun SettingsScreen(
     isDarkTheme: Boolean,
     onThemeChange: (Boolean) -> Unit,
-    onDeleteAccount: () -> Unit,
+    selectedLanguage: AppLanguage,
+    availableLanguages: List<AppLanguage>,
+    onLanguageChange: (AppLanguage) -> Unit,
+    onLogout: () -> Unit,
     onBack: () -> Unit,
 ) {
-    // TODO реализовать бы смену языков...
-    val languages = listOf("Русский", "English", "Deutsch")
     var isLanguageMenuExpanded by remember { mutableStateOf(false) }
-    var selectedLanguage by rememberSaveable { mutableStateOf(languages.first()) }
+    val selectedLanguageName = stringResource(selectedLanguage.displayNameResId)
 
-    Scaffold (
+    Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Настройки") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Назад")
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back)
+                        )
                     }
                 }
             )
         }
-    ) {paddingValues ->
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -65,20 +72,22 @@ fun SettingsScreen (
             verticalArrangement = Arrangement.Top
         ) {
             Text(
-                text = "Аккаунт",
+                text = stringResource(R.string.settings_account),
                 style = MaterialTheme.typography.subtitle1
             )
             Spacer(modifier = Modifier.height(8.dp))
             Button(
-                onClick = onDeleteAccount,
-                modifier = Modifier.fillMaxWidth()
+                onClick = onLogout,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(SETTINGS_LOGOUT_BUTTON_TEST_TAG)
             ) {
-                Text("Удалить аккаунт")
+                Text(stringResource(R.string.settings_logout))
             }
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Тема",
+                text = stringResource(R.string.settings_theme),
                 style = MaterialTheme.typography.subtitle1
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -87,52 +96,58 @@ fun SettingsScreen (
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isDarkTheme) "Темная" else "Светлая",
+                    text = if (isDarkTheme) {
+                        stringResource(R.string.settings_theme_dark)
+                    } else {
+                        stringResource(R.string.settings_theme_light)
+                    },
                     modifier = Modifier.weight(1f)
                 )
                 Switch(
                     checked = isDarkTheme,
-                    onCheckedChange = onThemeChange
+                    onCheckedChange = onThemeChange,
+                    modifier = Modifier.testTag(SETTINGS_THEME_SWITCH_TEST_TAG)
                 )
             }
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Язык",
+                text = stringResource(R.string.settings_language),
                 style = MaterialTheme.typography.subtitle1
             )
             OutlinedButton(
                 onClick = { isLanguageMenuExpanded = true },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Выбран $selectedLanguage")
+                Text(stringResource(R.string.settings_selected_language, selectedLanguageName))
             }
             DropdownMenu(
                 expanded = isLanguageMenuExpanded,
-                onDismissRequest = {isLanguageMenuExpanded = false}
+                onDismissRequest = { isLanguageMenuExpanded = false }
             ) {
-                languages.forEach { language ->
+                availableLanguages.forEach { language ->
                     DropdownMenuItem(onClick = {
-                        selectedLanguage = language
+                        onLanguageChange(language)
                         isLanguageMenuExpanded = false
                     }) {
-                        Text(language)
+                        Text(stringResource(language.displayNameResId))
                     }
                 }
             }
         }
-
     }
 }
 
-// Preview-composable для предпросмотра в Android Studio.
 @Preview
 @Composable
-fun SettingsScreenPreview () {
+fun SettingsScreenPreview() {
     SettingsScreen(
         isDarkTheme = false,
         onThemeChange = {},
-        onDeleteAccount = {},
+        selectedLanguage = AppLanguage.RU,
+        availableLanguages = AppLanguage.entries.toList(),
+        onLanguageChange = {},
+        onLogout = {},
         onBack = {}
     )
 }

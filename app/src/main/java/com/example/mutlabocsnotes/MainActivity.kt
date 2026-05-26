@@ -1,52 +1,75 @@
 package com.example.mutlabocsnotes
 
 import android.Manifest
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.darkColors
 import androidx.compose.material.lightColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.mutlabocsnotes.SessionManager
 
-// Точка входа Activity, выполняющая базовую инициализацию приложения.
 class MainActivity : ComponentActivity() {
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    private var pendingNotificationNoteId by mutableStateOf<String?>(null)
 
-    // Инициализирует ресурсы Activity и запускает содержимое приложения.
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingNotificationNoteId = DeadlineNotification.noteIdFromIntent(intent)
 
         createNotificationChannel()
-
         requestNotificationPermissionIfNeeded()
+
+        // Activity получает готовую фабрику из Application и передаёт её в Compose-root.
+        val appContainer = (application as MutlabocNotesApplication).appContainer
         setContent {
-            MyApp()
+            MyApp(
+                viewModelFactory = appContainer.viewModelFactory,
+                pendingNotificationNoteId = pendingNotificationNoteId,
+                onPendingNotificationHandled = { handledNoteId ->
+                    if (pendingNotificationNoteId == handledNoteId) {
+                        pendingNotificationNoteId = null
+                    }
+                }
+            )
         }
     }
 
-    // Создает канал для уведомлений.
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingNotificationNoteId = DeadlineNotification.noteIdFromIntent(intent)
+    }
+
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = getString(R.string.deadline_notification_channel_name)
@@ -61,8 +84,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-
-     // Запрашивает разрешение на уведомления у пользователя, если это необходимо.
     private fun requestNotificationPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val granted = ContextCompat.checkSelfPermission(
@@ -76,132 +97,248 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Composable-функция, отображающая приложение.
+internal fun exactAlarmSettingsIntent(packageName: String): Intent {
+    return Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+        data = Uri.parse("package:$packageName")
+    }
+}
+
+internal fun applicationDetailsSettingsIntent(packageName: String): Intent {
+    return Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        data = Uri.parse("package:$packageName")
+    }
+}
+
+internal fun homeInfoLinkIntent(link: String): Intent {
+    return Intent(Intent.ACTION_VIEW, Uri.parse(link))
+}
+
 @Composable
 fun MyApp(
-    // ViewModel для работы с заметками (хранит состояние списка заметок)
-    notesViewModel: NotesViewModel = viewModel(),
-    homeInfoViewModel: HomeInfoViewModel = viewModel()
+    viewModelFactory: ViewModelProvider.Factory,
+    pendingNotificationNoteId: String? = null,
+    onPendingNotificationHandled: (String) -> Unit = {},
+    // Все root ViewModel создаются одной фабрикой, чтобы зависимости не собирались внутри UI.
+    authViewModel: AuthViewModel = viewModel(factory = viewModelFactory),
+    notesViewModel: NotesViewModel = viewModel(factory = viewModelFactory),
+    homeInfoViewModel: HomeInfoViewModel = viewModel(factory = viewModelFactory),
+    settingsViewModel: SettingsViewModel = viewModel(factory = viewModelFactory)
 ) {
-    // Контроллер навигации для переключения между экранами
     val navController = rememberNavController()
     val context = LocalContext.current
-    // Менеджер сессий (хранит данные о вошедшем пользователе локально)
-    val sessionManager = remember { SessionManager(context) }
-
-    // Определение начального экрана: если пользователь залогинен - идем на "home", иначе на "auth"
-    val startDestination = remember {
-        if (sessionManager.hasSession()) "home" else "auth"
+    val authUiState = authViewModel.uiState
+    val authState = authUiState.authState
+    val notesUiState = notesViewModel.uiState
+    val settingsPreferences = settingsViewModel.uiState.preferences
+    var isWaitingForNotificationNotes by rememberSaveable { mutableStateOf(false) }
+    val exactAlarmSettingsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        notesViewModel.loadNotes()
+    }
+    val onMessageAction: (UiMessageAction) -> Unit = { action ->
+        when (action) {
+            UiMessageAction.OPEN_EXACT_ALARM_SETTINGS -> {
+                try {
+                    exactAlarmSettingsLauncher.launch(exactAlarmSettingsIntent(context.packageName))
+                } catch (error: ActivityNotFoundException) {
+                    exactAlarmSettingsLauncher.launch(applicationDetailsSettingsIntent(context.packageName))
+                }
+            }
+        }
     }
 
-    var isDarkTheme by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        SessionEventBus.events.collect { event ->
+            when (event) {
+                SessionEvent.SessionExpired -> authViewModel.handleSessionExpired()
+            }
+        }
+    }
 
-    MaterialTheme(colors = if (isDarkTheme) darkColors() else lightColors()) {
-        // Контейнер для навигации
-        NavHost(
-            navController = navController,
-            startDestination = startDestination
-        ) {
-
-            // Экран авторизации
-            composable("auth") {
-                AuthScreen {
-                    notesViewModel.loadNotes()
-                    navController.navigate("home") {
-                        popUpTo("auth") { inclusive = true }
-                    }
+    LaunchedEffect(authState) {
+        when (authState) {
+            is AuthState.Authenticated -> {
+                isWaitingForNotificationNotes = pendingNotificationNoteId != null
+                notesViewModel.loadNotes()
+                navController.navigate("home") {
+                    popUpTo("bootstrap") { inclusive = false }
+                    launchSingleTop = true
                 }
             }
 
-            // Главный экран со списком заметок
+            is AuthState.Unauthenticated -> {
+                isWaitingForNotificationNotes = false
+                notesViewModel.clearAll()
+                homeInfoViewModel.clearAll()
+                navController.navigate("auth") {
+                    popUpTo("bootstrap") { inclusive = false }
+                    launchSingleTop = true
+                }
+            }
+
+            AuthState.Checking -> Unit
+        }
+    }
+
+    LaunchedEffect(pendingNotificationNoteId) {
+        if (pendingNotificationNoteId != null && authState is AuthState.Authenticated) {
+            isWaitingForNotificationNotes = true
+            notesViewModel.loadNotes()
+            navController.navigate("home") {
+                launchSingleTop = true
+            }
+        }
+    }
+
+    LaunchedEffect(authState, notesUiState, pendingNotificationNoteId, isWaitingForNotificationNotes) {
+        when (
+            val decision = pendingNotificationNavigationDecision(
+                authState = authState,
+                notesUiState = notesUiState,
+                pendingNotificationNoteId = pendingNotificationNoteId,
+                isWaitingForNotificationNotes = isWaitingForNotificationNotes
+            )
+        ) {
+            is PendingNotificationNavigationDecision.OpenNote -> {
+                isWaitingForNotificationNotes = false
+                onPendingNotificationHandled(decision.noteId)
+                navController.navigate("edit/${Uri.encode(decision.noteId)}") {
+                    launchSingleTop = true
+                }
+            }
+            is PendingNotificationNavigationDecision.ClearPending -> {
+                isWaitingForNotificationNotes = false
+                onPendingNotificationHandled(decision.noteId)
+            }
+            PendingNotificationNavigationDecision.Wait -> Unit
+        }
+    }
+
+    MaterialTheme(colors = if (settingsPreferences.isDarkTheme) darkColors() else lightColors()) {
+        NavHost(
+            navController = navController,
+            startDestination = "bootstrap"
+        ) {
+            composable("bootstrap") {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            composable("auth") {
+                AuthScreen(
+                    uiState = authUiState,
+                    onSignIn = authViewModel::signIn,
+                    onSignUp = authViewModel::signUp,
+                    onGoogleIdToken = authViewModel::signInWithGoogle,
+                    onYandexAccessToken = authViewModel::signInWithYandex,
+                    onGoogleTokenEmpty = authViewModel::onGoogleTokenEmpty,
+                    onGoogleSignInFailed = authViewModel::onGoogleSignInFailed,
+                    onYandexTokenEmpty = authViewModel::onYandexTokenEmpty,
+                    onYandexSignInFailed = authViewModel::onYandexSignInFailed,
+                    onYandexSignInCancelled = authViewModel::onYandexSignInCancelled,
+                    onMessageShown = authViewModel::onMessageShown,
+                    onClearInlineError = authViewModel::clearInlineError
+                )
+            }
+
             composable("home") {
                 HomeScreen(
-                    notes = notesViewModel.notes,
-                    totalCoins = notesViewModel.totalCoins,
-                    userEmail = sessionManager.getEmail().orEmpty(),
+                    uiState = notesViewModel.uiState,
+                    uiMessage = notesViewModel.uiMessage,
+                    userEmail = authUiState.currentEmail,
+                    onRetryNotes = notesViewModel::loadNotes,
+                    onMessageShown = notesViewModel::onMessageShown,
+                    onMessageAction = onMessageAction,
                     onAddNoteClick = {
                         navController.navigate("edit")
                     },
                     onNoteClick = { noteId ->
-                        navController.navigate("edit/$noteId")
+                        navController.navigate("edit/${Uri.encode(noteId)}")
                     },
-                    onOtherCellClick = { index ->
-                        when (index) {
-                            0 -> navController.navigate("completed") {
-                                launchSingleTop = true
-                            }
-                            2 -> navController.navigate("home_info")
+                    onCompletedNotesClick = {
+                        navController.navigate("completed") {
+                            launchSingleTop = true
                         }
+                    },
+                    onHomeInfoClick = {
+                        navController.navigate("home_info")
                     },
                     onCompletionChange = { noteId, isCompleted ->
                         notesViewModel.setNoteCompletion(noteId, isCompleted)
                     },
-                    onSwitchUser = {
-                        sessionManager.clear()
-                        navController.navigate("auth") {
-                            popUpTo("home") { inclusive = true }
-                        }
-                    },
+                    onSwitchUser = authViewModel::logout,
                     onOpenSettings = {
                         navController.navigate("settings")
                     }
                 )
             }
 
-            // Экран настроек
             composable("settings") {
                 SettingsScreen(
-                    isDarkTheme = isDarkTheme,
-                    onThemeChange = { isDarkTheme = it },
-                    onDeleteAccount = {
-                        sessionManager.clear()
-                        navController.navigate("auth") {
-                            popUpTo("home") { inclusive = true }
-                        }
-                    },
+                    isDarkTheme = settingsPreferences.isDarkTheme,
+                    onThemeChange = settingsViewModel::setDarkTheme,
+                    selectedLanguage = settingsPreferences.language,
+                    availableLanguages = AppLanguage.entries.toList(),
+                    onLanguageChange = settingsViewModel::setLanguage,
+                    onLogout = authViewModel::logout,
                     onBack = {
                         navController.popBackStack()
                     }
                 )
             }
 
-            // Экран завершенных заметок
             composable("completed") {
                 CompletedNotesScreen(
-                    notes = notesViewModel.notes,
+                    uiState = notesViewModel.uiState,
+                    uiMessage = notesViewModel.uiMessage,
+                    onRetryNotes = notesViewModel::loadNotes,
+                    onMessageShown = notesViewModel::onMessageShown,
+                    onMessageAction = onMessageAction,
                     onaddNoteClick = {
                         navController.navigate("edit")
                     },
                     onNoteClick = { noteId ->
-                        navController.navigate("edit/$noteId")
+                        navController.navigate("edit/${Uri.encode(noteId)}")
                     },
                     onCompletionChange = { noteId, isCompleted ->
                         notesViewModel.setNoteCompletion(noteId, isCompleted)
                     },
                     onNavigateHome = {
                         navController.popBackStack()
+                    },
+                    onHomeInfoClick = {
+                        navController.navigate("home_info")
                     }
                 )
             }
 
-            // Экран карточек (Home Info)
             composable("home_info") {
                 LaunchedEffect(Unit) {
                     homeInfoViewModel.loadCards()
                 }
                 HomeInfoScreen(
-                    cards = homeInfoViewModel.cards,
-                    isLoading = homeInfoViewModel.isLoading,
-                    errorMessage = homeInfoViewModel.errorMessage,
+                    uiState = homeInfoViewModel.uiState,
+                    uiMessage = homeInfoViewModel.uiMessage,
+                    onRetry = homeInfoViewModel::loadCards,
+                    onMessageShown = homeInfoViewModel::onMessageShown,
                     onAddClick = { navController.navigate("home_info_edit") },
                     onCardClick = { cardId ->
                         navController.navigate("home_info_edit/$cardId")
+                    },
+                    onLinkClick = { link ->
+                        runCatching {
+                            context.startActivity(homeInfoLinkIntent(link))
+                        }
                     },
                     onBack = { navController.popBackStack() }
                 )
             }
 
-            // Экран создания карточки инфо
             composable("home_info_edit") {
                 EditHomeInfoCardScreen(
                     card = null,
@@ -214,13 +351,13 @@ fun MyApp(
                 )
             }
 
-            // Экран редактирования карточки инфо (с ID)
             composable(
                 route = "home_info_edit/{cardId}",
                 arguments = listOf(navArgument("cardId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val cardId = backStackEntry.arguments?.getString("cardId") ?: ""
-                val card = homeInfoViewModel.cards.find { it.id == cardId }
+                val cards = (homeInfoViewModel.uiState as? HomeInfoUiState.Content)?.cards.orEmpty()
+                val card = cards.find { it.id == cardId }
                 EditHomeInfoCardScreen(
                     card = card,
                     onSaveClick = { updatedCard ->
@@ -235,7 +372,6 @@ fun MyApp(
                 )
             }
 
-            // Экран создания заметки
             composable("edit") {
                 EditNoteScreen(
                     note = null,
@@ -246,13 +382,13 @@ fun MyApp(
                 )
             }
 
-            // Экран редактирования заметки (с ID)
             composable(
                 route = "edit/{noteId}",
                 arguments = listOf(navArgument("noteId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val noteId = backStackEntry.arguments!!.getString("noteId") ?: ""
-                val note = notesViewModel.notes.find { it.id == noteId }
+                val notes = (notesViewModel.uiState as? NotesUiState.Content)?.notes.orEmpty()
+                val note = notes.find { it.id == noteId }
                 EditNoteScreen(
                     note = note,
                     onSaveClick = { updatedNote ->
@@ -273,3 +409,35 @@ fun MyApp(
     }
 }
 
+internal sealed interface PendingNotificationNavigationDecision {
+    data object Wait : PendingNotificationNavigationDecision
+    data class ClearPending(val noteId: String) : PendingNotificationNavigationDecision
+    data class OpenNote(val noteId: String) : PendingNotificationNavigationDecision
+}
+
+internal fun pendingNotificationNavigationDecision(
+    authState: AuthState,
+    notesUiState: NotesUiState,
+    pendingNotificationNoteId: String?,
+    isWaitingForNotificationNotes: Boolean
+): PendingNotificationNavigationDecision {
+    val targetNoteId = pendingNotificationNoteId
+        ?.takeIf { it.isNotBlank() }
+        ?: return PendingNotificationNavigationDecision.Wait
+    if (!isWaitingForNotificationNotes || authState !is AuthState.Authenticated) {
+        return PendingNotificationNavigationDecision.Wait
+    }
+
+    return when (notesUiState) {
+        is NotesUiState.Content -> {
+            if (notesUiState.notes.any { it.id == targetNoteId }) {
+                PendingNotificationNavigationDecision.OpenNote(targetNoteId)
+            } else {
+                PendingNotificationNavigationDecision.ClearPending(targetNoteId)
+            }
+        }
+        NotesUiState.Empty -> PendingNotificationNavigationDecision.ClearPending(targetNoteId)
+        is NotesUiState.Error,
+        NotesUiState.Loading -> PendingNotificationNavigationDecision.Wait
+    }
+}

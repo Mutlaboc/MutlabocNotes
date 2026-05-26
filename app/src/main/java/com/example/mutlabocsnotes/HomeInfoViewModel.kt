@@ -2,99 +2,121 @@ package com.example.mutlabocsnotes
 
 import android.app.Application
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// Хранит UI-состояние и обрабатывает действия пользователя.
-class HomeInfoViewModel(application: Application) : AndroidViewModel(application) {
+class HomeInfoViewModel(
+    application: Application,
+    private val repository: HomeInfoDataSource,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) : AndroidViewModel(application) {
 
-    private val repository = HomeInfoRepository(application)
+    var uiState by mutableStateOf<HomeInfoUiState>(HomeInfoUiState.Loading)
+        private set
 
-    val cards = mutableStateListOf<HomeInfoCard>()
-    var isLoading by mutableStateOf(false)
-    var errorMessage by mutableStateOf<String?>(null)
+    var uiMessage by mutableStateOf<UiMessage?>(null)
+        private set
 
-    // Загружает карточку.
     fun loadCards() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             launch(Dispatchers.Main) {
-                isLoading = true
-                errorMessage = null
+                uiState = HomeInfoUiState.Loading
             }
+
             val result = repository.getAllCards()
+
             launch(Dispatchers.Main) {
                 result.onSuccess { loadedCards ->
-                    cards.clear()
-                    cards.addAll(loadedCards.sortedByDescending { it.updatedAt })
+                    applyCards(loadedCards)
                 }.onFailure { error ->
-                    errorMessage = error.message ?: "Не удалось загрузить карточки"
+                    uiState = HomeInfoUiState.Error(ApiErrorMapper.map(error))
                 }
-                isLoading = false
             }
         }
     }
 
-    // Добавляет карточку через репозиторий и обновляет локальное состояние.
     fun addCard(card: HomeInfoCard) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val result = repository.insert(card)
             launch(Dispatchers.Main) {
-                result.onSuccess { id ->
-                    val cardWithId = card.copy(id = id)
-                    cards.add(cardWithId)
-                    cards.sortByDescending { it.updatedAt }
+                result.onSuccess { created ->
+                    val cards = currentCards() + created
+                    applyCards(cards)
                 }.onFailure { error ->
-                    errorMessage = error.message ?: "Не удалось сохранить карточку"
+                    showMessage(error)
                 }
             }
         }
     }
 
-    // Обновляет карточку.
     fun updateCard(card: HomeInfoCard) {
-        if (card.id.isEmpty()) return
-        viewModelScope.launch(Dispatchers.IO) {
+        if (card.id.isEmpty()) {
+            showMessage(IllegalArgumentException("Blank card id"))
+            return
+        }
+
+        viewModelScope.launch(ioDispatcher) {
             val result = repository.update(card)
             launch(Dispatchers.Main) {
-                result.onSuccess {
-                    val index = cards.indexOfFirst { it.id == card.id }
-                    if (index != -1) {
-                        cards[index] = card
-                        cards.sortByDescending { it.updatedAt }
+                result.onSuccess { updated ->
+                    val cards = currentCards().map { existing ->
+                        if (existing.id == updated.id) updated else existing
                     }
+                    applyCards(cards)
                 }.onFailure { error ->
-                    errorMessage = error.message ?: "Не удалось обновить карточку"
+                    showMessage(error)
                 }
             }
         }
     }
 
-        // Удаляет карточку.
-        fun deleteCard(cardId: String) {
-            viewModelScope.launch(Dispatchers.IO) {
-                val result = repository.delete(cardId)
-                launch(Dispatchers.Main) {
-                    result.onSuccess {
-                        val card = cards.find { it.id == cardId }
-                        if (card != null) {
-                            cards.remove(card)
-                        }
-                    }.onFailure { error ->
-                        errorMessage = error.message ?: "Не удалось удалить карточку"
-                    }
+    fun deleteCard(cardId: String) {
+        viewModelScope.launch(ioDispatcher) {
+            val result = repository.delete(cardId)
+            launch(Dispatchers.Main) {
+                result.onSuccess {
+                    applyCards(currentCards().filterNot { it.id == cardId })
+                }.onFailure { error ->
+                    showMessage(error)
                 }
             }
         }
+    }
 
-    // Очищает временные и сохранённые данные состояния.
     fun clearAll() {
-        cards.clear()
-        errorMessage = null
-        isLoading = false
+        uiState = HomeInfoUiState.Empty
+        uiMessage = null
     }
+
+    fun onMessageShown(messageId: Long) {
+        if (uiMessage?.id == messageId) {
+            uiMessage = null
+        }
     }
+
+    private fun currentCards(): List<HomeInfoCard> {
+        return (uiState as? HomeInfoUiState.Content)?.cards.orEmpty()
+    }
+
+    private fun applyCards(cards: List<HomeInfoCard>) {
+        val canonicalCards = cards
+            .sortedByDescending { it.updatedAt }
+        uiState = if (canonicalCards.isEmpty()) {
+            HomeInfoUiState.Empty
+        } else {
+            HomeInfoUiState.Content(canonicalCards)
+        }
+    }
+
+    private fun showMessage(error: Throwable) {
+        uiMessage = UiMessage(
+            id = UiMessageId.next(),
+            text = ApiErrorMapper.map(error)
+        )
+    }
+}

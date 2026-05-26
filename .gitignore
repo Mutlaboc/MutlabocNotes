@@ -1,15 +1,39 @@
-*.iml
-.gradle
+# Gradle / Android build outputs
+.gradle/
+.kotlin/
+/build/
+**/build/
+.externalNativeBuild/
+.cxx/
+/captures/
+*.apk
+*.ap_
+*.aab
+
+# Local machine configuration
 /local.properties
-/.idea/caches
-/.idea/libraries
+local.properties
+.DS_Store
+
+# Android Studio / IntelliJ user-specific files
+*.iml
+/.idea/
+/.idea/caches/
+/.idea/libraries/
+/.idea/modules/
 /.idea/modules.xml
-/.idea/workspace.xml
+/.idea/workspace*.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
+/.idea/deploymentTargetSelector.xml
+/.idea/shelf/
+/.idea/tasks.xml
+/.idea/usage.statistics.xml
+/.idea/dictionaries/
+/.idea/httpRequests/
+
+# Local project artifacts
+/docs/
+/tools/
+hs_err_pid*.log
+replay_pid*.log

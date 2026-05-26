@@ -1,14 +1,123 @@
 <resources>
     <string name="app_name">Mutlaboc\'s notes</string>
-    <string name="google_web_client_id">822837772778-f7lc8b9nnbpn1u65njf7agkj392dub8c.apps.googleusercontent.com</string>
-    <string name="action_settings">Settings</string>
-    <!-- Строки для навигации между фрагментами -->
-    <string name="first_fragment_label">First Fragment</string>
-    <string name="second_fragment_label">Second Fragment</string>
-    <string name="next">Next</string>
-    <string name="previous">Previous</string>
+
+    <string name="action_settings">Настройки</string>
+    <string name="action_back">Назад</string>
+    <string name="action_add">Добавить</string>
+    <string name="action_delete">Удалить</string>
+    <string name="action_save">Сохранить</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="action_retry">Повторить</string>
+    <string name="action_allow">Разрешить</string>
+
+    <string name="first_fragment_label">Первый фрагмент</string>
+    <string name="second_fragment_label">Второй фрагмент</string>
+    <string name="next">Далее</string>
+    <string name="previous">Назад</string>
+
     <string name="deadline_notification_channel_name">Напоминания о дедлайнах</string>
     <string name="deadline_notification_channel_description">Уведомления о наступлении сроков задач</string>
     <string name="deadline_notification_message">Срок выполнения задачи «%1$s» наступил. Не забудьте завершить её!</string>
+    <string name="exact_alarm_permission_message">Точные напоминания отключены. Разрешите доступ, чтобы получать дедлайны вовремя.</string>
 
+    <string name="api_error_unauthorized">Сессия истекла. Войдите снова.</string>
+    <string name="api_error_conflict">Данные были изменены в другом месте. Обновите экран и повторите попытку.</string>
+    <string name="api_error_server">Ошибка сервера. Попробуйте позже.</string>
+    <string name="api_error_network">Ошибка сети. Проверьте подключение и повторите попытку.</string>
+    <string name="api_error_validation">Проверьте введённые данные и повторите попытку.</string>
+    <string name="api_error_unknown">Что-то пошло не так. Повторите попытку.</string>
+
+    <string name="auth_email_label">Email</string>
+    <string name="auth_password_label">Пароль</string>
+    <string name="auth_sign_in">Войти</string>
+    <string name="auth_signing_in">Вход...</string>
+    <string name="auth_sign_up">Зарегистрироваться</string>
+    <string name="auth_sign_in_google">Войти через Google</string>
+    <string name="auth_sign_in_yandex">Войти через Yandex</string>
+    <string name="auth_error_google_token_empty">Google id token пустой</string>
+    <string name="auth_error_yandex_token_empty">Yandex access token пустой</string>
+    <string name="auth_error_google_sign_in_failed">Не удалось войти через Google</string>
+    <string name="auth_error_yandex_sign_in_failed">Не удалось войти через Yandex</string>
+    <string name="auth_error_yandex_sign_in_cancelled">Вход через Yandex отменён</string>
+    <string name="auth_error_invalid_credentials">Введите корректный email и пароль не короче 8 символов</string>
+
+    <string name="settings_title">Настройки</string>
+    <string name="settings_account">Аккаунт</string>
+    <string name="settings_logout">Выйти</string>
+    <string name="settings_theme">Тема</string>
+    <string name="settings_theme_dark">Тёмная</string>
+    <string name="settings_theme_light">Светлая</string>
+    <string name="settings_language">Язык</string>
+    <string name="settings_selected_language">Выбран %1$s</string>
+    <string name="language_ru">Русский</string>
+    <string name="language_en">English</string>
+
+    <string name="loading">Загрузка...</string>
+    <string name="search_label">Поиск</string>
+    <string name="notes_empty">Активных заметок пока нет</string>
+    <string name="completed_notes_empty">Здесь будут отображаться выполненные задачи</string>
+    <string name="completed_notes_title">Выполненные задачи</string>
+    <string name="home_background_description">Фон главного экрана</string>
+    <string name="total_coins_description">Всего монет</string>
+    <string name="coin_description">Монета</string>
+    <string name="user_description">Пользователь</string>
+    <string name="switch_user">Сменить пользователя</string>
+    <string name="active_tasks">Активные задачи</string>
+    <string name="note_deadline_value">Дедлайн: %1$s</string>
+    <string name="note_repeating">Повтор: %1$s</string>
+    <string name="checklist_preview_item">- %1$s</string>
+    <string name="more_items_indicator">...</string>
+
+    <string name="edit_note_title">Редактирование заметки</string>
+    <string name="note_title_label">Заголовок</string>
+    <string name="note_title_required">Введите заголовок</string>
+    <string name="note_content_label">Содержимое</string>
+    <string name="note_category_shopping">Покупки</string>
+    <string name="note_category_tasks">Дела</string>
+    <string name="note_category_notes">Заметки</string>
+    <string name="checklist_add_item">Добавить</string>
+    <string name="checklist_delete_item">Удалить пункт</string>
+    <string name="deadline_label">Дедлайн</string>
+    <string name="repeat_label">Повтор: %1$s</string>
+    <string name="repeat_rule_none">Нет</string>
+    <string name="repeat_rule_daily">Ежедневно</string>
+    <string name="repeat_rule_weekly">Еженедельно</string>
+    <string name="repeat_rule_monthly">Ежемесячно</string>
+    <string name="coin_count_label">Количество монет</string>
+    <string name="note_delete_title">Удалить заметку?</string>
+    <string name="note_delete_message">Это действие нельзя отменить.</string>
+
+    <string name="home_info_title">Информация о доме</string>
+    <string name="home_info_empty">Нет карточек для отображения</string>
+    <string name="home_info_add_card">Добавить карточку</string>
+    <string name="home_info_section">Раздел</string>
+    <string name="home_info_all_sections">Все</string>
+    <string name="home_info_links_count">Ссылок: %1$d</string>
+    <string name="home_info_open_link">Открыть ссылку</string>
+    <string name="home_info_link_warning">Проверьте ссылку: она может открыться некорректно</string>
+    <string name="home_info_field_value">%1$s: %2$s</string>
+    <string name="home_info_new_card">Новая карточка</string>
+    <string name="home_info_edit_card">Редактирование</string>
+    <string name="home_info_fields">Поля</string>
+    <string name="home_info_key_label">Ключ</string>
+    <string name="home_info_value_label">Значение</string>
+    <string name="home_info_delete_field">Удалить поле</string>
+    <string name="home_info_add_field">Добавить поле</string>
+    <string name="home_info_note_label">Заметка</string>
+    <string name="home_info_links">Ссылки</string>
+    <string name="home_info_link_label">Ссылка</string>
+    <string name="home_info_delete_link">Удалить ссылку</string>
+    <string name="home_info_add_link">Добавить ссылку</string>
+    <string name="home_info_title_required">Введите заголовок</string>
+    <string name="home_info_delete_card_title">Удалить карточку?</string>
+    <string name="home_info_delete_card_message">Это действие нельзя отменить.</string>
+    <string name="home_section_meters">Счётчики</string>
+    <string name="home_section_appliances">Техника</string>
+    <string name="home_section_lighting">Освещение</string>
+    <string name="home_section_documents">Документы</string>
+    <string name="home_section_contacts">Контакты</string>
+    <string name="home_section_other">Другое</string>
+    <string name="auth_show_password">Показать пароль</string>
+    <string name="auth_hide_password">Скрыть пароль</string>
+    <string name="notes_title">Заметки</string>
 </resources>

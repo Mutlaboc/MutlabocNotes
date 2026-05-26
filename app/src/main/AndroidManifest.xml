@@ -7,9 +7,9 @@
         android:name="android.permission.POST_NOTIFICATIONS"
         tools:targetApi="tiramisu" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
     <application
+        android:name=".MutlabocNotesApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:enableOnBackInvokedCallback="true"
@@ -19,6 +19,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MutlabocsNotes"
+        android:usesCleartextTraffic="${USES_CLEARTEXT_TRAFFIC}"
         tools:targetApi="31">
 
         <meta-data
@@ -43,11 +44,6 @@
                     android:host="${YANDEX_CLIENT_ID}" />
             </intent-filter>
         </activity>
-
-        <meta-data
-            android:name="com.yandex.auth.CLIENT_ID"
-            android:value="${YANDEX_CLIENT_ID}" />
-
         <receiver
             android:name=".DeadlineNotificationReceiver"
             android:exported="false" />

@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-   Пример файла правил резервного копирования; при необходимости
-   раскомментируйте и настройте под проект.
-   Подробнее: https://developer.android.com/guide/topics/data/autobackup
-   Важно: этот файл игнорируется на устройствах с API ниже 31.
-   См. также: https://developer.android.com/about/versions/12/backup-restore
+   Production backup policy:
+   - Never back up auth/session material from EncryptedSharedPreferences.
+   - Do not restore scheduled alarm bookkeeping; alarms are rebuilt from notes after login.
+   - Allow harmless UI preferences such as theme and language.
+   API 31+ devices use data_extraction_rules.xml instead.
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <include domain="file" path="datastore/user_preferences.preferences_pb" />
+    <include domain="sharedpref" path="." />
+    <exclude domain="sharedpref" path="secure_session.xml" />
+    <exclude domain="sharedpref" path="deadline_notification_alarms.xml" />
 </full-backup-content>

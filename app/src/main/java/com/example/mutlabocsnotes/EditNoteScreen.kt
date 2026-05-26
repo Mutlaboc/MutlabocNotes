@@ -1,58 +1,100 @@
 package com.example.mutlabocsnotes
 
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
-import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
-import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.foundation.layout.width
-import androidx.compose.material.Checkbox
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.platform.LocalContext
-import android.app.DatePickerDialog
 import java.util.Calendar
-import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
 
-@OptIn(ExperimentalMaterial3Api::class)
+const val EDIT_NOTE_TITLE_FIELD_TEST_TAG = "edit_note_title_field"
+const val EDIT_NOTE_TITLE_ERROR_TEST_TAG = "edit_note_title_error"
+const val EDIT_NOTE_CONTENT_FIELD_TEST_TAG = "edit_note_content_field"
+const val EDIT_NOTE_COIN_COUNT_FIELD_TEST_TAG = "edit_note_coin_count_field"
+const val EDIT_NOTE_SAVE_BUTTON_TEST_TAG = "edit_note_save_button"
+const val EDIT_NOTE_DELETE_BUTTON_TEST_TAG = "edit_note_delete_button"
+const val EDIT_NOTE_DELETE_CONFIRM_BUTTON_TEST_TAG = "edit_note_delete_confirm_button"
+const val EDIT_NOTE_CHECKLIST_ADD_BUTTON_TEST_TAG = "edit_note_checklist_add_button"
 
-// Composable-функция для отображения экрана редактирования заметки.
+fun editNoteCategoryChipTestTag(category: NoteCategory): String = "edit_note_category_${category.name}"
+
+fun editNoteChecklistItemFieldTestTag(index: Int): String = "edit_note_checklist_item_field_$index"
+
+fun editNoteChecklistItemDeleteButtonTestTag(index: Int): String =
+    "edit_note_checklist_item_delete_$index"
+
+internal fun prepareNoteForSave(
+    noteId: String,
+    originalNote: Note?,
+    title: String,
+    content: String,
+    selectedCategory: NoteCategory,
+    checklistItems: List<ChecklistItem>,
+    selectedDeadlineMillis: Long,
+    repeatRule: RepeatRule,
+    coinCountText: String,
+    defaultCoinCount: Int
+): Note? {
+    val trimmedTitle = title.trim()
+    if (trimmedTitle.isBlank()) return null
+
+    val cleanedChecklist = if (selectedCategory == NoteCategory.SHOPPING) {
+        checklistItems
+            .map { it.copy(text = it.text.trim()) }
+            .filter { it.text.isNotBlank() }
+    } else {
+        emptyList()
+    }
+    val preparedContent = when (selectedCategory) {
+        NoteCategory.SHOPPING -> ""
+        else -> content
+    }
+    return Note(
+        id = noteId,
+        title = trimmedTitle,
+        content = preparedContent,
+        category = selectedCategory,
+        checklist = cleanedChecklist,
+        deadlineMillis = if (selectedCategory == NoteCategory.TASKS) {
+            selectedDeadlineMillis
+        } else {
+            null
+        },
+        repeatRule = if (selectedCategory == NoteCategory.TASKS) {
+            repeatRule
+        } else {
+            RepeatRule.NONE
+        },
+        coinCount = coinCountText.toIntOrNull() ?: defaultCoinCount,
+        isCompleted = originalNote?.isCompleted ?: false
+    )
+}
+
 @Composable
 fun EditNoteScreen(
     note: Note?,
     onSaveClick: (Note) -> Unit,
     onDeleteClick: (() -> Unit)? = null
 ) {
-    // особенность - привязываем изменение данных при рекомпозиции к noteId
     val noteId = note?.id.orEmpty()
     var title by remember(noteId) { mutableStateOf(note?.title ?: "") }
     var content by remember(noteId) { mutableStateOf(note?.content ?: "") }
@@ -66,7 +108,6 @@ fun EditNoteScreen(
             ?: listOf(ChecklistItem())
         mutableStateListOf<ChecklistItem>().apply { addAll(initial) }
     }
-
     val todayCalendar = remember {
         Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
@@ -83,23 +124,20 @@ fun EditNoteScreen(
     var selectedDeadlineMillis by remember(noteId) {
         mutableStateOf(note?.deadlineMillis ?: defaultDeadline)
     }
-    var isRepeating by remember(noteId) {
-        mutableStateOf(note?.isRepeating ?: false)
+    var repeatRule by remember(noteId) {
+        mutableStateOf(note?.repeatRule ?: RepeatRule.NONE)
     }
     val defaultCoinCount = remember(noteId) { note?.coinCount ?: (1..5).random() }
     var coinCountText by remember(noteId) {
         mutableStateOf(defaultCoinCount.toString())
     }
-    val categories = listOf(
-        NoteCategory.SHOPPING to "Покупки",
-        NoteCategory.TASKS to "Дела",
-        NoteCategory.NOTES to "Заметки"
-    )
-// Экран
+    var isTitleError by remember(noteId) { mutableStateOf(false) }
+    var showDeleteDialog by remember(noteId) { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Редактирование заметки") }
+                title = { Text(stringResource(R.string.edit_note_title)) }
             )
         }
     ) { padding ->
@@ -110,275 +148,116 @@ fun EditNoteScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text("Заголовок") },
-                // TODO может убрать жесткую привязку к черному?
-                textStyle = TextStyle(color = Color.Black),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    textColor = Color.Black,
-                    focusedLabelColor = Color.Black,
-                    unfocusedLabelColor = Color.Gray,
-                    cursorColor = Color.Black),
-                modifier = Modifier.fillMaxWidth(),
+            NoteTitleField(
+                title = title,
+                isError = isTitleError,
+                onTitleChange = {
+                    title = it
+                    isTitleError = false
+                }
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Row {
-                categories.forEach { (category, label) ->
-                    FilterChip(
-                        selected = selectedCategory == category,
-                        onClick = {
-                            selectedCategory = category
-                        },
-                        label = { Text(label) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFFBBDEFB)
-                        ),
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                }
-            }
+            CategoryPicker(
+                selectedCategory = selectedCategory,
+                onCategorySelected = { selectedCategory = it }
+            )
             Spacer(modifier = Modifier.height(8.dp))
             when (selectedCategory) {
                 NoteCategory.SHOPPING -> {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        checklistItems.forEachIndexed { index, item ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 4.dp)
-                            )
-                            {
-                                Checkbox(
-                                    checked = item.isChecked,
-                                    onCheckedChange = { checked ->
-                                        checklistItems[index] = item.copy(isChecked = checked)
-                                    }
-                                )
-                                OutlinedTextField(
-                                    value = item.text,
-                                    onValueChange = { text ->
-                                        checklistItems[index] = item.copy(text = text)
-                                    },
-                                    textStyle = TextStyle(color = Color.Black),
-                                    colors = TextFieldDefaults.outlinedTextFieldColors(
-                                        textColor = Color.Black,
-                                        focusedLabelColor = Color.Black,
-                                        unfocusedLabelColor = Color.Gray,
-                                        cursorColor = Color.Black
-                                    ),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(start = 8.dp)
-                                )
-
-                            }
-                        }
-                        Button(onClick = { checklistItems.add(ChecklistItem()) }) {
-                            Text("Добавить")
-                        }
-                    }
-                    }
-                NoteCategory.TASKS -> {
-
-                    val context = LocalContext.current
-
-                    val datePickerDialog = remember(context) {
-                        val calendar = Calendar.getInstance().apply { timeInMillis = selectedDeadlineMillis }
-                        DatePickerDialog(
-                            context,
-                            { _, year, month, dayOfMonth ->
-                                val pickedCalendar = Calendar.getInstance().apply {
-                                    set(Calendar.YEAR, year)
-                                    set(Calendar.MONTH, month)
-                                    set(Calendar.DAY_OF_MONTH, dayOfMonth)
-                                    set(Calendar.HOUR_OF_DAY, 0)
-                                    set(Calendar.MINUTE, 0)
-                                    set(Calendar.SECOND, 0)
-                                    set(Calendar.MILLISECOND, 0)
-                                }
-                                selectedDeadlineMillis = pickedCalendar.timeInMillis
-                            },
-                            calendar.get(Calendar.YEAR),
-                            calendar.get(Calendar.MONTH),
-                            calendar.get(Calendar.DAY_OF_MONTH)
-                        ).apply {
-                            datePicker.minDate = todayCalendar.timeInMillis
-                        }
-                    }
-
-                    val dateFieldInteractionSource = remember { MutableInteractionSource() }
-                    LaunchedEffect(dateFieldInteractionSource) {
-                        dateFieldInteractionSource.interactions.collect { interaction ->
-                            if (interaction is PressInteraction.Release) {
-                                val cal = Calendar.getInstance().apply { timeInMillis = selectedDeadlineMillis }
-                                datePickerDialog.updateDate(
-                                    cal.get(Calendar.YEAR),
-                                    cal.get(Calendar.MONTH),
-                                    cal.get(Calendar.DAY_OF_MONTH)
-                                )
-                                datePickerDialog.show()
-                            }
-                        }
-                    }
-                    val deadlineText = remember(selectedDeadlineMillis) {
-                        val calendar = Calendar.getInstance().apply {
-                            timeInMillis = selectedDeadlineMillis
-                        }
-                        "%02d.%02d.%04d".format(
-                            calendar.get(Calendar.DAY_OF_MONTH),
-                            calendar.get(Calendar.MONTH) +1,
-                            calendar.get(Calendar.YEAR)
-                        )
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(
-                            value = deadlineText,
-                            onValueChange = {},
-                            label = { Text("Дедлайн") },
-                            textStyle = TextStyle(color = Color.Black),
-                            colors = TextFieldDefaults.outlinedTextFieldColors(
-                                textColor = Color.Black,
-                                focusedLabelColor = Color.Black,
-                                unfocusedLabelColor = Color.Gray,
-                                cursorColor = Color.Black
-                            ),
-                            modifier = Modifier.weight(1f),
-                            readOnly = true,
-                            interactionSource = dateFieldInteractionSource
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(
-                                checked = isRepeating,
-                                onCheckedChange = { isRepeating = it }
-                            )
-                            Text("Повторять")
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = content,
-                        onValueChange = { content = it },
-                        label = { Text("Содержимое", color = Color.Black) },
-                        textStyle = TextStyle(color = Color.Black),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.4f),
-                        maxLines = Int.MAX_VALUE
-                    )
-                }
-                NoteCategory.NOTES -> {
-                    OutlinedTextField(
-                        value = content,
-                        onValueChange = {
-                            content = it
+                    ChecklistEditor(
+                        checklistItems = checklistItems,
+                        onItemTextChange = { index, text ->
+                            checklistItems[index] = checklistItems[index].copy(text = text)
                         },
-                        label = { Text("Содержимое", color = Color.Black) },
-                        textStyle = TextStyle(color = Color.Black),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.4f),
-                        maxLines = Int.MAX_VALUE
+                        onItemCheckedChange = { index, checked ->
+                            checklistItems[index] = checklistItems[index].copy(isChecked = checked)
+                        },
+                        onAddItem = { checklistItems.add(ChecklistItem()) },
+                        onRemoveItem = { index ->
+                            if (checklistItems.size == 1) {
+                                checklistItems[index] = ChecklistItem()
+                            } else {
+                                checklistItems.removeAt(index)
+                            }
+                        }
                     )
                 }
+
+                NoteCategory.TASKS -> {
+                    DeadlinePicker(
+                        selectedDeadlineMillis = selectedDeadlineMillis,
+                        todayMillis = todayCalendar.timeInMillis,
+                        repeatRule = repeatRule,
+                        onDeadlineSelected = { selectedDeadlineMillis = it },
+                        onRepeatRuleChange = { repeatRule = it }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    NoteContentField(
+                        content = content,
+                        onContentChange = { content = it }
+                    )
                 }
+
+                NoteCategory.NOTES -> {
+                    NoteContentField(
+                        content = content,
+                        onContentChange = { content = it }
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(16.dp))
             if (BuildConfig.DEBUG) {
-                OutlinedTextField(
-                    value = coinCountText,
-                    onValueChange = { value ->
-                        if (value.all { it.isDigit() }) {
-                            coinCountText = value
-                        }
-                    },
-                    label = { Text("Количество монет") },
-                    textStyle = TextStyle(color = Color.Black),
-                    colors = TextFieldDefaults.outlinedTextFieldColors(
-                        textColor = Color.Black,
-                        focusedLabelColor = Color.Black,
-                        unfocusedLabelColor = Color.Gray,
-                        cursorColor = Color.Black
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                CoinCountDebugField(
+                    coinCountText = coinCountText,
+                    onCoinCountChange = { coinCountText = it }
                 )
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
             }
-
-            Row (
-                modifier = Modifier.fillMaxWidth()
-            ) {
-
+            Row(modifier = Modifier.fillMaxWidth()) {
                 Button(
                     onClick = {
-                        val coinCount = coinCountText.toIntOrNull()
-                            ?: defaultCoinCount
-                        val cleanedChecklist  = if (selectedCategory == NoteCategory.SHOPPING)
-                        {
-                            checklistItems
-                                .map {it.copy(text = it.text.trim())}
-                                .filter { it.text.isNotEmpty() || it.isChecked }
-                        } else {
-                            emptyList()
-                        }
-                        val preparedContent = when (selectedCategory) {
-                            NoteCategory.SHOPPING -> note?.content ?: ""
-                            else -> content
-                        }
-                        val preparedNote = Note (
-                            id = noteId,
+                        val preparedNote = prepareNoteForSave(
+                            noteId = noteId,
+                            originalNote = note,
                             title = title,
-                            content = preparedContent,
-                            category = selectedCategory,
-                            checklist = cleanedChecklist,
-                            deadlineMillis = if (selectedCategory == NoteCategory.TASKS) {
-                                selectedDeadlineMillis
-                            } else {
-                                null
-                            },
-                            isRepeating = if (selectedCategory == NoteCategory.TASKS) {
-                                isRepeating
-                            } else {
-                                false
-                            },
-                            coinCount = coinCount,
-                            isCompleted = note?.isCompleted ?: false
+                            content = content,
+                            selectedCategory = selectedCategory,
+                            checklistItems = checklistItems,
+                            selectedDeadlineMillis = selectedDeadlineMillis,
+                            repeatRule = repeatRule,
+                            coinCountText = coinCountText,
+                            defaultCoinCount = defaultCoinCount
                         )
+                        if (preparedNote == null) {
+                            isTitleError = true
+                            return@Button
+                        }
                         onSaveClick(preparedNote)
                     },
+                    modifier = Modifier.testTag(EDIT_NOTE_SAVE_BUTTON_TEST_TAG)
                 ) {
-                    Text("Сохранить")
+                    Text(stringResource(R.string.action_save))
                 }
                 Spacer(Modifier.weight(1f))
-                onDeleteClick?.let {
-                    Button(
-                        onClick = { it() },
+                if (note != null && onDeleteClick != null) {
+                    OutlinedButton(
+                        onClick = { showDeleteDialog = true },
+                        modifier = Modifier.testTag(EDIT_NOTE_DELETE_BUTTON_TEST_TAG)
                     ) {
-                        Text("Удалить")
+                        Text(stringResource(R.string.action_delete))
                     }
                 }
             }
         }
     }
-}
 
-// Preview-composable для предпросмотра в Android Studio.
-@Preview(showBackground = true)
-@Composable
-fun EditNoteScreenPreview() {
-    val sampleNote = Note(
-        id = "1",
-        title = "Пример",
-        content = "Содержимое",
-        category = NoteCategory.NOTES,
-        coinCount = 3
-    )
-    EditNoteScreen(
-        note = sampleNote,
-        onSaveClick = { _ -> },
-        onDeleteClick = { }
-    )
+    if (showDeleteDialog && onDeleteClick != null) {
+        DeleteNoteDialog(
+            onConfirm = {
+                showDeleteDialog = false
+                onDeleteClick()
+            },
+            onDismiss = { showDeleteDialog = false }
+        )
+    }
 }

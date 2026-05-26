@@ -1,6 +1,5 @@
 package com.example.mutlabocsnotes
 
-import android.content.Context
 import com.example.mutlabocsnotes.network.AuthResponseDto
 import com.example.mutlabocsnotes.network.RefreshTokenRequestDto
 import com.google.gson.Gson
@@ -16,14 +15,10 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
-// HTTP-интерсептор, дополняющий исходящие запросы.
 class AuthorizationInterceptor(
-    context: Context
+    private val sessionManager: AuthSessionStore
 ) : Interceptor {
 
-    private val sessionManager = SessionManager(context.applicationContext)
-
-    // Добавляет данные авторизации перед отправкой запроса.
     override fun intercept(chain: Interceptor.Chain): Response {
         val token = sessionManager.getAccessToken()
 
@@ -40,55 +35,51 @@ class AuthorizationInterceptor(
     }
 }
 
-// HTTP-аутентификатор, обновляющий истекшие учётные данные.
 class RefreshTokenAuthenticator(
-    context: Context
+    private val sessionManager: AuthSessionStore,
+    private val baseUrl: String = ApiConfig.BASE_URL
 ) : Authenticator {
 
-    private val appContext = context.applicationContext
-    private val sessionManager = SessionManager(appContext)
     private val gson = Gson()
 
-    // Пытается обновить токен, когда backend возвращает unauthorized.
     override fun authenticate(route: Route?, response: Response): Request? {
-        // Останавливается после ограниченного числа попыток, чтобы избежать циклов повторов.
+        val requestAccessToken = response.request.header("Authorization")
+            ?.removePrefix("Bearer ")
+            ?.trim()
+
         if (responseCount(response) >= 2) {
-            clearSessionAndNotify()
+            clearSessionAndNotify(sessionManager.getSessionSnapshot()?.refreshToken)
             return null
         }
 
-        val storedRefreshToken = sessionManager.getRefreshToken()
-            ?: run {
-                clearSessionAndNotify()
-                return null
-            }
-
         synchronized(this) {
-            val currentAccessToken = sessionManager.getAccessToken()
-            val requestAccessToken = response.request.header("Authorization")
-                ?.removePrefix("Bearer ")
-                ?.trim()
-
-            // Если другой запрос уже обновил токен, сразу используем его.
-            if (!currentAccessToken.isNullOrBlank() && currentAccessToken != requestAccessToken) {
-                return response.request.newBuilder()
-                    .header("Authorization", "Bearer $currentAccessToken")
-                    .build()
-            }
-
-            // Иначе обновляем токены, сохраняем их и повторяем исходный запрос.
-            val refreshResponse = refreshTokens(storedRefreshToken)
+            val currentSession = sessionManager.getSessionSnapshot()
                 ?: run {
-                    clearSessionAndNotify()
+                    clearSessionAndNotify(expectedRefreshToken = null)
                     return null
                 }
 
-            val currentEmail = sessionManager.getEmail()
-            sessionManager.saveSession(
+            if (currentSession.accessToken != requestAccessToken) {
+                return response.request.newBuilder()
+                    .header("Authorization", "Bearer ${currentSession.accessToken}")
+                    .build()
+            }
+
+            val refreshResponse = refreshTokens(currentSession.refreshToken)
+                ?: run {
+                    clearSessionAndNotify(currentSession.refreshToken)
+                    return null
+                }
+
+            val saved = sessionManager.saveSessionIfRefreshTokenMatches(
+                expectedRefreshToken = currentSession.refreshToken,
                 accessToken = refreshResponse.accessToken,
                 refreshToken = refreshResponse.refreshToken,
-                email = currentEmail
+                email = currentSession.email
             )
+            if (!saved) {
+                return null
+            }
 
             return response.request.newBuilder()
                 .header("Authorization", "Bearer ${refreshResponse.accessToken}")
@@ -96,14 +87,13 @@ class RefreshTokenAuthenticator(
         }
     }
 
-    // Вызывает endpoint обновления и разбирает новую пару токенов.
     private fun refreshTokens(refreshToken: String): AuthResponseDto? {
         val requestBody = gson.toJson(
             RefreshTokenRequestDto(refreshToken = refreshToken)
         ).toRequestBody("application/json".toMediaType())
 
         val request = Request.Builder()
-            .url("${ApiConfig.BASE_URL}auth/refresh")
+            .url("${baseUrl}auth/refresh")
             .post(requestBody)
             .build()
 
@@ -125,13 +115,14 @@ class RefreshTokenAuthenticator(
         }.getOrNull()
     }
 
-    // Очищает временные и сохранённые данные состояния.
-    private fun clearSessionAndNotify() {
-        sessionManager.clear()
-        SessionEventBus.emit(SessionEvent.SessionExpired)
+    private fun clearSessionAndNotify(expectedRefreshToken: String?) {
+        val shouldNotify = expectedRefreshToken == null ||
+            sessionManager.clearSessionIfRefreshTokenMatches(expectedRefreshToken)
+        if (shouldNotify) {
+            SessionEventBus.emit(SessionEvent.SessionExpired)
+        }
     }
 
-    // Подсчитывает предыдущие ответы, связанные через OkHttp, чтобы контролировать глубину повторов.
     private fun responseCount(response: Response): Int {
         var currentResponse: Response? = response
         var count = 1
@@ -145,28 +136,28 @@ class RefreshTokenAuthenticator(
     }
 }
 
-// Создаёт настроенные клиенты и зависимости для сетевого слоя.
 object AuthenticatedApiFactory {
 
-    // Создаёт и возвращает настроенный экземпляр.
-    fun createOkHttpClient(context: Context): OkHttpClient {
+    fun createOkHttpClient(
+        sessionManager: AuthSessionStore,
+        baseUrl: String = ApiConfig.BASE_URL
+    ): OkHttpClient {
         return OkHttpClient.Builder()
-            .addInterceptor(AuthorizationInterceptor(context.applicationContext))
-            .authenticator(RefreshTokenAuthenticator(context.applicationContext))
+            .addInterceptor(AuthorizationInterceptor(sessionManager))
+            .authenticator(RefreshTokenAuthenticator(sessionManager, baseUrl))
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .writeTimeout(15, TimeUnit.SECONDS)
             .build()
     }
 
-    // Создаёт и возвращает настроенный экземпляр.
     fun createRetrofit(
-        context: Context,
+        sessionManager: AuthSessionStore,
         baseUrl: String = ApiConfig.BASE_URL
     ): Retrofit {
         return Retrofit.Builder()
             .baseUrl(baseUrl)
-            .client(createOkHttpClient(context))
+            .client(createOkHttpClient(sessionManager, baseUrl))
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }

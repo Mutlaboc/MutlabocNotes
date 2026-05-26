@@ -1,0 +1,123 @@
+<resources>
+    <string name="app_name">Mutlaboc\'s notes</string>
+
+    <string name="action_settings">Settings</string>
+    <string name="action_back">Back</string>
+    <string name="action_add">Add</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_allow">Allow</string>
+
+    <string name="first_fragment_label">First Fragment</string>
+    <string name="second_fragment_label">Second Fragment</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+
+    <string name="deadline_notification_channel_name">Deadline reminders</string>
+    <string name="deadline_notification_channel_description">Notifications when task deadlines arrive</string>
+    <string name="deadline_notification_message">The deadline for “%1$s” has arrived. Do not forget to complete it!</string>
+    <string name="exact_alarm_permission_message">Exact reminders are disabled. Allow access to receive deadlines on time.</string>
+
+    <string name="api_error_unauthorized">Your session has expired. Sign in again.</string>
+    <string name="api_error_conflict">The data was changed elsewhere. Refresh the screen and try again.</string>
+    <string name="api_error_server">Server error. Try again later.</string>
+    <string name="api_error_network">Network error. Check your connection and try again.</string>
+    <string name="api_error_validation">Check the entered data and try again.</string>
+    <string name="api_error_unknown">Something went wrong. Try again.</string>
+
+    <string name="auth_email_label">Email</string>
+    <string name="auth_password_label">Password</string>
+    <string name="auth_sign_in">Sign In</string>
+    <string name="auth_signing_in">Signing in...</string>
+    <string name="auth_sign_up">Sign Up</string>
+    <string name="auth_sign_in_google">Sign in with Google</string>
+    <string name="auth_sign_in_yandex">Sign in with Yandex</string>
+    <string name="auth_error_google_token_empty">Google id token is empty</string>
+    <string name="auth_error_yandex_token_empty">Yandex access token is empty</string>
+    <string name="auth_error_google_sign_in_failed">Google sign-in failed</string>
+    <string name="auth_error_yandex_sign_in_failed">Yandex sign-in failed</string>
+    <string name="auth_error_yandex_sign_in_cancelled">Yandex sign-in cancelled</string>
+    <string name="auth_error_invalid_credentials">Enter a valid email and a password of at least 8 characters</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_account">Account</string>
+    <string name="settings_logout">Log out</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_selected_language">Selected %1$s</string>
+    <string name="language_ru">Русский</string>
+    <string name="language_en">English</string>
+
+    <string name="loading">Loading...</string>
+    <string name="search_label">Search</string>
+    <string name="notes_empty">There are no active notes yet</string>
+    <string name="completed_notes_empty">Completed tasks will appear here</string>
+    <string name="completed_notes_title">Completed tasks</string>
+    <string name="notes_title">Notes</string>
+    <string name="home_background_description">Home screen background</string>
+    <string name="total_coins_description">Total coins</string>
+    <string name="coin_description">Coin</string>
+    <string name="user_description">User</string>
+    <string name="switch_user">Switch user</string>
+    <string name="active_tasks">Active tasks</string>
+    <string name="note_deadline_value">Deadline: %1$s</string>
+    <string name="note_repeating">Repeats: %1$s</string>
+    <string name="checklist_preview_item">- %1$s</string>
+    <string name="more_items_indicator">...</string>
+
+    <string name="edit_note_title">Edit note</string>
+    <string name="note_title_label">Title</string>
+    <string name="note_title_required">Enter a title</string>
+    <string name="note_content_label">Content</string>
+    <string name="note_category_shopping">Shopping</string>
+    <string name="note_category_tasks">Tasks</string>
+    <string name="note_category_notes">Notes</string>
+    <string name="checklist_add_item">Add</string>
+    <string name="checklist_delete_item">Delete item</string>
+    <string name="deadline_label">Deadline</string>
+    <string name="repeat_label">Repeat: %1$s</string>
+    <string name="repeat_rule_none">None</string>
+    <string name="repeat_rule_daily">Daily</string>
+    <string name="repeat_rule_weekly">Weekly</string>
+    <string name="repeat_rule_monthly">Monthly</string>
+    <string name="coin_count_label">Coin count</string>
+    <string name="note_delete_title">Delete note?</string>
+    <string name="note_delete_message">This action cannot be undone.</string>
+
+    <string name="home_info_title">Home information</string>
+    <string name="home_info_empty">No cards to display</string>
+    <string name="home_info_add_card">Add card</string>
+    <string name="home_info_section">Section</string>
+    <string name="home_info_all_sections">All</string>
+    <string name="home_info_links_count">Links: %1$d</string>
+    <string name="home_info_open_link">Open link</string>
+    <string name="home_info_link_warning">Check this link: it may not open correctly</string>
+    <string name="home_info_field_value">%1$s: %2$s</string>
+    <string name="home_info_new_card">New card</string>
+    <string name="home_info_edit_card">Edit card</string>
+    <string name="home_info_fields">Fields</string>
+    <string name="home_info_key_label">Key</string>
+    <string name="home_info_value_label">Value</string>
+    <string name="home_info_delete_field">Delete field</string>
+    <string name="home_info_add_field">Add field</string>
+    <string name="home_info_note_label">Note</string>
+    <string name="home_info_links">Links</string>
+    <string name="home_info_link_label">Link</string>
+    <string name="home_info_delete_link">Delete link</string>
+    <string name="home_info_add_link">Add link</string>
+    <string name="home_info_title_required">Enter a title</string>
+    <string name="home_info_delete_card_title">Delete card?</string>
+    <string name="home_info_delete_card_message">This action cannot be undone.</string>
+    <string name="home_section_meters">Meters</string>
+    <string name="home_section_appliances">Appliances</string>
+    <string name="home_section_lighting">Lighting</string>
+    <string name="home_section_documents">Documents</string>
+    <string name="home_section_contacts">Contacts</string>
+    <string name="home_section_other">Other</string>
+    <string name="auth_show_password">Show password</string>
+    <string name="auth_hide_password">Hide password</string>
+</resources>
