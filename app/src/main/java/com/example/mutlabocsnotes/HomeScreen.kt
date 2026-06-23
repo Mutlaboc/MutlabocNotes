@@ -61,6 +61,9 @@ fun HomeScreen(
     val notes = contentState?.notes.orEmpty()
     val totalCoins = contentState?.totalCoins ?: 0
     val activeNotes = notes.filter { !it.isCompleted }
+    val homeAnimationRestartKey = remember(uiState, activeNotes, totalCoins) {
+        homeAnimationRestartKey(uiState, activeNotes, totalCoins)
+    }
     var search by remember { mutableStateOf("") }
 
     LaunchedEffect(uiMessage?.id) {
@@ -89,7 +92,10 @@ fun HomeScreen(
         }
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
-            HomeHeader(totalCoins = totalCoins)
+            HomeHeader(
+                totalCoins = totalCoins,
+                animationRestartKey = homeAnimationRestartKey
+            )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -158,6 +164,24 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+private fun homeAnimationRestartKey(
+    uiState: NotesUiState,
+    activeNotes: List<Note>,
+    totalCoins: Int
+): String {
+    return when (uiState) {
+        NotesUiState.Empty -> "empty:$totalCoins"
+        is NotesUiState.Error -> "error:${uiState.message}:$totalCoins"
+        NotesUiState.Loading -> "loading:$totalCoins"
+        is NotesUiState.Content -> {
+            val activeNotesKey = activeNotes.joinToString(separator = "|") { note ->
+                "${note.id}:${note.isCompleted}"
+            }
+            "content:$totalCoins:$activeNotesKey"
         }
     }
 }

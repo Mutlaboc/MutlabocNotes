@@ -20,31 +20,43 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.lottiefiles.dotlottie.core.compose.ui.DotLottieAnimation
+import com.lottiefiles.dotlottie.core.util.DotLottieSource
 
 @Composable
-internal fun HomeHeader(totalCoins: Int) {
+internal fun HomeHeader(
+    totalCoins: Int,
+    animationRestartKey: Any
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(200.dp),
         contentAlignment = Alignment.BottomCenter
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.background_country_home),
-            contentDescription = stringResource(R.string.home_background_description),
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
+        val backgroundDescription = stringResource(R.string.home_background_description)
+        key(animationRestartKey) {
+            DotLottieAnimation(
+                source = DotLottieSource.Res(R.raw.home),
+                autoplay = true,
+                loop = false,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .semantics { contentDescription = backgroundDescription }
+            )
+        }
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
