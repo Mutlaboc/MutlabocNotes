@@ -166,6 +166,116 @@ class Sprint5UxPolishTest {
     }
 
     @Test
+    fun authModeSwitch_togglesBetweenSignInAndSignUp() {
+        composeRule.setContent {
+            MaterialTheme {
+                AuthScreen(
+                    uiState = AuthUiState(authState = AuthState.Unauthenticated),
+                    onSignIn = { _, _ -> },
+                    onSignUp = { _, _ -> },
+                    onGoogleIdToken = {},
+                    onYandexAccessToken = {},
+                    onGoogleTokenEmpty = {},
+                    onGoogleSignInFailed = {},
+                    onYandexTokenEmpty = {},
+                    onYandexSignInFailed = {},
+                    onYandexSignInCancelled = {},
+                    onMessageShown = {},
+                    onClearInlineError = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(AUTH_SIGN_IN_BUTTON_TEST_TAG).assertIsDisplayed()
+        composeRule.onAllNodesWithTag(AUTH_CONFIRM_PASSWORD_FIELD_TEST_TAG).assertCountEquals(0)
+
+        composeRule.onNodeWithTag(AUTH_SIGN_UP_BUTTON_TEST_TAG).performClick()
+
+        composeRule.onNodeWithTag(AUTH_CONFIRM_PASSWORD_FIELD_TEST_TAG).assertIsDisplayed()
+
+        composeRule.onNodeWithTag(AUTH_SIGN_IN_BUTTON_TEST_TAG).performClick()
+
+        composeRule.onAllNodesWithTag(AUTH_CONFIRM_PASSWORD_FIELD_TEST_TAG).assertCountEquals(0)
+        composeRule.onNodeWithTag(AUTH_SIGN_IN_BUTTON_TEST_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun authSignUpMode_mismatchedPasswordsShowsErrorAndDoesNotSubmit() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val mismatch = context.getString(R.string.auth_error_passwords_do_not_match)
+        var signUpCalls = 0
+
+        composeRule.setContent {
+            MaterialTheme {
+                AuthScreen(
+                    uiState = AuthUiState(authState = AuthState.Unauthenticated),
+                    onSignIn = { _, _ -> },
+                    onSignUp = { _, _ -> signUpCalls += 1 },
+                    onGoogleIdToken = {},
+                    onYandexAccessToken = {},
+                    onGoogleTokenEmpty = {},
+                    onGoogleSignInFailed = {},
+                    onYandexTokenEmpty = {},
+                    onYandexSignInFailed = {},
+                    onYandexSignInCancelled = {},
+                    onMessageShown = {},
+                    onClearInlineError = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(AUTH_SIGN_UP_BUTTON_TEST_TAG).performClick()
+        composeRule.onNodeWithTag(AUTH_EMAIL_FIELD_TEST_TAG).performTextInput("new@example.com")
+        composeRule.onNodeWithTag(AUTH_PASSWORD_FIELD_TEST_TAG).performTextInput("secret123")
+        composeRule.onNodeWithTag(AUTH_CONFIRM_PASSWORD_FIELD_TEST_TAG).performTextInput("secret124")
+        composeRule.onNodeWithTag(AUTH_SIGN_UP_BUTTON_TEST_TAG).performClick()
+
+        composeRule.onNodeWithText(mismatch).assertIsDisplayed()
+        composeRule.runOnIdle {
+            assertEquals(0, signUpCalls)
+        }
+    }
+
+    @Test
+    fun authSignUpMode_matchingPasswordsSubmitsTrimmedEmail() {
+        var submittedEmail: String? = null
+        var submittedPassword: String? = null
+
+        composeRule.setContent {
+            MaterialTheme {
+                AuthScreen(
+                    uiState = AuthUiState(authState = AuthState.Unauthenticated),
+                    onSignIn = { _, _ -> },
+                    onSignUp = { email, password ->
+                        submittedEmail = email
+                        submittedPassword = password
+                    },
+                    onGoogleIdToken = {},
+                    onYandexAccessToken = {},
+                    onGoogleTokenEmpty = {},
+                    onGoogleSignInFailed = {},
+                    onYandexTokenEmpty = {},
+                    onYandexSignInFailed = {},
+                    onYandexSignInCancelled = {},
+                    onMessageShown = {},
+                    onClearInlineError = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(AUTH_SIGN_UP_BUTTON_TEST_TAG).performClick()
+        composeRule.onNodeWithTag(AUTH_EMAIL_FIELD_TEST_TAG).performTextInput(" new@example.com ")
+        composeRule.onNodeWithTag(AUTH_PASSWORD_FIELD_TEST_TAG).performTextInput("secret123")
+        composeRule.onNodeWithTag(AUTH_CONFIRM_PASSWORD_FIELD_TEST_TAG).performTextInput("secret123")
+        composeRule.onNodeWithTag(AUTH_SIGN_UP_BUTTON_TEST_TAG).performClick()
+
+        composeRule.runOnIdle {
+            assertEquals("new@example.com", submittedEmail)
+            assertEquals("secret123", submittedPassword)
+        }
+    }
+
+    @Test
     fun authSnackbar_rendersUiMessage() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val message = context.getString(R.string.api_error_network)
