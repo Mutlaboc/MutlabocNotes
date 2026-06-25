@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.semantics.disabled
@@ -58,6 +59,43 @@ object CozyAuth {
 
     /** Embedded Terminus-derived pixel font with full Cyrillic (OFL). */
     val PixelFont = FontFamily(Font(R.font.terminus_pixel))
+}
+
+fun Modifier.pixelScreenFrame(): Modifier = drawBehind {
+    val outer = 4.dp.toPx()
+    val inner = 8.dp.toPx()
+    drawRect(CozyAuth.BrownOutline.copy(alpha = 0.32f), size = Size(size.width, outer))
+    drawRect(
+        CozyAuth.BrownOutline.copy(alpha = 0.32f),
+        topLeft = Offset(0f, size.height - outer),
+        size = Size(size.width, outer)
+    )
+    drawRect(CozyAuth.BrownOutline.copy(alpha = 0.32f), size = Size(outer, size.height))
+    drawRect(
+        CozyAuth.BrownOutline.copy(alpha = 0.32f),
+        topLeft = Offset(size.width - outer, 0f),
+        size = Size(outer, size.height)
+    )
+    drawRect(
+        CozyAuth.MutedYellow.copy(alpha = 0.30f),
+        topLeft = Offset(inner, inner),
+        size = Size(outer, outer)
+    )
+    drawRect(
+        CozyAuth.MutedYellow.copy(alpha = 0.30f),
+        topLeft = Offset(size.width - inner - outer, inner),
+        size = Size(outer, outer)
+    )
+    drawRect(
+        CozyAuth.MutedYellow.copy(alpha = 0.30f),
+        topLeft = Offset(inner, size.height - inner - outer),
+        size = Size(outer, outer)
+    )
+    drawRect(
+        CozyAuth.MutedYellow.copy(alpha = 0.30f),
+        topLeft = Offset(size.width - inner - outer, size.height - inner - outer),
+        size = Size(outer, outer)
+    )
 }
 
 /**

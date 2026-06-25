@@ -1,5 +1,6 @@
 package com.example.mutlabocsnotes
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -82,6 +83,7 @@ fun HomeScreen(
     Scaffold(
         scaffoldState = scaffoldState,
         modifier = Modifier.fillMaxSize(),
+        backgroundColor = CozyAuth.Cream,
         bottomBar = {
             BottomBar(
                 selectedAction = null,
@@ -91,7 +93,13 @@ fun HomeScreen(
             )
         }
     ) { paddingValues ->
-        Column(modifier = Modifier.padding(paddingValues)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(CozyAuth.Cream)
+                .pixelScreenFrame()
+                .padding(paddingValues)
+        ) {
             HomeHeader(
                 totalCoins = totalCoins,
                 animationRestartKey = homeAnimationRestartKey

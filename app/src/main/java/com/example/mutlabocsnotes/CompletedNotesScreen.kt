@@ -1,5 +1,6 @@
 package com.example.mutlabocsnotes
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -56,6 +57,7 @@ fun CompletedNotesScreen(
     Scaffold(
         scaffoldState = scaffoldState,
         modifier = Modifier.fillMaxSize(),
+        backgroundColor = CozyAuth.Cream,
         bottomBar = {
             BottomBar(
                 selectedAction = BottomBarAction.CompletedNotes,
@@ -67,8 +69,10 @@ fun CompletedNotesScreen(
     ) { paddingValues ->
         Column(
             modifier = Modifier
-                .padding(paddingValues)
                 .fillMaxSize()
+                .background(CozyAuth.Cream)
+                .pixelScreenFrame()
+                .padding(paddingValues)
         ) {
             Text(
                 text = stringResource(R.string.completed_notes_title),
