@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,6 +27,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -40,23 +43,28 @@ internal fun HomeHeader(
     totalCoins: Int,
     animationRestartKey: Any
 ) {
+    val backgroundDescription = stringResource(R.string.home_background_description)
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp),
+            .height(220.dp)
+            .clipToBounds()
+            .semantics { contentDescription = backgroundDescription },
         contentAlignment = Alignment.BottomCenter
     ) {
-        val backgroundDescription = stringResource(R.string.home_background_description)
-        key(animationRestartKey) {
-            DotLottieAnimation(
-                source = DotLottieSource.Res(R.raw.home),
-                autoplay = true,
-                loop = false,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .semantics { contentDescription = backgroundDescription }
-            )
-        }
+        Image(
+            painter = painterResource(id = R.drawable.home_meadow_background),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        HomeYardScene(
+            animationRestartKey = animationRestartKey,
+            modifier = Modifier
+                .height(232.dp)
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+        )
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
