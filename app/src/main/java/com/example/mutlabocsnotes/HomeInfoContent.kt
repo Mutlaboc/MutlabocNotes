@@ -10,12 +10,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Link
@@ -24,7 +20,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 internal fun HomeInfoLoadingMessage() {
@@ -34,7 +32,7 @@ internal fun HomeInfoLoadingMessage() {
             .padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
-        CircularProgressIndicator()
+        CircularProgressIndicator(color = CozyAuth.Terracotta)
     }
 }
 
@@ -50,14 +48,18 @@ internal fun HomeInfoStatusMessage(
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = message, style = MaterialTheme.typography.body1)
+        Text(
+            text = message,
+            color = CozyAuth.InkSoft,
+            fontFamily = CozyAuth.PixelFont,
+            fontSize = 15.sp
+        )
         if (actionText != null && onAction != null) {
-            Button(
+            PixelPrimaryButton(
+                text = actionText,
                 onClick = onAction,
                 modifier = Modifier.padding(top = 12.dp)
-            ) {
-                Text(actionText)
-            }
+            )
         }
     }
 }
@@ -90,12 +92,10 @@ private fun HomeInfoCardItem(
         .filter { it.key.isNotBlank() || it.value.isNotBlank() }
         .take(3)
 
-    Surface(
+    PixelPanel(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colors.surface
+            .padding(vertical = 6.dp, horizontal = 2.dp)
     ) {
         Column(
             modifier = Modifier
@@ -104,13 +104,26 @@ private fun HomeInfoCardItem(
                 .clickable(onClick = onClick)
                 .padding(16.dp)
         ) {
-            Text(text = card.title, style = MaterialTheme.typography.subtitle1)
-            Text(text = sectionLabel(card.section), style = MaterialTheme.typography.caption)
+            Text(
+                text = card.title,
+                color = CozyAuth.Ink,
+                fontFamily = CozyAuth.PixelFont,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = sectionLabel(card.section),
+                color = CozyAuth.Hint,
+                fontFamily = CozyAuth.PixelFont,
+                fontSize = 12.sp
+            )
             Spacer(modifier = Modifier.height(6.dp))
             previewFields.forEach { field ->
                 Text(
                     text = field.displayText(),
-                    style = MaterialTheme.typography.body2
+                    color = CozyAuth.InkSoft,
+                    fontFamily = CozyAuth.PixelFont,
+                    fontSize = 14.sp
                 )
             }
             card.links.forEachIndexed { index, link ->
@@ -125,11 +138,14 @@ private fun HomeInfoCardItem(
                     Icon(
                         imageVector = Icons.Default.Link,
                         contentDescription = stringResource(R.string.home_info_open_link),
+                        tint = CozyAuth.Terracotta,
                         modifier = Modifier.padding(end = 6.dp)
                     )
                     Text(
                         text = link,
-                        style = MaterialTheme.typography.caption
+                        color = CozyAuth.TerracottaDark,
+                        fontFamily = CozyAuth.PixelFont,
+                        fontSize = 13.sp
                     )
                 }
             }

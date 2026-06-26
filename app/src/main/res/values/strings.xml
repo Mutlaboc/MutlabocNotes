@@ -100,6 +100,7 @@
     <string name="note_delete_message">Это действие нельзя отменить.</string>
 
     <string name="home_info_title">Информация о доме</string>
+    <string name="home_info_header_description">Хозяин пишет заметку за столом в избе</string>
     <string name="home_info_empty">Нет карточек для отображения</string>
     <string name="home_info_add_card">Добавить карточку</string>
     <string name="home_info_section">Раздел</string>
