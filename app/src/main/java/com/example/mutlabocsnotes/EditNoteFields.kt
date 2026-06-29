@@ -4,16 +4,13 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.AlertDialog
-import androidx.compose.material.Button
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedButton
-import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.sp
 
 @Composable
 internal fun NoteTitleField(
@@ -21,19 +18,21 @@ internal fun NoteTitleField(
     isError: Boolean,
     onTitleChange: (String) -> Unit
 ) {
-    OutlinedTextField(
+    CozyTextField(
         value = title,
         onValueChange = onTitleChange,
-        label = { Text(stringResource(R.string.note_title_label)) },
+        label = stringResource(R.string.note_title_label),
+        isError = isError,
         modifier = Modifier
             .fillMaxWidth()
-            .testTag(EDIT_NOTE_TITLE_FIELD_TEST_TAG),
-        isError = isError
+            .testTag(EDIT_NOTE_TITLE_FIELD_TEST_TAG)
     )
     if (isError) {
         Text(
             text = stringResource(R.string.note_title_required),
-            color = MaterialTheme.colors.error,
+            color = CozyAuth.Terracotta,
+            fontFamily = CozyAuth.PixelFont,
+            fontSize = 13.sp,
             modifier = Modifier.testTag(EDIT_NOTE_TITLE_ERROR_TEST_TAG)
         )
     }
@@ -44,15 +43,15 @@ internal fun NoteContentField(
     content: String,
     onContentChange: (String) -> Unit
 ) {
-    OutlinedTextField(
+    CozyTextField(
         value = content,
         onValueChange = onContentChange,
-        label = { Text(stringResource(R.string.note_content_label)) },
+        label = stringResource(R.string.note_content_label),
+        singleLine = false,
         modifier = Modifier
             .fillMaxWidth()
             .fillMaxHeight(0.4f)
-            .testTag(EDIT_NOTE_CONTENT_FIELD_TEST_TAG),
-        maxLines = Int.MAX_VALUE
+            .testTag(EDIT_NOTE_CONTENT_FIELD_TEST_TAG)
     )
 }
 
@@ -61,18 +60,18 @@ internal fun CoinCountDebugField(
     coinCountText: String,
     onCoinCountChange: (String) -> Unit
 ) {
-    OutlinedTextField(
+    CozyTextField(
         value = coinCountText,
         onValueChange = { value ->
             if (value.all { it.isDigit() }) {
                 onCoinCountChange(value)
             }
         },
-        label = { Text(stringResource(R.string.coin_count_label)) },
+        label = stringResource(R.string.coin_count_label),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier
             .fillMaxWidth()
-            .testTag(EDIT_NOTE_COIN_COUNT_FIELD_TEST_TAG),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            .testTag(EDIT_NOTE_COIN_COUNT_FIELD_TEST_TAG)
     )
 }
 
@@ -83,20 +82,33 @@ internal fun DeleteNoteDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.note_delete_title)) },
-        text = { Text(stringResource(R.string.note_delete_message)) },
+        backgroundColor = CozyAuth.CardCream,
+        title = {
+            Text(
+                text = stringResource(R.string.note_delete_title),
+                color = CozyAuth.Ink,
+                fontFamily = CozyAuth.PixelFont
+            )
+        },
+        text = {
+            Text(
+                text = stringResource(R.string.note_delete_message),
+                color = CozyAuth.InkSoft,
+                fontFamily = CozyAuth.PixelFont
+            )
+        },
         confirmButton = {
-            Button(
+            PixelPrimaryButton(
+                text = stringResource(R.string.action_delete),
                 onClick = onConfirm,
                 modifier = Modifier.testTag(EDIT_NOTE_DELETE_CONFIRM_BUTTON_TEST_TAG)
-            ) {
-                Text(stringResource(R.string.action_delete))
-            }
+            )
         },
         dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_cancel))
-            }
+            PixelOutlineButton(
+                text = stringResource(R.string.action_cancel),
+                onClick = onDismiss
+            )
         }
     )
 }

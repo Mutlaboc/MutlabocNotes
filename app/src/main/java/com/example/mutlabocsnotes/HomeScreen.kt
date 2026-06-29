@@ -1,6 +1,12 @@
 package com.example.mutlabocsnotes
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.os.SystemClock
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.AlertDialog
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Scaffold
 import androidx.compose.material.SnackbarResult
@@ -16,11 +23,16 @@ import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -53,8 +65,25 @@ fun HomeScreen(
     onHomeInfoClick: () -> Unit,
     onCompletionChange: (noteId: String, Boolean) -> Unit,
     onSwitchUser: () -> Unit,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    onOpenCharacter: () -> Unit = {},
+    characterSheet: CharacterSheet? = null,
+    onGrantXp: (characterXp: Int, skillKey: String?, skillXp: Int) -> Unit = { _, _, _ -> }
 ) {
+    val context = LocalContext.current
+    var showExitDialog by remember { mutableStateOf(false) }
+    // Intercept the system back press on the notes screen to confirm leaving the app.
+    BackHandler(enabled = !showExitDialog) { showExitDialog = true }
+    if (showExitDialog) {
+        ExitAppDialog(
+            onConfirm = {
+                showExitDialog = false
+                context.findActivity()?.finish()
+            },
+            onDismiss = { showExitDialog = false }
+        )
+    }
+
     val scaffoldState = rememberScaffoldState()
     val snackbarText = uiMessage?.text?.asString()
     val snackbarActionText = uiMessage?.actionText?.asString()
@@ -66,6 +95,23 @@ fun HomeScreen(
         homeAnimationRestartKey(uiState, activeNotes, totalCoins)
     }
     var search by remember { mutableStateOf("") }
+
+    // Coin-flight animation state: the header counter's anchor, the active flights, and an
+    // id source. Completing a note is deferred until its coins reach the counter.
+    var coinTarget by remember { mutableStateOf(Offset.Zero) }
+    val flights = remember { mutableStateListOf<CoinFlight>() }
+    val bursts = remember { mutableStateListOf<NoteBurst>() }
+    var nextFlightId by remember { mutableStateOf(0L) }
+
+    // Per-note stopwatch state (in memory only — not persisted). [timerAccum] holds the
+    // paused value; while a note runs we add (now - runStart) on top.
+    val timerAccum = remember { mutableStateMapOf<String, Long>() }
+    var runningNoteId by remember { mutableStateOf<String?>(null) }
+    var expandedNoteId by remember { mutableStateOf<String?>(null) }
+    var runStartUptime by remember { mutableStateOf(0L) }
+    var timerOriginRect by remember { mutableStateOf(Rect.Zero) }
+    // Random skill (from the character's skills) credited during this timer session.
+    var timerSkillKey by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(uiMessage?.id) {
         val message = uiMessage ?: return@LaunchedEffect
@@ -93,16 +139,22 @@ fun HomeScreen(
             )
         }
     ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(CozyAuth.Cream)
                 .pixelScreenFrame()
-                .padding(paddingValues)
         ) {
             HomeHeader(
                 totalCoins = totalCoins,
-                animationRestartKey = homeAnimationRestartKey
+                animationRestartKey = homeAnimationRestartKey,
+                onCoinAnchorPositioned = { coinTarget = it },
+                onOpenCharacter = onOpenCharacter
             )
             Row(
                 modifier = Modifier
@@ -110,10 +162,10 @@ fun HomeScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedTextField(
+                CozyTextField(
                     value = search,
                     onValueChange = { search = it },
-                    placeholder = { Text(stringResource(R.string.search_label)) },
+                    label = stringResource(R.string.search_label),
                     modifier = Modifier
                         .padding(start = 8.dp)
                         .weight(1f)
@@ -166,6 +218,35 @@ fun HomeScreen(
                                 modifier = Modifier.testTag(noteItemTestTag(note.id)),
                                 onCompletionChange = { isCompleted ->
                                     onCompletionChange(note.id, isCompleted)
+                                },
+                                onBurstComplete = { burstCenter, coinSource, coinCount, color ->
+                                    nextFlightId += 1
+                                    bursts.add(
+                                        NoteBurst(
+                                            id = nextFlightId,
+                                            centerRoot = burstCenter,
+                                            color = color
+                                        )
+                                    )
+                                    flights.add(
+                                        CoinFlight(
+                                            id = nextFlightId,
+                                            noteId = note.id,
+                                            startRoot = coinSource,
+                                            count = coinCount
+                                        )
+                                    )
+                                },
+                                timerMillis = timerAccum[note.id] ?: 0L,
+                                isExpanded = expandedNoteId == note.id,
+                                onStartTimer = { rect ->
+                                    if (expandedNoteId == null) {
+                                        timerOriginRect = rect
+                                        runStartUptime = SystemClock.uptimeMillis()
+                                        timerSkillKey = characterSheet?.skills?.randomOrNull()?.key
+                                        runningNoteId = note.id
+                                        expandedNoteId = note.id
+                                    }
                                 }
                             )
                         }
@@ -173,7 +254,98 @@ fun HomeScreen(
                 }
             }
         }
+
+            CoinFlightOverlay(
+                flights = flights,
+                bursts = bursts,
+                targetRoot = coinTarget,
+                onFlightArrived = { flight ->
+                    flights.remove(flight)
+                    onCompletionChange(flight.noteId, true)
+                },
+                onBurstFinished = { burst -> bursts.remove(burst) }
+            )
+
+            val expandedNote = expandedNoteId?.let { id -> notes.find { it.id == id } }
+            if (expandedNote != null) {
+                // Commits the running segment to the accumulator and credits the earned XP
+                // (1 per 2s to the character, 1 per 10s to the session skill).
+                val settleRun: () -> Unit = settle@{
+                    if (runningNoteId != expandedNote.id) return@settle
+                    val segment = (SystemClock.uptimeMillis() - runStartUptime).coerceAtLeast(0L)
+                    val base = timerAccum[expandedNote.id] ?: 0L
+                    timerAccum[expandedNote.id] = base + segment
+                    runningNoteId = null
+                    onGrantXp((segment / 2000L).toInt(), timerSkillKey, (segment / 10000L).toInt())
+                }
+                ExpandedNoteOverlay(
+                    note = expandedNote,
+                    accumulatedMs = timerAccum[expandedNote.id] ?: 0L,
+                    running = runningNoteId == expandedNote.id,
+                    runStartUptime = runStartUptime,
+                    onPause = settleRun,
+                    onResume = {
+                        runStartUptime = SystemClock.uptimeMillis()
+                        runningNoteId = expandedNote.id
+                    },
+                    onComplete = {
+                        settleRun()
+                        onCompletionChange(expandedNote.id, true)
+                    },
+                    onReturnHome = settleRun,
+                    onClosed = { expandedNoteId = null },
+                    characterSheet = characterSheet,
+                    timerSkill = characterSheet?.skills?.firstOrNull { it.key == timerSkillKey }
+                )
+            }
+        }
     }
+}
+
+@Composable
+private fun ExitAppDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        backgroundColor = CozyAuth.CardCream,
+        title = {
+            Text(
+                text = "Выход",
+                color = CozyAuth.Ink,
+                fontFamily = CozyAuth.PixelFont
+            )
+        },
+        text = {
+            Text(
+                text = "Выйти из приложения?",
+                color = CozyAuth.InkSoft,
+                fontFamily = CozyAuth.PixelFont
+            )
+        },
+        confirmButton = {
+            PixelPrimaryButton(
+                text = "Выйти",
+                onClick = onConfirm
+            )
+        },
+        dismissButton = {
+            PixelOutlineButton(
+                text = stringResource(R.string.action_cancel),
+                onClick = onDismiss
+            )
+        }
+    )
+}
+
+private fun Context.findActivity(): Activity? {
+    var ctx: Context = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }
 
 private fun homeAnimationRestartKey(

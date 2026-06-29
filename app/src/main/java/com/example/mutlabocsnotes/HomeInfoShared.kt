@@ -2,10 +2,14 @@ package com.example.mutlabocsnotes
 
 import android.net.Uri
 import androidx.annotation.StringRes
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.OutlinedButton
@@ -19,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 const val HOME_INFO_SEARCH_FIELD_TEST_TAG = "home_info_search_field"
 const val HOME_INFO_LINK_WARNING_TEST_TAG = "home_info_link_warning"
@@ -37,22 +42,44 @@ fun SectionPicker(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(stringResource(R.string.home_info_section))
+        Text(
+            text = stringResource(R.string.home_info_section),
+            color = CozyAuth.Ink,
+            fontFamily = CozyAuth.PixelFont,
+            fontSize = 15.sp
+        )
         Spacer(modifier = Modifier.width(12.dp))
         Box {
-            OutlinedButton(onClick = { expanded = true }) {
-                Text(sectionLabel(selectedSection))
+            OutlinedButton(
+                onClick = { expanded = true },
+                shape = RoundedCornerShape(4.dp),
+                border = BorderStroke(2.dp, CozyAuth.InputBorder),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    backgroundColor = CozyAuth.FieldCream,
+                    contentColor = CozyAuth.TerracottaDark
+                )
+            ) {
+                Text(
+                    text = sectionLabel(selectedSection),
+                    fontFamily = CozyAuth.PixelFont,
+                    fontSize = 14.sp
+                )
             }
             DropdownMenu(
                 expanded = expanded,
-                onDismissRequest = { expanded = false }
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(CozyAuth.CardCream)
             ) {
                 HomeSection.values().forEach { section ->
                     DropdownMenuItem(onClick = {
                         onSectionSelected(section)
                         expanded = false
                     }) {
-                        Text(sectionLabel(section))
+                        Text(
+                            text = sectionLabel(section),
+                            color = CozyAuth.Ink,
+                            fontFamily = CozyAuth.PixelFont
+                        )
                     }
                 }
             }

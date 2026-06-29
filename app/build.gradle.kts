@@ -267,7 +267,6 @@ dependencies {
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
-    implementation(libs.dotlottie.android)
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

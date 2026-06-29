@@ -9,6 +9,9 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 class NotesViewModel(
     application: Application,
@@ -31,7 +34,7 @@ class NotesViewModel(
             launch(Dispatchers.Main) {
                 result.onSuccess { loadedNotes ->
                     applyNotes(loadedNotes)
-                    handleScheduleResult(notificationScheduler.scheduleAll(loadedNotes))
+                    reschedule { notificationScheduler.scheduleAll(loadedNotes) }
                 }.onFailure { error ->
                     uiState = NotesUiState.Error(ApiErrorMapper.map(error))
                 }
@@ -47,7 +50,7 @@ class NotesViewModel(
                     val noteWithId = note.copy(id = id)
                     val notes = currentNotes() + noteWithId
                     applyNotes(notes)
-                    handleScheduleResult(notificationScheduler.schedule(noteWithId))
+                    reschedule { notificationScheduler.schedule(noteWithId) }
                 }.onFailure { error ->
                     showMessage(error)
                 }
@@ -56,7 +59,7 @@ class NotesViewModel(
     }
 
     fun clearAll() {
-        notificationScheduler.cancelAll()
+        runScheduler { notificationScheduler.cancelAll() }
         uiState = NotesUiState.Empty
         uiMessage = null
     }
@@ -81,7 +84,7 @@ class NotesViewModel(
                         if (existing.id == note.id) note else existing
                     }
                     applyNotes(notes)
-                    handleScheduleResult(notificationScheduler.schedule(note))
+                    reschedule { notificationScheduler.schedule(note) }
                 }.onFailure { error ->
                     showMessage(error)
                 }
@@ -100,14 +103,14 @@ class NotesViewModel(
             this[index] = updatedNote
         }
         applyNotes(optimisticNotes)
-        handleScheduleResult(notificationScheduler.schedule(updatedNote))
+        reschedule { notificationScheduler.schedule(updatedNote) }
 
         viewModelScope.launch(ioDispatcher) {
             val result = repository.updateCompletion(noteId, isCompleted)
             launch(Dispatchers.Main) {
                 result.onFailure { error ->
                     applyNotes(existingNotes)
-                    handleScheduleResult(notificationScheduler.schedule(existing))
+                    reschedule { notificationScheduler.schedule(existing) }
                     showMessage(error)
                 }
             }
@@ -123,7 +126,7 @@ class NotesViewModel(
                     val deletedNote = notes.find { it.id == noteId }
                     applyNotes(notes.filterNot { it.id == noteId })
                     if (deletedNote != null) {
-                        notificationScheduler.cancel(noteId)
+                        runScheduler { notificationScheduler.cancel(noteId) }
                     }
                 }.onFailure { error ->
                     showMessage(error)
@@ -152,6 +155,23 @@ class NotesViewModel(
             id = UiMessageId.next(),
             text = ApiErrorMapper.map(error)
         )
+    }
+
+    // Alarm scheduling touches AlarmManager + SharedPreferences, so it must run off the
+    // main thread; [scheduleMutex] serialises those writes (they share one prefs record).
+    private val scheduleMutex = Mutex()
+
+    private fun reschedule(block: () -> DeadlineScheduleResult) {
+        viewModelScope.launch(ioDispatcher) {
+            val result = scheduleMutex.withLock { block() }
+            withContext(Dispatchers.Main) { handleScheduleResult(result) }
+        }
+    }
+
+    private fun runScheduler(block: () -> Unit) {
+        viewModelScope.launch(ioDispatcher) {
+            scheduleMutex.withLock { block() }
+        }
     }
 
     private fun handleScheduleResult(result: DeadlineScheduleResult) {

@@ -132,4 +132,21 @@
     <string name="home_section_other">Other</string>
     <string name="auth_show_password">Show password</string>
     <string name="auth_hide_password">Hide password</string>
+
+    <string name="character_title">Character sheet</string>
+    <string name="character_section_stats">Abilities</string>
+    <string name="character_section_skills">Skills</string>
+    <string name="character_mascot_description">Mascot</string>
+    <string name="character_rename_title">Rename</string>
+    <string name="character_name_label">Name</string>
+    <string name="character_xp_label">Experience</string>
+    <string name="character_xp_max">MAX</string>
+    <string name="character_level_short">Lv. %1$d</string>
+    <string name="character_level_xp_label">Lv. %1$d · XP</string>
+    <string name="character_skill_level">lv. %1$d</string>
+    <string name="start_timer_description">Start timer</string>
+    <string name="timer_stop">Stop</string>
+    <string name="timer_resume">Resume</string>
+    <string name="timer_done">Done</string>
+    <string name="timer_home">Home</string>
 </resources>

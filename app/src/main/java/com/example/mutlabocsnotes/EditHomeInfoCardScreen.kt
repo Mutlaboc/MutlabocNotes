@@ -1,5 +1,6 @@
 package com.example.mutlabocsnotes
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,17 +14,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.AlertDialog
-import androidx.compose.material.Button
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedButton
-import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
-import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,8 +30,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun EditHomeInfoCardScreen(
@@ -61,25 +58,15 @@ fun EditHomeInfoCardScreen(
     val hasLinkWarning = hasSuspiciousHomeInfoLinks(cleanedLinks)
 
     Scaffold(
+        backgroundColor = CozyAuth.Cream,
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        if (card == null) {
-                            stringResource(R.string.home_info_new_card)
-                        } else {
-                            stringResource(R.string.home_info_edit_card)
-                        }
-                    )
+            CozyTopBar(
+                title = if (card == null) {
+                    stringResource(R.string.home_info_new_card)
+                } else {
+                    stringResource(R.string.home_info_edit_card)
                 },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back)
-                        )
-                    }
-                }
+                onBack = onBack
             )
         }
     ) { padding ->
@@ -87,23 +74,27 @@ fun EditHomeInfoCardScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
+                .background(CozyAuth.Cream)
+                .pixelScreenFrame()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            OutlinedTextField(
+            CozyTextField(
                 value = title,
                 onValueChange = {
                     title = it
                     isTitleError = false
                 },
-                label = { Text(stringResource(R.string.note_title_label)) },
-                modifier = Modifier.fillMaxWidth(),
-                isError = isTitleError
+                label = stringResource(R.string.note_title_label),
+                isError = isTitleError,
+                modifier = Modifier.fillMaxWidth()
             )
             if (isTitleError) {
                 Text(
                     text = stringResource(R.string.home_info_title_required),
-                    color = MaterialTheme.colors.error
+                    color = CozyAuth.Terracotta,
+                    fontFamily = CozyAuth.PixelFont,
+                    fontSize = 13.sp
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -112,69 +103,73 @@ fun EditHomeInfoCardScreen(
                 onSectionSelected = { selectedSection = it }
             )
             Spacer(modifier = Modifier.height(12.dp))
-            Text(stringResource(R.string.home_info_fields))
+            EditCardSectionLabel(stringResource(R.string.home_info_fields))
             Spacer(modifier = Modifier.height(6.dp))
             fields.forEachIndexed { index, field ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    OutlinedTextField(
+                    CozyTextField(
                         value = field.key,
                         onValueChange = { fields[index] = field.copy(key = it) },
-                        label = { Text(stringResource(R.string.home_info_key_label)) },
+                        label = stringResource(R.string.home_info_key_label),
                         modifier = Modifier.weight(1f)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    OutlinedTextField(
+                    CozyTextField(
                         value = field.value,
                         onValueChange = { fields[index] = field.copy(value = it) },
-                        label = { Text(stringResource(R.string.home_info_value_label)) },
+                        label = stringResource(R.string.home_info_value_label),
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(onClick = { fields.removeAt(index) }) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = stringResource(R.string.home_info_delete_field)
+                            contentDescription = stringResource(R.string.home_info_delete_field),
+                            tint = CozyAuth.InkSoft
                         )
                     }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
             }
-            OutlinedButton(onClick = { fields.add(HomeField()) }) {
-                Text(stringResource(R.string.home_info_add_field))
-            }
+            PixelOutlineButton(
+                text = stringResource(R.string.home_info_add_field),
+                onClick = { fields.add(HomeField()) }
+            )
             Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(
+            CozyTextField(
                 value = note,
                 onValueChange = { note = it },
-                label = { Text(stringResource(R.string.home_info_note_label)) },
+                label = stringResource(R.string.home_info_note_label),
+                singleLine = false,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp),
                 keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Text)
             )
             Spacer(modifier = Modifier.height(12.dp))
-            Text(stringResource(R.string.home_info_links))
+            EditCardSectionLabel(stringResource(R.string.home_info_links))
             Spacer(modifier = Modifier.height(6.dp))
             links.forEachIndexed { index, link ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    OutlinedTextField(
+                    CozyTextField(
                         value = link,
                         onValueChange = { links[index] = it },
-                        label = { Text(stringResource(R.string.home_info_link_label)) },
+                        label = stringResource(R.string.home_info_link_label),
+                        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Uri),
                         modifier = Modifier
                             .weight(1f)
-                            .testTag(editHomeInfoLinkFieldTestTag(index)),
-                        keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Uri)
+                            .testTag(editHomeInfoLinkFieldTestTag(index))
                     )
                     IconButton(onClick = { links.removeAt(index) }) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = stringResource(R.string.home_info_delete_link)
+                            contentDescription = stringResource(R.string.home_info_delete_link),
+                            tint = CozyAuth.InkSoft
                         )
                     }
                 }
@@ -183,23 +178,26 @@ fun EditHomeInfoCardScreen(
             if (hasLinkWarning) {
                 Text(
                     text = stringResource(R.string.home_info_link_warning),
-                    color = MaterialTheme.colors.error,
-                    style = MaterialTheme.typography.caption,
+                    color = CozyAuth.Terracotta,
+                    fontFamily = CozyAuth.PixelFont,
+                    fontSize = 12.sp,
                     modifier = Modifier.testTag(HOME_INFO_LINK_WARNING_TEST_TAG)
                 )
                 Spacer(modifier = Modifier.height(6.dp))
             }
-            OutlinedButton(onClick = { links.add("") }) {
-                Text(stringResource(R.string.home_info_add_link))
-            }
+            PixelOutlineButton(
+                text = stringResource(R.string.home_info_add_link),
+                onClick = { links.add("") }
+            )
             Spacer(modifier = Modifier.height(20.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(
+                PixelPrimaryButton(
+                    text = stringResource(R.string.action_save),
                     onClick = {
                         val trimmedTitle = title.trim()
                         if (trimmedTitle.isBlank()) {
                             isTitleError = true
-                            return@Button
+                            return@PixelPrimaryButton
                         }
                         val now = System.currentTimeMillis()
                         val updatedCard = HomeInfoCard(
@@ -217,13 +215,12 @@ fun EditHomeInfoCardScreen(
                         onSaveClick(updatedCard)
                     },
                     modifier = Modifier.testTag(EDIT_HOME_INFO_SAVE_BUTTON_TEST_TAG)
-                ) {
-                    Text(stringResource(R.string.action_save))
-                }
+                )
                 if (card != null && onDeleteClick != null) {
-                    OutlinedButton(onClick = { showDeleteDialog = true }) {
-                        Text(stringResource(R.string.action_delete))
-                    }
+                    PixelOutlineButton(
+                        text = stringResource(R.string.action_delete),
+                        onClick = { showDeleteDialog = true }
+                    )
                 }
             }
         }
@@ -232,21 +229,47 @@ fun EditHomeInfoCardScreen(
     if (showDeleteDialog && onDeleteClick != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text(stringResource(R.string.home_info_delete_card_title)) },
-            text = { Text(stringResource(R.string.home_info_delete_card_message)) },
+            backgroundColor = CozyAuth.CardCream,
+            title = {
+                Text(
+                    text = stringResource(R.string.home_info_delete_card_title),
+                    color = CozyAuth.Ink,
+                    fontFamily = CozyAuth.PixelFont
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.home_info_delete_card_message),
+                    color = CozyAuth.InkSoft,
+                    fontFamily = CozyAuth.PixelFont
+                )
+            },
             confirmButton = {
-                Button(onClick = {
-                    showDeleteDialog = false
-                    onDeleteClick()
-                }) {
-                    Text(stringResource(R.string.action_delete))
-                }
+                PixelPrimaryButton(
+                    text = stringResource(R.string.action_delete),
+                    onClick = {
+                        showDeleteDialog = false
+                        onDeleteClick()
+                    }
+                )
             },
             dismissButton = {
-                OutlinedButton(onClick = { showDeleteDialog = false }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
+                PixelOutlineButton(
+                    text = stringResource(R.string.action_cancel),
+                    onClick = { showDeleteDialog = false }
+                )
             }
         )
     }
+}
+
+@Composable
+private fun EditCardSectionLabel(text: String) {
+    Text(
+        text = text,
+        color = CozyAuth.Ink,
+        fontFamily = CozyAuth.PixelFont,
+        fontSize = 15.sp,
+        fontWeight = FontWeight.Bold
+    )
 }

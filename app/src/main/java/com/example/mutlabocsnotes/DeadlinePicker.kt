@@ -1,12 +1,16 @@
 package com.example.mutlabocsnotes
 
 import android.app.DatePickerDialog
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.OutlinedTextField
@@ -23,7 +27,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.util.Calendar
 
 const val REPEAT_RULE_DROPDOWN_TEST_TAG = "repeat_rule_dropdown"
@@ -86,9 +92,18 @@ internal fun DeadlinePicker(
         OutlinedTextField(
             value = deadlineText,
             onValueChange = {},
-            label = { Text(stringResource(R.string.deadline_label)) },
+            label = {
+                Text(
+                    text = stringResource(R.string.deadline_label),
+                    fontFamily = CozyAuth.PixelFont
+                )
+            },
             modifier = Modifier.weight(1f),
             readOnly = true,
+            singleLine = true,
+            shape = RoundedCornerShape(4.dp),
+            textStyle = TextStyle(fontFamily = CozyAuth.PixelFont, color = CozyAuth.Ink),
+            colors = cozyTextFieldColors(),
             interactionSource = dateFieldInteractionSource
         )
         Spacer(modifier = Modifier.width(8.dp))
@@ -108,13 +123,24 @@ private fun RepeatRuleDropdown(
     Box {
         OutlinedButton(
             onClick = { expanded = true },
+            shape = RoundedCornerShape(4.dp),
+            border = BorderStroke(2.dp, CozyAuth.InputBorder),
+            colors = ButtonDefaults.outlinedButtonColors(
+                backgroundColor = CozyAuth.FieldCream,
+                contentColor = CozyAuth.TerracottaDark
+            ),
             modifier = Modifier.testTag(REPEAT_RULE_DROPDOWN_TEST_TAG)
         ) {
-            Text(stringResource(R.string.repeat_label, stringResource(repeatRule.labelRes())))
+            Text(
+                text = stringResource(R.string.repeat_label, stringResource(repeatRule.labelRes())),
+                fontFamily = CozyAuth.PixelFont,
+                fontSize = 14.sp
+            )
         }
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(CozyAuth.CardCream)
         ) {
             RepeatRule.values().forEach { rule ->
                 DropdownMenuItem(
@@ -124,7 +150,11 @@ private fun RepeatRuleDropdown(
                     },
                     modifier = Modifier.testTag(repeatRuleOptionTestTag(rule))
                 ) {
-                    Text(stringResource(rule.labelRes()))
+                    Text(
+                        text = stringResource(rule.labelRes()),
+                        color = CozyAuth.Ink,
+                        fontFamily = CozyAuth.PixelFont
+                    )
                 }
             }
         }

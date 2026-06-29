@@ -1,19 +1,35 @@
 package com.example.mutlabocsnotes
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.Colors
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
+import androidx.compose.material.darkColors
+import androidx.compose.material.lightColors
+import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.SwitchDefaults
 import androidx.compose.material.Text
+import androidx.compose.material.TextFieldDefaults
+import androidx.compose.material.TopAppBar
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,12 +38,17 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
 /**
  * Warm, cozy pixel-art palette and reusable building blocks for the HomeNotes
@@ -59,7 +80,40 @@ object CozyAuth {
 
     /** Embedded Terminus-derived pixel font with full Cyrillic (OFL). */
     val PixelFont = FontFamily(Font(R.font.terminus_pixel))
+
+    /** Cream-coloured "ink on cream" text used on dark/terracotta surfaces. */
+    val OnAccent = Color(0xFFFFF6EC)
 }
+
+/**
+ * Material palettes built from the cozy colours, so default Material widgets (checkboxes,
+ * switches, progress, text cursor/selection, ripples, menus) match the pixel UI instead
+ * of falling back to the stock purple/teal accents.
+ */
+fun cozyLightColors(): Colors = lightColors(
+    primary = CozyAuth.Terracotta,
+    primaryVariant = CozyAuth.TerracottaDark,
+    secondary = CozyAuth.Terracotta,
+    secondaryVariant = CozyAuth.TerracottaDark,
+    background = CozyAuth.Cream,
+    surface = CozyAuth.CardCream,
+    onPrimary = CozyAuth.OnAccent,
+    onSecondary = CozyAuth.OnAccent,
+    onBackground = CozyAuth.Ink,
+    onSurface = CozyAuth.Ink,
+)
+
+fun cozyDarkColors(): Colors = darkColors(
+    primary = CozyAuth.Terracotta,
+    primaryVariant = CozyAuth.TerracottaDark,
+    secondary = CozyAuth.Terracotta,
+    background = CozyAuth.Ink,
+    surface = CozyAuth.InkSoft,
+    onPrimary = CozyAuth.OnAccent,
+    onSecondary = CozyAuth.OnAccent,
+    onBackground = CozyAuth.Cream,
+    onSurface = CozyAuth.Cream,
+)
 
 fun Modifier.pixelScreenFrame(): Modifier = drawBehind {
     val outer = 4.dp.toPx()
@@ -201,22 +255,34 @@ fun PixelClickable(
     content: @Composable () -> Unit
 ) {
     val interaction = remember { MutableInteractionSource() }
+    val scope = rememberCoroutineScope()
+    // The face sinks down into its shadow lip for a tactile "pushed in" feel. On click we
+    // drive a full press pulse and only fire onClick after the down phase, so the animation
+    // is always visible — even for buttons (like Save) whose action navigates away.
+    val press = remember { Animatable(0f) }
+    val shape = RoundedCornerShape(4.dp)
     Box(
         modifier
+            .graphicsLayer { translationY = shadowOffset.dp.toPx() * press.value }
             .drawBehind {
                 val o = shadowOffset.dp.toPx()
-                drawRect(color = shadow, topLeft = Offset(0f, o), size = size)
+                drawRect(color = shadow, topLeft = Offset(0f, o - o * press.value), size = size)
             }
-            .clip(RoundedCornerShape(4.dp))
+            .clip(shape)
             .background(fill)
-            .border(borderWidth.dp, border, RoundedCornerShape(4.dp))
+            .border(borderWidth.dp, border, shape)
             .then(if (enabled) Modifier else Modifier.semantics { disabled() })
             .clickable(
                 interactionSource = interaction,
                 indication = null,
-                enabled = enabled,
-                onClick = onClick
-            )
+                enabled = enabled
+            ) {
+                scope.launch {
+                    press.animateTo(1f, tween(durationMillis = 70))
+                    onClick()
+                    press.animateTo(0f, tween(durationMillis = 120))
+                }
+            }
             .padding(horizontal = 14.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -253,3 +319,128 @@ fun PixelDividerWithText(text: String, modifier: Modifier = Modifier) {
         )
     }
 }
+
+/** Cozy outlined text-field colours shared across every screen. */
+@Composable
+fun cozyTextFieldColors() = TextFieldDefaults.outlinedTextFieldColors(
+    textColor = CozyAuth.Ink,
+    disabledTextColor = CozyAuth.InkSoft.copy(alpha = 0.55f),
+    backgroundColor = CozyAuth.FieldCream,
+    focusedBorderColor = CozyAuth.Terracotta,
+    unfocusedBorderColor = CozyAuth.InputBorder,
+    disabledBorderColor = CozyAuth.InputBorder.copy(alpha = 0.55f),
+    cursorColor = CozyAuth.TerracottaDark,
+    focusedLabelColor = CozyAuth.TerracottaDark,
+    unfocusedLabelColor = CozyAuth.Hint
+)
+
+/** Pixel-styled outlined text field used on every form. */
+@Composable
+fun CozyTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    isError: Boolean = false,
+    singleLine: Boolean = true,
+    enabled: Boolean = true,
+    maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        label = { Text(text = label, fontFamily = CozyAuth.PixelFont) },
+        isError = isError,
+        enabled = enabled,
+        singleLine = singleLine,
+        maxLines = maxLines,
+        keyboardOptions = keyboardOptions,
+        visualTransformation = visualTransformation,
+        leadingIcon = leadingIcon,
+        trailingIcon = trailingIcon,
+        shape = RoundedCornerShape(4.dp),
+        textStyle = TextStyle(fontFamily = CozyAuth.PixelFont, color = CozyAuth.Ink),
+        colors = cozyTextFieldColors()
+    )
+}
+
+/** Cozy cream top bar with pixel title and an optional back arrow + brown hairline. */
+@Composable
+fun CozyTopBar(
+    title: String,
+    onBack: (() -> Unit)? = null
+) {
+    Column {
+        TopAppBar(
+            title = {
+                Text(
+                    text = title,
+                    color = CozyAuth.Ink,
+                    fontFamily = CozyAuth.PixelFont,
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            navigationIcon = onBack?.let { back ->
+                {
+                    IconButton(onClick = back) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = null,
+                            tint = CozyAuth.Ink
+                        )
+                    }
+                }
+            },
+            backgroundColor = CozyAuth.CardCream,
+            contentColor = CozyAuth.Ink,
+            elevation = 0.dp
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(2.dp)
+                .background(CozyAuth.BrownOutline.copy(alpha = 0.35f))
+        )
+    }
+}
+
+/** Light secondary pixel button (outline-style) for cancel / delete / add actions. */
+@Composable
+fun PixelOutlineButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    PixelClickable(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.height(48.dp),
+        fill = CozyAuth.FieldCream,
+        border = CozyAuth.BrownOutline,
+        shadow = CozyAuth.BrownShadow,
+        shadowOffset = 4
+    ) {
+        Text(
+            text = text,
+            color = CozyAuth.Ink,
+            fontFamily = CozyAuth.PixelFont,
+            fontSize = 15.sp
+        )
+    }
+}
+
+/** Cozy colours for Material switches. */
+@Composable
+fun cozySwitchColors() = SwitchDefaults.colors(
+    checkedThumbColor = CozyAuth.Terracotta,
+    checkedTrackColor = CozyAuth.Terracotta.copy(alpha = 0.5f),
+    uncheckedThumbColor = CozyAuth.Hint,
+    uncheckedTrackColor = CozyAuth.InputBorder
+)

@@ -4,14 +4,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Button
 import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 internal fun NotesLoadingMessage() {
@@ -21,7 +20,7 @@ internal fun NotesLoadingMessage() {
             .padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
-        CircularProgressIndicator()
+        CircularProgressIndicator(color = CozyAuth.Terracotta)
     }
 }
 
@@ -39,15 +38,16 @@ internal fun NotesStatusMessage(
     ) {
         Text(
             text = message,
-            style = MaterialTheme.typography.body1
+            color = CozyAuth.InkSoft,
+            fontFamily = CozyAuth.PixelFont,
+            fontSize = 15.sp
         )
         if (actionText != null && onAction != null) {
-            Button(
+            PixelPrimaryButton(
+                text = actionText,
                 onClick = onAction,
                 modifier = Modifier.padding(top = 12.dp)
-            ) {
-                Text(actionText)
-            }
+            )
         }
     }
 }

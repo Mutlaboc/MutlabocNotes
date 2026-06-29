@@ -2,6 +2,8 @@ package com.example.mutlabocsnotes
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -19,6 +21,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -27,21 +30,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.lottiefiles.dotlottie.core.compose.ui.DotLottieAnimation
-import com.lottiefiles.dotlottie.core.util.DotLottieSource
 
 @Composable
 internal fun HomeHeader(
     totalCoins: Int,
-    animationRestartKey: Any
+    animationRestartKey: Any,
+    onCoinAnchorPositioned: (Offset) -> Unit = {},
+    onOpenCharacter: () -> Unit = {}
 ) {
     val backgroundDescription = stringResource(R.string.home_background_description)
     Box(
@@ -68,23 +75,39 @@ internal fun HomeHeader(
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(16.dp)
-                .background(
-                    color = MaterialTheme.colors.surface.copy(alpha = 0.85f),
-                    shape = RoundedCornerShape(12.dp)
-                )
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Image(
                 painter = painterResource(id = R.drawable.gold_coin),
                 contentDescription = stringResource(R.string.total_coins_description),
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier
+                    .size(24.dp)
+                    .onGloballyPositioned { onCoinAnchorPositioned(it.boundsInRoot().center) }
             )
             Text(
                 text = totalCoins.toString(),
+                color = CozyAuth.Ink,
+                fontFamily = CozyAuth.PixelFont,
                 style = MaterialTheme.typography.subtitle1,
                 modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+                .size(40.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(CozyAuth.CardCream.copy(alpha = 0.9f))
+                .border(2.dp, CozyAuth.BrownOutline, RoundedCornerShape(8.dp))
+                .clickable { onOpenCharacter() },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Person,
+                contentDescription = stringResource(R.string.character_title),
+                tint = CozyAuth.Ink
             )
         }
     }

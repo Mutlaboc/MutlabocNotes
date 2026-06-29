@@ -1,5 +1,6 @@
 package com.example.mutlabocsnotes
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -135,16 +136,17 @@ fun EditNoteScreen(
     var showDeleteDialog by remember(noteId) { mutableStateOf(false) }
 
     Scaffold(
+        backgroundColor = CozyAuth.Cream,
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.edit_note_title)) }
-            )
+            CozyTopBar(title = stringResource(R.string.edit_note_title))
         }
     ) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
+                .background(CozyAuth.Cream)
+                .pixelScreenFrame()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
@@ -214,7 +216,8 @@ fun EditNoteScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
             Row(modifier = Modifier.fillMaxWidth()) {
-                Button(
+                PixelPrimaryButton(
+                    text = stringResource(R.string.action_save),
                     onClick = {
                         val preparedNote = prepareNoteForSave(
                             noteId = noteId,
@@ -230,22 +233,19 @@ fun EditNoteScreen(
                         )
                         if (preparedNote == null) {
                             isTitleError = true
-                            return@Button
+                            return@PixelPrimaryButton
                         }
                         onSaveClick(preparedNote)
                     },
                     modifier = Modifier.testTag(EDIT_NOTE_SAVE_BUTTON_TEST_TAG)
-                ) {
-                    Text(stringResource(R.string.action_save))
-                }
+                )
                 Spacer(Modifier.weight(1f))
                 if (note != null && onDeleteClick != null) {
-                    OutlinedButton(
+                    PixelOutlineButton(
+                        text = stringResource(R.string.action_delete),
                         onClick = { showDeleteDialog = true },
                         modifier = Modifier.testTag(EDIT_NOTE_DELETE_BUTTON_TEST_TAG)
-                    ) {
-                        Text(stringResource(R.string.action_delete))
-                    }
+                    )
                 }
             }
         }

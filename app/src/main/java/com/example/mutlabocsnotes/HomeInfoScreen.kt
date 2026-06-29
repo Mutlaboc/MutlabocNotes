@@ -72,37 +72,10 @@ fun HomeInfoScreen(
         scaffoldState = scaffoldState,
         backgroundColor = CozyAuth.Cream,
         topBar = {
-            Column {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = stringResource(R.string.home_info_title),
-                            color = CozyAuth.Ink,
-                            fontFamily = CozyAuth.PixelFont,
-                            fontSize = 19.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowBack,
-                                contentDescription = stringResource(R.string.action_back),
-                                tint = CozyAuth.Ink
-                            )
-                        }
-                    },
-                    backgroundColor = CozyAuth.CardCream,
-                    contentColor = CozyAuth.Ink,
-                    elevation = 0.dp
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(2.dp)
-                        .background(CozyAuth.BrownOutline.copy(alpha = 0.35f))
-                )
-            }
+            CozyTopBar(
+                title = stringResource(R.string.home_info_title),
+                onBack = onBack
+            )
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -131,22 +104,10 @@ fun HomeInfoScreen(
                     .fillMaxSize()
                     .padding(16.dp)
             ) {
-                OutlinedTextField(
+                CozyTextField(
                     value = query,
                     onValueChange = { query = it },
-                    label = {
-                        Text(
-                            text = stringResource(R.string.search_label),
-                            fontFamily = CozyAuth.PixelFont
-                        )
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(4.dp),
-                    textStyle = TextStyle(
-                        fontFamily = CozyAuth.PixelFont,
-                        color = CozyAuth.Ink
-                    ),
-                    colors = cozyTextFieldColors(),
+                    label = stringResource(R.string.search_label),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag(HOME_INFO_SEARCH_FIELD_TEST_TAG)
@@ -191,14 +152,3 @@ fun HomeInfoScreen(
         }
     }
 }
-
-@Composable
-internal fun cozyTextFieldColors() = TextFieldDefaults.outlinedTextFieldColors(
-    textColor = CozyAuth.Ink,
-    backgroundColor = CozyAuth.FieldCream,
-    focusedBorderColor = CozyAuth.Terracotta,
-    unfocusedBorderColor = CozyAuth.InputBorder,
-    cursorColor = CozyAuth.TerracottaDark,
-    focusedLabelColor = CozyAuth.TerracottaDark,
-    unfocusedLabelColor = CozyAuth.Hint
-)

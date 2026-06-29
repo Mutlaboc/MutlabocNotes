@@ -1,5 +1,6 @@
 package com.example.mutlabocsnotes
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,19 +9,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Button
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.OutlinedButton
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Switch
 import androidx.compose.material.Text
-import androidx.compose.material.TopAppBar
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,8 +23,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 const val SETTINGS_LOGOUT_BUTTON_TEST_TAG = "settings_logout_button"
 const val SETTINGS_THEME_SWITCH_TEST_TAG = "settings_theme_switch"
@@ -50,46 +45,35 @@ fun SettingsScreen(
     val selectedLanguageName = stringResource(selectedLanguage.displayNameResId)
 
     Scaffold(
+        backgroundColor = CozyAuth.Cream,
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back)
-                        )
-                    }
-                }
+            CozyTopBar(
+                title = stringResource(R.string.settings_title),
+                onBack = onBack
             )
         }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(CozyAuth.Cream)
+                .pixelScreenFrame()
                 .padding(paddingValues)
                 .padding(16.dp),
             verticalArrangement = Arrangement.Top
         ) {
-            Text(
-                text = stringResource(R.string.settings_account),
-                style = MaterialTheme.typography.subtitle1
-            )
+            SettingsSectionTitle(stringResource(R.string.settings_account))
             Spacer(modifier = Modifier.height(8.dp))
-            Button(
+            PixelPrimaryButton(
+                text = stringResource(R.string.settings_logout),
                 onClick = onLogout,
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag(SETTINGS_LOGOUT_BUTTON_TEST_TAG)
-            ) {
-                Text(stringResource(R.string.settings_logout))
-            }
+            )
             Spacer(modifier = Modifier.height(24.dp))
 
-            Text(
-                text = stringResource(R.string.settings_theme),
-                style = MaterialTheme.typography.subtitle1
-            )
+            SettingsSectionTitle(stringResource(R.string.settings_theme))
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -101,41 +85,58 @@ fun SettingsScreen(
                     } else {
                         stringResource(R.string.settings_theme_light)
                     },
+                    color = CozyAuth.InkSoft,
+                    fontFamily = CozyAuth.PixelFont,
+                    fontSize = 15.sp,
                     modifier = Modifier.weight(1f)
                 )
                 Switch(
                     checked = isDarkTheme,
                     onCheckedChange = onThemeChange,
+                    colors = cozySwitchColors(),
                     modifier = Modifier.testTag(SETTINGS_THEME_SWITCH_TEST_TAG)
                 )
             }
             Spacer(modifier = Modifier.height(24.dp))
 
-            Text(
-                text = stringResource(R.string.settings_language),
-                style = MaterialTheme.typography.subtitle1
-            )
-            OutlinedButton(
+            SettingsSectionTitle(stringResource(R.string.settings_language))
+            Spacer(modifier = Modifier.height(8.dp))
+            PixelOutlineButton(
+                text = stringResource(R.string.settings_selected_language, selectedLanguageName),
                 onClick = { isLanguageMenuExpanded = true },
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.settings_selected_language, selectedLanguageName))
-            }
+            )
             DropdownMenu(
                 expanded = isLanguageMenuExpanded,
-                onDismissRequest = { isLanguageMenuExpanded = false }
+                onDismissRequest = { isLanguageMenuExpanded = false },
+                modifier = Modifier.background(CozyAuth.CardCream)
             ) {
                 availableLanguages.forEach { language ->
                     DropdownMenuItem(onClick = {
                         onLanguageChange(language)
                         isLanguageMenuExpanded = false
                     }) {
-                        Text(stringResource(language.displayNameResId))
+                        Text(
+                            text = stringResource(language.displayNameResId),
+                            color = CozyAuth.Ink,
+                            fontFamily = CozyAuth.PixelFont
+                        )
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun SettingsSectionTitle(text: String) {
+    Text(
+        text = text,
+        color = CozyAuth.Ink,
+        fontFamily = CozyAuth.PixelFont,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Bold
+    )
 }
 
 @Preview

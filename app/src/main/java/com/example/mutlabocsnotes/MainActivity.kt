@@ -17,8 +17,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.darkColors
-import androidx.compose.material.lightColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -122,7 +120,8 @@ fun MyApp(
     authViewModel: AuthViewModel = viewModel(factory = viewModelFactory),
     notesViewModel: NotesViewModel = viewModel(factory = viewModelFactory),
     homeInfoViewModel: HomeInfoViewModel = viewModel(factory = viewModelFactory),
-    settingsViewModel: SettingsViewModel = viewModel(factory = viewModelFactory)
+    settingsViewModel: SettingsViewModel = viewModel(factory = viewModelFactory),
+    characterViewModel: CharacterViewModel = viewModel(factory = viewModelFactory)
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
@@ -215,7 +214,7 @@ fun MyApp(
         }
     }
 
-    MaterialTheme(colors = if (settingsPreferences.isDarkTheme) darkColors() else lightColors()) {
+    MaterialTheme(colors = if (settingsPreferences.isDarkTheme) cozyDarkColors() else cozyLightColors()) {
         NavHost(
             navController = navController,
             startDestination = "bootstrap"
@@ -247,10 +246,12 @@ fun MyApp(
             }
 
             composable("home") {
+                LaunchedEffect(Unit) { characterViewModel.loadCharacter() }
                 HomeScreen(
                     uiState = notesViewModel.uiState,
                     uiMessage = notesViewModel.uiMessage,
                     userEmail = authUiState.currentEmail,
+                    characterSheet = (characterViewModel.uiState as? CharacterUiState.Content)?.sheet,
                     onRetryNotes = notesViewModel::loadNotes,
                     onMessageShown = notesViewModel::onMessageShown,
                     onMessageAction = onMessageAction,
@@ -274,7 +275,23 @@ fun MyApp(
                     onSwitchUser = authViewModel::logout,
                     onOpenSettings = {
                         navController.navigate("settings")
+                    },
+                    onOpenCharacter = {
+                        navController.navigate("character")
+                    },
+                    onGrantXp = { characterXp, skillKey, skillXp ->
+                        characterViewModel.grantXp(characterXp, skillKey, skillXp)
                     }
+                )
+            }
+
+            composable("character") {
+                LaunchedEffect(Unit) { characterViewModel.loadCharacter() }
+                CharacterScreen(
+                    uiState = characterViewModel.uiState,
+                    onBack = { navController.popBackStack() },
+                    onRetry = { characterViewModel.loadCharacter() },
+                    onRename = { newName -> characterViewModel.updateName(newName) }
                 )
             }
 

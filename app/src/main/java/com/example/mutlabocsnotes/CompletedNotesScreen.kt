@@ -18,7 +18,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun CompletedNotesScreen(
@@ -76,7 +78,10 @@ fun CompletedNotesScreen(
         ) {
             Text(
                 text = stringResource(R.string.completed_notes_title),
-                style = MaterialTheme.typography.h6,
+                color = CozyAuth.Ink,
+                fontFamily = CozyAuth.PixelFont,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
             )
             when (uiState) {
@@ -124,6 +129,11 @@ private fun EmptyCompletedNotesMessage() {
             .padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(stringResource(R.string.completed_notes_empty))
+        Text(
+            text = stringResource(R.string.completed_notes_empty),
+            color = CozyAuth.InkSoft,
+            fontFamily = CozyAuth.PixelFont,
+            fontSize = 15.sp
+        )
     }
 }

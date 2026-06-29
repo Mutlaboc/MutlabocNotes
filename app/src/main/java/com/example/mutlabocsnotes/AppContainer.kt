@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.mutlabocsnotes.network.AuthApi
+import com.example.mutlabocsnotes.network.CharacterApi
 import com.example.mutlabocsnotes.network.HomeCardsApi
 import com.example.mutlabocsnotes.network.NotesApi
 
@@ -49,6 +50,12 @@ class AppContainer(
         )
     }
 
+    val characterRepository: CharacterDataSource by lazy {
+        CharacterRepository(
+            api = authenticatedRetrofit.create(CharacterApi::class.java)
+        )
+    }
+
     val deadlineNotificationScheduler: DeadlineScheduler by lazy {
         DeadlineNotificationScheduler(application)
     }
@@ -64,6 +71,7 @@ class AppContainer(
             authRepository = authRepository,
             notesRepository = notesRepository,
             homeInfoRepository = homeInfoRepository,
+            characterRepository = characterRepository,
             deadlineNotificationScheduler = deadlineNotificationScheduler,
             settingsRepository = settingsRepository
         )
@@ -76,6 +84,7 @@ class MutlabocNotesViewModelFactory(
     private val authRepository: AuthSessionRepository,
     private val notesRepository: NotesDataSource,
     private val homeInfoRepository: HomeInfoDataSource,
+    private val characterRepository: CharacterDataSource,
     private val deadlineNotificationScheduler: DeadlineScheduler,
     private val settingsRepository: SettingsRepository
 ) : ViewModelProvider.Factory {
@@ -99,6 +108,11 @@ class MutlabocNotesViewModelFactory(
             modelClass.isAssignableFrom(HomeInfoViewModel::class.java) -> HomeInfoViewModel(
                 application = application,
                 repository = homeInfoRepository
+            ) as T
+
+            modelClass.isAssignableFrom(CharacterViewModel::class.java) -> CharacterViewModel(
+                application = application,
+                repository = characterRepository
             ) as T
 
             modelClass.isAssignableFrom(SettingsViewModel::class.java) -> SettingsViewModel(
