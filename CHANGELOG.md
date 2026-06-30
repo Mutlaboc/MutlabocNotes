@@ -1,13 +1,14 @@
 # Changelog
 
-## Android 1.0.0 - Unreleased
+## Android 1.0.1 - Pending RuStore submission
 
-Release tag: `android-v{versionName}` after signed artifact approval.
+Build: `versionName 1.0.1`, `versionCode 2` (see `app/build.gradle.kts`).
+Release tag: `android-v1.0.1` after signed artifact approval.
 
 Release policy:
 
 - Increase `versionCode` monotonically for every production APK/AAB.
-- Keep `versionName` semantic; the first production release starts at `1.0.0`.
+- Keep `versionName` semantic.
 - Record the Git SHA, signed artifact, backend artifact, and go/no-go decision in `RELEASE_CHECKLIST.md`.
 
 Highlights:
