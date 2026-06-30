@@ -100,6 +100,7 @@
     <string name="note_delete_message">This action cannot be undone.</string>
 
     <string name="home_info_title">Home information</string>
+    <string name="home_info_header_description">The host writes a note at a table in a wooden house</string>
     <string name="home_info_empty">No cards to display</string>
     <string name="home_info_add_card">Add card</string>
     <string name="home_info_section">Section</string>
