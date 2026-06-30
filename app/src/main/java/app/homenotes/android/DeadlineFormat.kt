@@ -1,0 +1,14 @@
+package app.homenotes.android
+
+import java.util.Calendar
+
+fun formatDeadlineDate(millis: Long): String {
+    val calendar = Calendar.getInstance().apply {
+        timeInMillis = millis
+    }
+    return "%02d.%02d.%04d".format(
+        calendar.get(Calendar.DAY_OF_MONTH),
+        calendar.get(Calendar.MONTH) + 1,
+        calendar.get(Calendar.YEAR)
+    )
+}

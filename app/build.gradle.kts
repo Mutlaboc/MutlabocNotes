@@ -153,11 +153,11 @@ val environmentConfigs = mapOf(
 val releaseSigning = releaseSigningConfig()
 
 android {
-    namespace = "com.example.homenotes"
+    namespace = "app.homenotes.android"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.homenotes"
+        applicationId = "app.homenotes.android"
         minSdk = 24
         targetSdk = 34
         versionCode = 2
