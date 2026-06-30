@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Mutlaboc\'s notes</string>
+    <string name="app_name">HomeNotes</string>
 
     <string name="action_settings">Настройки</string>
     <string name="action_back">Назад</string>

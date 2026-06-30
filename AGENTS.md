@@ -1,15 +1,15 @@
-# AGENTS.md - Mutlaboc Notes
+# AGENTS.md - HomeNotes
 
 ## Project context
 
-Mutlaboc Notes is an Android client written in Kotlin with Jetpack Compose, Navigation Compose, Material Components, Retrofit/OkHttp, DataStore, Room, AndroidX Security Crypto, and dotLottie Android.
+HomeNotes is an Android client written in Kotlin with Jetpack Compose, Navigation Compose, Material Components, Retrofit/OkHttp, DataStore, Room, AndroidX Security Crypto, and dotLottie Android.
 
 The Android app is the mobile UI/client. The backend is a separate Ktor service and must not be modified from this repository unless the task explicitly asks for contract changes.
 
 ## Architecture rules
 
 - Keep dependency creation outside UI.
-- `MutlabocNotesApplication` owns `AppContainer`.
+- `HomeNotesApplication` owns `AppContainer`.
 - `MainActivity` receives `ViewModelProvider.Factory` from `AppContainer`.
 - Compose screens must receive state and callbacks; they must not create repositories, API clients, schedulers, session managers, or storage directly.
 - Repositories remain thin mapping layers between ViewModel and API/domain models.

@@ -29,5 +29,5 @@ dependencyResolutionManagement {
 }
 
 // Метаданные корневого проекта и подключённые модули.
-rootProject.name = "Mutlaboc's notes"
+rootProject.name = "HomeNotes"
 include(":app")

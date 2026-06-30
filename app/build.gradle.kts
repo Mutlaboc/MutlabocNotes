@@ -153,11 +153,11 @@ val environmentConfigs = mapOf(
 val releaseSigning = releaseSigningConfig()
 
 android {
-    namespace = "com.example.mutlabocsnotes"
+    namespace = "com.example.homenotes"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.mutlabocsnotes"
+        applicationId = "com.example.homenotes"
         minSdk = 24
         targetSdk = 34
         versionCode = 2
