@@ -124,7 +124,8 @@ class Sprint5UxPolishTest {
 
         composeRule.onNodeWithTag(AUTH_SIGN_IN_BUTTON_TEST_TAG).assertIsNotEnabled()
         composeRule.onNodeWithTag(AUTH_SIGN_UP_BUTTON_TEST_TAG).assertIsNotEnabled()
-        composeRule.onNodeWithTag(AUTH_GOOGLE_SIGN_IN_BUTTON_TEST_TAG).assertIsNotEnabled()
+        // Google sign-in button is intentionally hidden while its auth flow remains in code.
+        // composeRule.onNodeWithTag(AUTH_GOOGLE_SIGN_IN_BUTTON_TEST_TAG).assertIsNotEnabled()
         composeRule.onNodeWithTag(AUTH_YANDEX_SIGN_IN_BUTTON_TEST_TAG).assertIsNotEnabled()
     }
 

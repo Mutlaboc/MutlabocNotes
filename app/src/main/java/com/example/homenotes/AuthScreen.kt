@@ -552,6 +552,9 @@ private fun AuthRegistrationCard(
                 text = stringResource(R.string.auth_divider_or),
                 modifier = Modifier.padding(top = 18.dp, bottom = 12.dp)
             )
+            /*
+            Google sign-in UI is temporarily hidden. Keep the button wiring in place so
+            the existing Google auth flow can be restored without rebuilding it.
             PixelSocialButton(
                 text = stringResource(R.string.auth_sign_in_google),
                 onClick = onGoogleSignIn,
@@ -562,6 +565,7 @@ private fun AuthRegistrationCard(
                     .testTag(AUTH_GOOGLE_SIGN_IN_BUTTON_TEST_TAG)
             )
             Spacer(Modifier.height(10.dp))
+            */
             PixelSocialButton(
                 text = stringResource(R.string.auth_sign_in_yandex),
                 onClick = onYandexSignIn,
