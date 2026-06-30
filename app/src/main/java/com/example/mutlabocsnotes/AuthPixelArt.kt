@@ -151,8 +151,9 @@ fun AuthMascotWalk(
         val goingRight = t <= 1f
         val p = if (goingRight) t else 2f - t
 
-        val travel = w - mascotW
-        val x = travel * p
+        val startX = -mascotW
+        val endX = w
+        val x = startX + (endX - startX) * p
         val frameIndex = ((elapsed / FRAME_MS) % mascotFrames.size).toInt()
         val frameId = if (animationsEnabled) mascotFrames[frameIndex] else mascotFrames[0]
 

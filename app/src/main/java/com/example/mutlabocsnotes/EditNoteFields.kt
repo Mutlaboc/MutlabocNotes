@@ -2,14 +2,12 @@ package com.example.mutlabocsnotes
 
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.sp
 
 @Composable
@@ -52,26 +50,6 @@ internal fun NoteContentField(
             .fillMaxWidth()
             .fillMaxHeight(0.4f)
             .testTag(EDIT_NOTE_CONTENT_FIELD_TEST_TAG)
-    )
-}
-
-@Composable
-internal fun CoinCountDebugField(
-    coinCountText: String,
-    onCoinCountChange: (String) -> Unit
-) {
-    CozyTextField(
-        value = coinCountText,
-        onValueChange = { value ->
-            if (value.all { it.isDigit() }) {
-                onCoinCountChange(value)
-            }
-        },
-        label = stringResource(R.string.coin_count_label),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag(EDIT_NOTE_COIN_COUNT_FIELD_TEST_TAG)
     )
 }
 

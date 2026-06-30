@@ -17,7 +17,8 @@ class NotesViewModel(
     application: Application,
     private val repository: NotesDataSource,
     private val notificationScheduler: DeadlineScheduler,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val coinRewardProvider: () -> Int = { (1..3).random() }
 ) : AndroidViewModel(application) {
 
     var uiState by mutableStateOf<NotesUiState>(NotesUiState.Loading)
@@ -44,10 +45,11 @@ class NotesViewModel(
 
     fun addNote(note: Note) {
         viewModelScope.launch(ioDispatcher) {
-            val result = repository.insert(note)
+            val rewardedNote = note.copy(coinCount = coinRewardProvider())
+            val result = repository.insert(rewardedNote)
             launch(Dispatchers.Main) {
                 result.onSuccess { id ->
-                    val noteWithId = note.copy(id = id)
+                    val noteWithId = rewardedNote.copy(id = id)
                     val notes = currentNotes() + noteWithId
                     applyNotes(notes)
                     reschedule { notificationScheduler.schedule(noteWithId) }
@@ -86,6 +88,39 @@ class NotesViewModel(
                     applyNotes(notes)
                     reschedule { notificationScheduler.schedule(note) }
                 }.onFailure { error ->
+                    showMessage(error)
+                }
+            }
+        }
+    }
+
+    /**
+     * Toggles a single checklist item on a shopping note and persists the whole note.
+     * Applied optimistically so the focus overlay reflects the tap immediately; on a
+     * backend failure the previous state is restored and the error surfaced.
+     */
+    fun toggleChecklistItem(noteId: String, index: Int, isChecked: Boolean) {
+        val existingNotes = currentNotes()
+        val noteIndex = existingNotes.indexOfFirst { it.id == noteId }
+        if (noteIndex == -1) return
+
+        val existing = existingNotes[noteIndex]
+        if (index !in existing.checklist.indices) return
+
+        val updatedChecklist = existing.checklist.toMutableList().apply {
+            this[index] = this[index].copy(isChecked = isChecked)
+        }
+        val updatedNote = existing.copy(checklist = updatedChecklist)
+        val optimisticNotes = existingNotes.toMutableList().apply {
+            this[noteIndex] = updatedNote
+        }
+        applyNotes(optimisticNotes)
+
+        viewModelScope.launch(ioDispatcher) {
+            val result = repository.update(updatedNote)
+            launch(Dispatchers.Main) {
+                result.onFailure { error ->
+                    applyNotes(existingNotes)
                     showMessage(error)
                 }
             }

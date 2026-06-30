@@ -64,6 +64,14 @@ class AppContainer(
         DataStoreSettingsRepository(application)
     }
 
+    val onboardingRepository: OnboardingRepository by lazy {
+        DataStoreOnboardingRepository(application)
+    }
+
+    val coinWalletRepository: CoinWalletRepository by lazy {
+        DataStoreCoinWalletRepository(application)
+    }
+
     // Фабрика создаёт root ViewModel с зависимостями из контейнера.
     val viewModelFactory: ViewModelProvider.Factory by lazy {
         MutlabocNotesViewModelFactory(
@@ -73,7 +81,9 @@ class AppContainer(
             homeInfoRepository = homeInfoRepository,
             characterRepository = characterRepository,
             deadlineNotificationScheduler = deadlineNotificationScheduler,
-            settingsRepository = settingsRepository
+            settingsRepository = settingsRepository,
+            onboardingRepository = onboardingRepository,
+            coinWalletRepository = coinWalletRepository
         )
     }
 }
@@ -86,7 +96,9 @@ class MutlabocNotesViewModelFactory(
     private val homeInfoRepository: HomeInfoDataSource,
     private val characterRepository: CharacterDataSource,
     private val deadlineNotificationScheduler: DeadlineScheduler,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val onboardingRepository: OnboardingRepository = InMemoryOnboardingRepository(),
+    private val coinWalletRepository: CoinWalletRepository = InMemoryCoinWalletRepository()
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -112,12 +124,18 @@ class MutlabocNotesViewModelFactory(
 
             modelClass.isAssignableFrom(CharacterViewModel::class.java) -> CharacterViewModel(
                 application = application,
-                repository = characterRepository
+                repository = characterRepository,
+                coinWallet = coinWalletRepository
             ) as T
 
             modelClass.isAssignableFrom(SettingsViewModel::class.java) -> SettingsViewModel(
                 application = application,
                 repository = settingsRepository
+            ) as T
+
+            modelClass.isAssignableFrom(OnboardingViewModel::class.java) -> OnboardingViewModel(
+                application = application,
+                repository = onboardingRepository
             ) as T
 
             else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

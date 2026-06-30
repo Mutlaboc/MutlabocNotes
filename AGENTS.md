@@ -94,3 +94,5 @@ Before finishing any animation task, report:
 - duration/FPS/loop behavior if applicable;
 - validation commands run;
 - known limitations.
+
+## Imported Claude Cowork project instructions

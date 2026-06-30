@@ -66,8 +66,8 @@ private const val CANOPY_W = 971f;  private const val CANOPY_H = 878f
 private const val MASCOT_ASPECT = 230f / 485f
 private const val MASCOT_H = 430f
 private const val MASCOT_W = MASCOT_H * MASCOT_ASPECT
-private const val WALK_LEFT_X = 300f    // centre x at the left turn
-private const val WALK_RIGHT_X = 1700f  // centre x at the right turn
+private const val WALK_LEFT_X = -MASCOT_W / 2f    // centre x when fully off the left edge
+private const val WALK_RIGHT_X = SCENE_W + MASCOT_W / 2f  // centre x when fully off the right edge
 private const val FRAME_MS = 110L
 private const val CROSS_MS = 9_000L      // one length of the yard
 private const val FOOT_PAD = 8f          // sprite has a few empty px below the feet
@@ -107,9 +107,11 @@ internal fun HomeYardScene(
         R.drawable.mascot_walk_07, R.drawable.mascot_walk_08
     )
 
-    // Pre-rendered idle frames of the house (windows breathing + chimney smoke), baked
-    // from the old dotLottie. Only decoded when the house is actually shown.
+    // Pre-rendered idle frames of the house: only the lantern and chimney smoke animate;
+    // the windows are frozen to a steady glow to cut load on the notes screen. Only
+    // decoded when the house is actually shown.
     val houseFrames = if (showHouse) {
+        // 12-frame loop: lantern flicker + chimney smoke only; windows are static.
         rememberPixelBmps(
             R.drawable.house_anim_01, R.drawable.house_anim_02, R.drawable.house_anim_03,
             R.drawable.house_anim_04, R.drawable.house_anim_05, R.drawable.house_anim_06,

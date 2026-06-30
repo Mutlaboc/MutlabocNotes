@@ -30,7 +30,6 @@ import java.util.Calendar
 const val EDIT_NOTE_TITLE_FIELD_TEST_TAG = "edit_note_title_field"
 const val EDIT_NOTE_TITLE_ERROR_TEST_TAG = "edit_note_title_error"
 const val EDIT_NOTE_CONTENT_FIELD_TEST_TAG = "edit_note_content_field"
-const val EDIT_NOTE_COIN_COUNT_FIELD_TEST_TAG = "edit_note_coin_count_field"
 const val EDIT_NOTE_SAVE_BUTTON_TEST_TAG = "edit_note_save_button"
 const val EDIT_NOTE_DELETE_BUTTON_TEST_TAG = "edit_note_delete_button"
 const val EDIT_NOTE_DELETE_CONFIRM_BUTTON_TEST_TAG = "edit_note_delete_confirm_button"
@@ -51,9 +50,7 @@ internal fun prepareNoteForSave(
     selectedCategory: NoteCategory,
     checklistItems: List<ChecklistItem>,
     selectedDeadlineMillis: Long,
-    repeatRule: RepeatRule,
-    coinCountText: String,
-    defaultCoinCount: Int
+    repeatRule: RepeatRule
 ): Note? {
     val trimmedTitle = title.trim()
     if (trimmedTitle.isBlank()) return null
@@ -85,7 +82,7 @@ internal fun prepareNoteForSave(
         } else {
             RepeatRule.NONE
         },
-        coinCount = coinCountText.toIntOrNull() ?: defaultCoinCount,
+        coinCount = originalNote?.coinCount ?: 0,
         isCompleted = originalNote?.isCompleted ?: false
     )
 }
@@ -127,10 +124,6 @@ fun EditNoteScreen(
     }
     var repeatRule by remember(noteId) {
         mutableStateOf(note?.repeatRule ?: RepeatRule.NONE)
-    }
-    val defaultCoinCount = remember(noteId) { note?.coinCount ?: (1..5).random() }
-    var coinCountText by remember(noteId) {
-        mutableStateOf(defaultCoinCount.toString())
     }
     var isTitleError by remember(noteId) { mutableStateOf(false) }
     var showDeleteDialog by remember(noteId) { mutableStateOf(false) }
@@ -208,13 +201,6 @@ fun EditNoteScreen(
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            if (BuildConfig.DEBUG) {
-                CoinCountDebugField(
-                    coinCountText = coinCountText,
-                    onCoinCountChange = { coinCountText = it }
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
             Row(modifier = Modifier.fillMaxWidth()) {
                 PixelPrimaryButton(
                     text = stringResource(R.string.action_save),
@@ -227,9 +213,7 @@ fun EditNoteScreen(
                             selectedCategory = selectedCategory,
                             checklistItems = checklistItems,
                             selectedDeadlineMillis = selectedDeadlineMillis,
-                            repeatRule = repeatRule,
-                            coinCountText = coinCountText,
-                            defaultCoinCount = defaultCoinCount
+                            repeatRule = repeatRule
                         )
                         if (preparedNote == null) {
                             isTitleError = true

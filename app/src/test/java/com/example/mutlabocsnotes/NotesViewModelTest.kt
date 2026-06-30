@@ -29,7 +29,8 @@ class NotesViewModelTest {
             application = Application(),
             repository = repository,
             notificationScheduler = scheduler,
-            ioDispatcher = mainDispatcherRule.dispatcher
+            ioDispatcher = mainDispatcherRule.dispatcher,
+            coinRewardProvider = { 2 }
         )
     }
 
@@ -110,9 +111,10 @@ class NotesViewModelTest {
         viewModel.addNote(created)
         advanceUntilIdle()
 
-        val expected = created.copy(id = "created-id")
+        val expected = created.copy(id = "created-id", coinCount = 2)
         val state = viewModel.uiState as NotesUiState.Content
         assertEquals(listOf(expected), state.notes)
+        assertEquals(listOf(created.copy(coinCount = 2)), repository.insertCalls)
         assertEquals(listOf(expected), scheduler.scheduleCalls)
         assertEquals(null, viewModel.uiMessage)
     }
@@ -286,6 +288,7 @@ class NotesViewModelTest {
         checkNotNull(viewModel.uiMessage)
 
         viewModel.clearAll()
+        advanceUntilIdle()
 
         assertEquals(NotesUiState.Empty, viewModel.uiState)
         assertEquals(null, viewModel.uiMessage)

@@ -154,6 +154,7 @@ class EditNoteScreenTest {
             assertEquals(emptyList<ChecklistItem>(), note.checklist)
             assertEquals(DEADLINE, note.deadlineMillis)
             assertEquals(RepeatRule.WEEKLY, note.repeatRule)
+            assertEquals(2, note.coinCount)
         }
     }
 

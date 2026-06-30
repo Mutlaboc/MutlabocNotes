@@ -96,7 +96,6 @@
     <string name="repeat_rule_daily">Daily</string>
     <string name="repeat_rule_weekly">Weekly</string>
     <string name="repeat_rule_monthly">Monthly</string>
-    <string name="coin_count_label">Coin count</string>
     <string name="note_delete_title">Delete note?</string>
     <string name="note_delete_message">This action cannot be undone.</string>
 
@@ -144,9 +143,22 @@
     <string name="character_level_short">Lv. %1$d</string>
     <string name="character_level_xp_label">Lv. %1$d · XP</string>
     <string name="character_skill_level">lv. %1$d</string>
+    <string name="character_stat_max">MAX</string>
     <string name="start_timer_description">Start timer</string>
     <string name="timer_stop">Stop</string>
     <string name="timer_resume">Resume</string>
     <string name="timer_done">Done</string>
     <string name="timer_home">Home</string>
+
+    <string name="onboarding_welcome_title">Welcome!</string>
+    <string name="onboarding_welcome_message">Hi! Welcome to the notes app. Following your lead, I will try to organise my home and take care of chores together with you. As soon as you start a task, I will go do something useful too!</string>
+    <string name="onboarding_welcome_button">Get started</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_done">Done</string>
+    <string name="onboarding_hint_add_note_title">Create notes</string>
+    <string name="onboarding_hint_add_note_message">Tap the plus to create a new note or task.</string>
+    <string name="onboarding_hint_home_info_title">Home information</string>
+    <string name="onboarding_hint_home_info_message">Here you can create home info cards: meters, appliances, documents and contacts.</string>
+    <string name="onboarding_hint_completed_title">Completed tasks</string>
+    <string name="onboarding_hint_completed_message">Completed notes gather here — take a look to see what is already done.</string>
 </resources>

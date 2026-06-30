@@ -121,7 +121,8 @@ fun MyApp(
     notesViewModel: NotesViewModel = viewModel(factory = viewModelFactory),
     homeInfoViewModel: HomeInfoViewModel = viewModel(factory = viewModelFactory),
     settingsViewModel: SettingsViewModel = viewModel(factory = viewModelFactory),
-    characterViewModel: CharacterViewModel = viewModel(factory = viewModelFactory)
+    characterViewModel: CharacterViewModel = viewModel(factory = viewModelFactory),
+    onboardingViewModel: OnboardingViewModel = viewModel(factory = viewModelFactory)
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
@@ -159,6 +160,8 @@ fun MyApp(
         when (authState) {
             is AuthState.Authenticated -> {
                 isWaitingForNotificationNotes = pendingNotificationNoteId != null
+                onboardingViewModel.setUser(authState.email)
+                characterViewModel.setUser(authState.email)
                 notesViewModel.loadNotes()
                 navController.navigate("home") {
                     popUpTo("bootstrap") { inclusive = false }
@@ -168,6 +171,8 @@ fun MyApp(
 
             is AuthState.Unauthenticated -> {
                 isWaitingForNotificationNotes = false
+                onboardingViewModel.setUser(null)
+                characterViewModel.setUser(null)
                 notesViewModel.clearAll()
                 homeInfoViewModel.clearAll()
                 navController.navigate("auth") {
@@ -272,6 +277,9 @@ fun MyApp(
                     onCompletionChange = { noteId, isCompleted ->
                         notesViewModel.setNoteCompletion(noteId, isCompleted)
                     },
+                    onChecklistItemToggle = { noteId, index, checked ->
+                        notesViewModel.toggleChecklistItem(noteId, index, checked)
+                    },
                     onSwitchUser = authViewModel::logout,
                     onOpenSettings = {
                         navController.navigate("settings")
@@ -281,17 +289,24 @@ fun MyApp(
                     },
                     onGrantXp = { characterXp, skillKey, skillXp ->
                         characterViewModel.grantXp(characterXp, skillKey, skillXp)
-                    }
+                    },
+                    onboarding = onboardingViewModel.uiState,
+                    onWelcomeSeen = onboardingViewModel::markWelcomeSeen,
+                    onHintSeen = onboardingViewModel::markHintSeen
                 )
             }
 
             composable("character") {
                 LaunchedEffect(Unit) { characterViewModel.loadCharacter() }
+                val earnedCoins = (notesViewModel.uiState as? NotesUiState.Content)?.totalCoins ?: 0
+                val availableCoins = (earnedCoins - characterViewModel.spentCoins).coerceAtLeast(0)
                 CharacterScreen(
                     uiState = characterViewModel.uiState,
                     onBack = { navController.popBackStack() },
                     onRetry = { characterViewModel.loadCharacter() },
-                    onRename = { newName -> characterViewModel.updateName(newName) }
+                    onRename = { newName -> characterViewModel.updateName(newName) },
+                    availableCoins = availableCoins,
+                    onUpgradeStat = { statKey -> characterViewModel.upgradeStat(statKey, earnedCoins) }
                 )
             }
 

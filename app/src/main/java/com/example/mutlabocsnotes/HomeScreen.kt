@@ -64,11 +64,15 @@ fun HomeScreen(
     onCompletedNotesClick: () -> Unit,
     onHomeInfoClick: () -> Unit,
     onCompletionChange: (noteId: String, Boolean) -> Unit,
+    onChecklistItemToggle: (noteId: String, index: Int, checked: Boolean) -> Unit = { _, _, _ -> },
     onSwitchUser: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenCharacter: () -> Unit = {},
     characterSheet: CharacterSheet? = null,
-    onGrantXp: (characterXp: Int, skillKey: String?, skillXp: Int) -> Unit = { _, _, _ -> }
+    onGrantXp: (characterXp: Int, skillKey: String?, skillXp: Int) -> Unit = { _, _, _ -> },
+    onboarding: OnboardingState = OnboardingState.Completed,
+    onWelcomeSeen: () -> Unit = {},
+    onHintSeen: (OnboardingHintStep) -> Unit = {}
 ) {
     val context = LocalContext.current
     var showExitDialog by remember { mutableStateOf(false) }
@@ -95,6 +99,17 @@ fun HomeScreen(
         homeAnimationRestartKey(uiState, activeNotes, totalCoins)
     }
     var search by remember { mutableStateOf("") }
+
+    // --- Онбординг: приветствие и одноразовые подсказки над иконками нижней панели ---
+    val iconBounds = remember { mutableStateMapOf<BottomBarAction, Rect>() }
+    val activeHint: OnboardingHintStep? = when {
+        !onboarding.welcomeSeen -> null
+        !onboarding.addNoteHintSeen -> OnboardingHintStep.ADD_NOTE
+        !onboarding.homeInfoHintSeen -> OnboardingHintStep.HOME_INFO
+        !onboarding.completedHintSeen -> OnboardingHintStep.COMPLETED
+        else -> null
+    }
+    val highlightedAction = activeHint?.let(::hintBottomBarAction)
 
     // Coin-flight animation state: the header counter's anchor, the active flights, and an
     // id source. Completing a note is deferred until its coins reach the counter.
@@ -135,7 +150,9 @@ fun HomeScreen(
                 selectedAction = null,
                 onCompletedNotesClick = onCompletedNotesClick,
                 onAddClick = onAddNoteClick,
-                onHomeInfoClick = onHomeInfoClick
+                onHomeInfoClick = onHomeInfoClick,
+                highlightedAction = highlightedAction,
+                onIconBounds = { action, rect -> iconBounds[action] = rect }
             )
         }
     ) { paddingValues ->
@@ -295,11 +312,59 @@ fun HomeScreen(
                     onReturnHome = settleRun,
                     onClosed = { expandedNoteId = null },
                     characterSheet = characterSheet,
-                    timerSkill = characterSheet?.skills?.firstOrNull { it.key == timerSkillKey }
+                    timerSkill = characterSheet?.skills?.firstOrNull { it.key == timerSkillKey },
+                    onChecklistItemToggle = { index, checked ->
+                        onChecklistItemToggle(expandedNote.id, index, checked)
+                    }
+                )
+            }
+
+            // Приветствие при первом запуске приложения.
+            if (!onboarding.welcomeSeen) {
+                OnboardingWelcomeDialog(
+                    title = stringResource(R.string.onboarding_welcome_title),
+                    message = stringResource(R.string.onboarding_welcome_message),
+                    buttonText = stringResource(R.string.onboarding_welcome_button),
+                    onDismiss = onWelcomeSeen
+                )
+            }
+
+            // Одноразовая подсказка над подсвеченной иконкой нижней панели.
+            val hintAnchor = highlightedAction?.let { iconBounds[it] }
+            if (activeHint != null && hintAnchor != null && hintAnchor != Rect.Zero) {
+                OnboardingCoachOverlay(
+                    anchorRect = hintAnchor,
+                    title = stringResource(onboardingHintTitleRes(activeHint)),
+                    message = stringResource(onboardingHintMessageRes(activeHint)),
+                    buttonText = stringResource(onboardingHintButtonRes(activeHint)),
+                    onDismiss = { onHintSeen(activeHint) }
                 )
             }
         }
     }
+}
+
+private fun hintBottomBarAction(step: OnboardingHintStep): BottomBarAction = when (step) {
+    OnboardingHintStep.ADD_NOTE -> BottomBarAction.AddNote
+    OnboardingHintStep.HOME_INFO -> BottomBarAction.HomeInfo
+    OnboardingHintStep.COMPLETED -> BottomBarAction.CompletedNotes
+}
+
+private fun onboardingHintTitleRes(step: OnboardingHintStep): Int = when (step) {
+    OnboardingHintStep.ADD_NOTE -> R.string.onboarding_hint_add_note_title
+    OnboardingHintStep.HOME_INFO -> R.string.onboarding_hint_home_info_title
+    OnboardingHintStep.COMPLETED -> R.string.onboarding_hint_completed_title
+}
+
+private fun onboardingHintMessageRes(step: OnboardingHintStep): Int = when (step) {
+    OnboardingHintStep.ADD_NOTE -> R.string.onboarding_hint_add_note_message
+    OnboardingHintStep.HOME_INFO -> R.string.onboarding_hint_home_info_message
+    OnboardingHintStep.COMPLETED -> R.string.onboarding_hint_completed_message
+}
+
+private fun onboardingHintButtonRes(step: OnboardingHintStep): Int = when (step) {
+    OnboardingHintStep.COMPLETED -> R.string.onboarding_done
+    else -> R.string.onboarding_next
 }
 
 @Composable

@@ -95,7 +95,6 @@
     <string name="repeat_rule_daily">Ежедневно</string>
     <string name="repeat_rule_weekly">Еженедельно</string>
     <string name="repeat_rule_monthly">Ежемесячно</string>
-    <string name="coin_count_label">Количество монет</string>
     <string name="note_delete_title">Удалить заметку?</string>
     <string name="note_delete_message">Это действие нельзя отменить.</string>
 
@@ -145,9 +144,22 @@
     <string name="character_level_short">Ур. %1$d</string>
     <string name="character_level_xp_label">Ур. %1$d · опыт</string>
     <string name="character_skill_level">ур. %1$d</string>
+    <string name="character_stat_max">МАКС</string>
     <string name="start_timer_description">Запустить таймер</string>
     <string name="timer_stop">Стоп</string>
     <string name="timer_resume">Возобновить</string>
     <string name="timer_done">Выполнено</string>
     <string name="timer_home">На главную</string>
+
+    <string name="onboarding_welcome_title">Добро пожаловать!</string>
+    <string name="onboarding_welcome_message">Привет! Добро пожаловать в приложение заметок. На твоём примере я постараюсь упорядочить свой дом и буду вместе с тобой заниматься делами. Как только ты запустишь задачу, я тоже пойду заниматься полезными делами!</string>
+    <string name="onboarding_welcome_button">Начать</string>
+    <string name="onboarding_next">Далее</string>
+    <string name="onboarding_done">Готово</string>
+    <string name="onboarding_hint_add_note_title">Создание заметок</string>
+    <string name="onboarding_hint_add_note_message">Нажми «плюс», чтобы создать новую заметку или задачу.</string>
+    <string name="onboarding_hint_home_info_title">Информация о доме</string>
+    <string name="onboarding_hint_home_info_message">Здесь создаются карточки с информацией о доме: счётчики, техника, документы и контакты.</string>
+    <string name="onboarding_hint_completed_title">Выполненные задачи</string>
+    <string name="onboarding_hint_completed_message">Тут собираются выполненные заметки — загляни, чтобы увидеть, что уже сделано.</string>
 </resources>

@@ -99,6 +99,7 @@ class AppContainerWiringTest {
             authRepository = WiringFakeAuthSessionRepository(),
             notesRepository = WiringFakeNotesDataSource(),
             homeInfoRepository = WiringFakeHomeInfoDataSource(),
+            characterRepository = WiringFakeCharacterDataSource(),
             deadlineNotificationScheduler = WiringFakeDeadlineScheduler(),
             settingsRepository = WiringFakeSettingsRepository()
         )
@@ -106,6 +107,7 @@ class AppContainerWiringTest {
         assertNotNull(factory.create(AuthViewModel::class.java))
         assertNotNull(factory.create(NotesViewModel::class.java))
         assertNotNull(factory.create(HomeInfoViewModel::class.java))
+        assertNotNull(factory.create(CharacterViewModel::class.java))
         assertNotNull(factory.create(SettingsViewModel::class.java))
         advanceUntilIdle()
     }
@@ -329,6 +331,13 @@ private class WiringFakeHomeInfoDataSource : HomeInfoDataSource {
 
     override suspend fun update(card: HomeInfoCard): Result<HomeInfoCard> = Result.success(card)
     override suspend fun delete(cardId: String): Result<Unit> = Result.success(Unit)
+}
+
+private class WiringFakeCharacterDataSource : CharacterDataSource {
+    override suspend fun getCharacter(): Result<CharacterSheet> = Result.success(sampleCharacterSheet())
+    override suspend fun updateCharacter(sheet: CharacterSheet): Result<CharacterSheet> = Result.success(sheet)
+    override suspend fun addExperience(characterXp: Int, skillKey: String?, skillXp: Int): Result<CharacterSheet> =
+        Result.success(sampleCharacterSheet())
 }
 
 private class WiringFakeDeadlineScheduler : DeadlineScheduler {

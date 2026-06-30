@@ -16,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.AlertDialog
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
@@ -92,7 +93,7 @@ fun EditHomeInfoCardScreen(
             if (isTitleError) {
                 Text(
                     text = stringResource(R.string.home_info_title_required),
-                    color = CozyAuth.Terracotta,
+                    color = MaterialTheme.colors.error,
                     fontFamily = CozyAuth.PixelFont,
                     fontSize = 13.sp
                 )
@@ -178,7 +179,7 @@ fun EditHomeInfoCardScreen(
             if (hasLinkWarning) {
                 Text(
                     text = stringResource(R.string.home_info_link_warning),
-                    color = CozyAuth.Terracotta,
+                    color = MaterialTheme.colors.error,
                     fontFamily = CozyAuth.PixelFont,
                     fontSize = 12.sp,
                     modifier = Modifier.testTag(HOME_INFO_LINK_WARNING_TEST_TAG)

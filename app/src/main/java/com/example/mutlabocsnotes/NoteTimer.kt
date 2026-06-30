@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -26,11 +27,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.Checkbox
 import androidx.compose.material.LocalContentColor
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -45,9 +48,11 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -90,8 +95,18 @@ fun ExpandedNoteOverlay(
     onClosed: () -> Unit,
     characterSheet: CharacterSheet? = null,
     timerSkill: CharacterSkill? = null,
+    onChecklistItemToggle: (index: Int, checked: Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
+    val view = LocalView.current
+    DisposableEffect(view) {
+        val previousKeepScreenOn = view.keepScreenOn
+        view.keepScreenOn = true
+        onDispose {
+            view.keepScreenOn = previousKeepScreenOn
+        }
+    }
+
     // Tick locally so only this overlay recomposes while the stopwatch runs.
     var now by remember { mutableStateOf(SystemClock.uptimeMillis()) }
     LaunchedEffect(running) {
@@ -205,7 +220,8 @@ fun ExpandedNoteOverlay(
                 running = running,
                 onPauseResume = { if (running) onPause() else onResume() },
                 onComplete = { closeWith(onComplete) },
-                onReturnHome = { closeWith(onReturnHome) }
+                onReturnHome = { closeWith(onReturnHome) },
+                onChecklistItemToggle = onChecklistItemToggle
             )
         }
     }
@@ -294,6 +310,42 @@ private fun StatBar(progress: Float, fill: Color) {
     }
 }
 
+/**
+ * Tappable checklist shown for shopping notes while the focus timer runs, letting the
+ * user tick items off as they shop. Each toggle is reported to the caller, which persists
+ * the change. Ticked items are struck through for clear visual feedback.
+ */
+@Composable
+private fun InteractiveChecklist(
+    items: List<ChecklistItem>,
+    onToggle: (index: Int, checked: Boolean) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        items.forEachIndexed { index, item ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onToggle(index, !item.isChecked) }
+                    .padding(vertical = 2.dp)
+            ) {
+                Checkbox(
+                    checked = item.isChecked,
+                    onCheckedChange = { checked -> onToggle(index, checked) },
+                    colors = cozyCheckboxColors()
+                )
+                Text(
+                    text = item.text,
+                    fontFamily = CozyAuth.PixelFont,
+                    style = MaterialTheme.typography.body2,
+                    textDecoration = if (item.isChecked) TextDecoration.LineThrough else null,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun TimerWindow(
     note: Note,
@@ -301,7 +353,8 @@ private fun TimerWindow(
     running: Boolean,
     onPauseResume: () -> Unit,
     onComplete: () -> Unit,
-    onReturnHome: () -> Unit
+    onReturnHome: () -> Unit,
+    onChecklistItemToggle: (index: Int, checked: Boolean) -> Unit
 ) {
     val colors = noteCategoryColors(note.category)
     PixelPanel(
@@ -325,7 +378,14 @@ private fun TimerWindow(
                     style = MaterialTheme.typography.h6
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                NoteDetails(note)
+                if (note.category == NoteCategory.SHOPPING && note.checklist.isNotEmpty()) {
+                    InteractiveChecklist(
+                        items = note.checklist,
+                        onToggle = onChecklistItemToggle
+                    )
+                } else {
+                    NoteDetails(note)
+                }
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = timerText,
@@ -350,7 +410,7 @@ private fun TimerWindow(
                         onClick = onComplete,
                         modifier = Modifier.weight(1f)
                     )
-                    PixelOutlineButton(
+                    PixelPrimaryButton(
                         text = stringResource(R.string.timer_home),
                         onClick = onReturnHome,
                         modifier = Modifier.weight(1f)

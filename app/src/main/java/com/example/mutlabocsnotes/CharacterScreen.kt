@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -102,6 +103,49 @@ fun sampleCharacterSheet(): CharacterSheet = CharacterSheet(
 
 const val CHARACTER_MAX_LEVEL = 100
 
+/** Верхняя граница значения характеристики, выше которой прокачка недоступна. */
+const val CHARACTER_STAT_MAX = 99
+
+/**
+ * Стоимость поднять характеристику на +1 от текущего значения [value], в монетах.
+ * Растёт пропорционально текущему значению (квадратично): cost = value².
+ * Минимум 1 монета, чтобы стартовая прокачка не была бесплатной.
+ */
+fun statUpgradeCost(value: Int): Int {
+    val v = value.coerceAtLeast(0)
+    return (v.toLong() * v.toLong()).coerceIn(1L, Int.MAX_VALUE.toLong()).toInt()
+}
+
+/**
+ * Награда за повышение уровня: за каждый набранный уровень случайно повышается одна
+ * характеристика (+1, не выше [CHARACTER_STAT_MAX]) или один навык (+1 к уровню).
+ * Характеристики на максимуме в выбор не попадают. Чистая функция — [random] позволяет
+ * детерминированно тестировать выбор.
+ */
+fun applyLevelUpRewards(
+    sheet: CharacterSheet,
+    levelsGained: Int,
+    random: kotlin.random.Random = kotlin.random.Random.Default
+): CharacterSheet {
+    if (levelsGained <= 0) return sheet
+    var stats = sheet.stats
+    var skills = sheet.skills
+    repeat(levelsGained) {
+        val statTargets = stats.indices.filter { stats[it].value < CHARACTER_STAT_MAX }
+        val totalChoices = statTargets.size + skills.size
+        if (totalChoices == 0) return@repeat
+        val pick = random.nextInt(totalChoices)
+        if (pick < statTargets.size) {
+            val idx = statTargets[pick]
+            stats = stats.toMutableList().also { it[idx] = it[idx].copy(value = it[idx].value + 1) }
+        } else {
+            val idx = pick - statTargets.size
+            skills = skills.toMutableList().also { it[idx] = it[idx].copy(level = it[idx].level + 1) }
+        }
+    }
+    return sheet.copy(stats = stats, skills = skills)
+}
+
 /** XP needed to advance FROM [level]: 100 * 2^(level-1), capped at level 100. Mirrors the backend. */
 fun characterXpToNext(level: Int): Int {
     if (level >= CHARACTER_MAX_LEVEL) return Int.MAX_VALUE
@@ -139,7 +183,9 @@ fun CharacterScreen(
     uiState: CharacterUiState,
     onBack: () -> Unit,
     onRetry: () -> Unit,
-    onRename: (String) -> Unit = {}
+    onRename: (String) -> Unit = {},
+    availableCoins: Int = 0,
+    onUpgradeStat: (String) -> Unit = {}
 ) {
     val scaffoldState = rememberScaffoldState()
     Scaffold(
@@ -164,14 +210,24 @@ fun CharacterScreen(
                     onAction = onRetry
                 )
 
-                is CharacterUiState.Content -> CharacterContent(uiState.sheet, onRename)
+                is CharacterUiState.Content -> CharacterContent(
+                    sheet = uiState.sheet,
+                    onRename = onRename,
+                    availableCoins = availableCoins,
+                    onUpgradeStat = onUpgradeStat
+                )
             }
         }
     }
 }
 
 @Composable
-private fun CharacterContent(sheet: CharacterSheet, onRename: (String) -> Unit) {
+private fun CharacterContent(
+    sheet: CharacterSheet,
+    onRename: (String) -> Unit,
+    availableCoins: Int,
+    onUpgradeStat: (String) -> Unit
+) {
     var showRenameDialog by remember { mutableStateOf(false) }
     if (showRenameDialog) {
         RenameDialog(
@@ -194,9 +250,20 @@ private fun CharacterContent(sheet: CharacterSheet, onRename: (String) -> Unit) 
         XpSection(sheet)
         Spacer(Modifier.height(20.dp))
 
-        SectionLabel(stringResource(R.string.character_section_stats))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SectionLabel(stringResource(R.string.character_section_stats))
+            CoinBalanceChip(availableCoins)
+        }
         Spacer(Modifier.height(8.dp))
-        StatsSection(sheet.stats)
+        StatsSection(
+            stats = sheet.stats,
+            availableCoins = availableCoins,
+            onUpgradeStat = onUpgradeStat
+        )
         Spacer(Modifier.height(20.dp))
 
         SectionLabel(stringResource(R.string.character_section_skills))
@@ -356,7 +423,11 @@ private fun XpSection(sheet: CharacterSheet) {
 }
 
 @Composable
-private fun StatsSection(stats: List<CharacterStat>) {
+private fun StatsSection(
+    stats: List<CharacterStat>,
+    availableCoins: Int,
+    onUpgradeStat: (String) -> Unit
+) {
     // Tap a tile to reveal its description; only one is expanded at a time.
     var expandedName by remember { mutableStateOf<String?>(null) }
     Column(
@@ -372,9 +443,11 @@ private fun StatsSection(stats: List<CharacterStat>) {
                     StatTile(
                         stat = stat,
                         expanded = expandedName == stat.name,
+                        availableCoins = availableCoins,
                         onClick = {
                             expandedName = if (expandedName == stat.name) null else stat.name
                         },
+                        onUpgrade = { onUpgradeStat(stat.key) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -388,11 +461,16 @@ private fun StatsSection(stats: List<CharacterStat>) {
 private fun StatTile(
     stat: CharacterStat,
     expanded: Boolean,
+    availableCoins: Int,
     onClick: () -> Unit,
+    onUpgrade: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val mod = stat.modifier
     val modText = if (mod >= 0) "+$mod" else "$mod"
+    val atMax = stat.value >= CHARACTER_STAT_MAX
+    val cost = statUpgradeCost(stat.value)
+    val canAfford = availableCoins >= cost
     PixelPanel(
         fill = CozyAuth.CardCream,
         shadowOffset = 4,
@@ -430,6 +508,13 @@ private fun StatTile(
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
             )
+            Spacer(Modifier.height(10.dp))
+            StatUpgradeButton(
+                cost = cost,
+                atMax = atMax,
+                enabled = canAfford && !atMax,
+                onClick = onUpgrade
+            )
             if (expanded) {
                 Spacer(Modifier.height(8.dp))
                 Text(
@@ -441,6 +526,94 @@ private fun StatTile(
                 )
             }
         }
+    }
+}
+
+/** Compact "+ cost🪙" upgrade button under a stat. Shows MAX once the cap is reached. */
+@Composable
+private fun StatUpgradeButton(
+    cost: Int,
+    atMax: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    val face = when {
+        atMax -> CozyAuth.FieldCream
+        enabled -> CozyAuth.SoftGreen
+        else -> CozyAuth.SoftGreen.copy(alpha = 0.4f)
+    }
+    val shape = RoundedCornerShape(6.dp)
+    Row(
+        modifier = Modifier
+            .clip(shape)
+            .background(face)
+            .border(2.dp, CozyAuth.BrownOutline, shape)
+            .then(
+                if (enabled && !atMax) Modifier.clickable { onClick() } else Modifier
+            )
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        if (atMax) {
+            Text(
+                text = stringResource(R.string.character_stat_max),
+                fontFamily = CozyAuth.PixelFont,
+                color = CozyAuth.InkSoft,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp
+            )
+        } else {
+            Text(
+                text = "+1",
+                fontFamily = CozyAuth.PixelFont,
+                color = CozyAuth.Ink,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp
+            )
+            Spacer(Modifier.size(6.dp))
+            Text(
+                text = cost.toString(),
+                fontFamily = CozyAuth.PixelFont,
+                color = CozyAuth.Ink,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp
+            )
+            Spacer(Modifier.size(3.dp))
+            Image(
+                painter = painterResource(id = R.drawable.gold_coin),
+                contentDescription = null,
+                modifier = Modifier.size(14.dp)
+            )
+        }
+    }
+}
+
+/** Shows how many coins are available to spend on upgrades, in the stats header. */
+@Composable
+private fun CoinBalanceChip(coins: Int) {
+    val shape = RoundedCornerShape(6.dp)
+    Row(
+        modifier = Modifier
+            .clip(shape)
+            .background(CozyAuth.FieldCream)
+            .border(2.dp, CozyAuth.BrownOutline, shape)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.gold_coin),
+            contentDescription = stringResource(R.string.total_coins_description),
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(Modifier.size(6.dp))
+        Text(
+            text = coins.toString(),
+            fontFamily = CozyAuth.PixelFont,
+            color = CozyAuth.Ink,
+            fontWeight = FontWeight.Bold,
+            fontSize = 15.sp
+        )
     }
 }
 
