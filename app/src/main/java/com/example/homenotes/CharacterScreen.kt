@@ -81,7 +81,7 @@ data class CharacterSheet(
 )
 
 fun sampleCharacterSheet(): CharacterSheet = CharacterSheet(
-    name = "Мутлабок",
+    name = "Юра",
     level = 1,
     xp = 0,
     xpToNext = 100,
