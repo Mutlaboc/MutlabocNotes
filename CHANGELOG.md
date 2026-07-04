@@ -4,6 +4,7 @@
 
 Build: `versionName 1.0.1`, `versionCode 2` (see `app/build.gradle.kts`).
 Release tag: `android-v1.0.1` after signed artifact approval.
+Tag policy: use `android-v{versionName}` for signed Android releases.
 
 Release policy:
 
