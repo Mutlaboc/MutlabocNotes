@@ -41,6 +41,13 @@ jobs:
           name: testDevDebugUnitTest-results
           path: app/build/test-results/testDevDebugUnitTest
 
+      - name: Upload dev debug APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-dev-debug
+          path: app/build/outputs/apk/dev/debug/*.apk
+
       - name: Upload lint reports
         if: always()
         uses: actions/upload-artifact@v4

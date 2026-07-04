@@ -70,7 +70,7 @@ class ReleaseConfigurationTest {
     fun changelogDefinesFirstAndroidReleaseAndTagPolicy() {
         val changelog = projectFile("CHANGELOG.md").readText()
 
-        assertTrue(changelog.contains("1.0.0"))
+        assertTrue(changelog.contains("1.0.1"))
         assertTrue(changelog.contains("android-v{versionName}"))
         assertTrue(changelog.contains("versionCode"))
         assertTrue(changelog.contains("No crash telemetry SDK"))
