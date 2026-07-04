@@ -2,7 +2,7 @@
 
 ## Project context
 
-HomeNotes is an Android client written in Kotlin with Jetpack Compose, Navigation Compose, Material Components, Retrofit/OkHttp, DataStore, Room, AndroidX Security Crypto, and dotLottie Android.
+HomeNotes is an Android client written in Kotlin with Jetpack Compose, Navigation Compose, Material Components, Retrofit/OkHttp, DataStore, Room, and AndroidX Security Crypto. The visual style is pixel art; decorative animations are raster sprite frame sequences played by Compose (no Lottie/Rive runtime).
 
 The Android app is the mobile UI/client. The backend is a separate Ktor service and must not be modified from this repository unless the task explicitly asks for contract changes.
 
@@ -36,8 +36,8 @@ Treat these Compose entry points as stable unless the task explicitly asks to re
 
 - User-facing strings must go through `strings.xml` and `values-en/strings.xml`.
 - Inline text is allowed only for preview sample data, test tags, route names, exception messages, and dynamic user content.
-- Lottie and dotLottie assets used by Android must live in `app/src/main/res/raw`.
-- Drawable assets must live in the appropriate `res/drawable*` folder.
+- Animation frames and pixel-art assets must live in `app/src/main/res/drawable-nodpi/` as lossless WebP (`name_NN.webp` for frame sequences). Never place them in density-qualified `drawable*` folders: `BitmapFactory.decodeResource` rescales them per density (memory blowup + blurred pixel art).
+- Other drawable assets must live in the appropriate `res/drawable*` folder.
 - Do not add large generated assets without explaining why they are necessary.
 
 ## Animation rules
@@ -47,18 +47,18 @@ Use animation only when it improves clarity, feedback, continuity, or perceived 
 Prefer this order:
 
 1. Jetpack Compose animation for UI state changes and micro-interactions.
-2. dotLottie/Lottie for decorative, illustrative, loading, empty, success, error, and ambient animations.
-3. Rive only when an existing `.riv` file with state machines is provided or explicitly requested.
-4. Avoid video/GIF unless the task requires raster/photorealistic motion.
+2. Sprite frame sequences (lossless WebP in `drawable-nodpi`, played via the frame-clock pattern in `HomeYardScene.kt`) for decorative, illustrative, character, loading, empty, success, error, and ambient animations.
+3. Lottie/Rive only when such an asset is explicitly provided and requested; adding a runtime dependency must be justified.
+4. GIF is never a production format (acceptable only as an AI-generation intermediate).
 
-For Lottie/dotLottie:
+For frame sequences:
 
-- Keep animations small, precise, and readable.
-- Prefer simple transforms, opacity, scale, rotation, path, and trim-path style motion.
-- Avoid unsupported or fragile After Effects features.
-- Use transparent background unless the task explicitly needs a background.
-- Check loop seams.
-- Check dark/light theme readability.
+- Follow the `mutlaboc-motion` skill (`.agents/skills/mutlaboc-motion/`); prepare assets with its `scripts/prepare_frames.py`.
+- Decode frames once (`rememberPixelBmps`), cycle via frame clock + `derivedStateOf`; read time-driven values only in `offset {}` / `graphicsLayer {}` lambdas.
+- Draw pixel art with `FilterQuality.None`.
+- Budget: decoded RAM = width × height × 4 × frames; keep one animation ≤ ~15 MB, one scene ≤ ~40 MB.
+- Respect reduced motion (`rememberAnimationsEnabled()`); the first frame must work as a static fallback.
+- Check loop seams and dark/light theme readability.
 - Check accessibility: decorative animations should not add noisy semantics.
 - Avoid uncontrolled infinite motion in content-heavy screens.
 
@@ -90,7 +90,7 @@ Before finishing any animation task, report:
 
 - files changed;
 - animation purpose;
-- whether it is Compose, Lottie/dotLottie, Rive, or another format;
+- whether it is Compose animation, a sprite frame sequence, or another format;
 - duration/FPS/loop behavior if applicable;
 - validation commands run;
 - known limitations.

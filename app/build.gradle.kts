@@ -265,8 +265,6 @@ dependencies {
     implementation(libs.retrofit.converter.gson)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
-    implementation(libs.coil.compose)
-    implementation(libs.coil.gif)
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
