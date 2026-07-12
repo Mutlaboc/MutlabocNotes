@@ -116,7 +116,7 @@ private val mascotFrames = intArrayOf(
     R.drawable.mascot_walk_08
 )
 
-private const val MASCOT_ASPECT = 230f / 485f
+private const val MASCOT_ASPECT = 320f / 485f  // v2 frames use a wider 320x485 canvas
 private const val FRAME_MS = 110L
 private const val CROSS_MS = 9_000L
 

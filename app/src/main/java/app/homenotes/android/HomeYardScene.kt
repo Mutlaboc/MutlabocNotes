@@ -62,14 +62,8 @@ private const val TRUNK_W = 760f;  private const val TRUNK_H = 923f
 private const val CANOPY_X = 1144f; private const val CANOPY_Y = 90f
 private const val CANOPY_W = 971f;  private const val CANOPY_H = 878f
 
-// Mascot strolls along the grass (same walk cycle as the auth screen).
-private const val MASCOT_ASPECT = 230f / 485f
-private const val MASCOT_H = 430f
-private const val MASCOT_W = MASCOT_H * MASCOT_ASPECT
-private const val WALK_LEFT_X = -MASCOT_W / 2f    // centre x when fully off the left edge
-private const val WALK_RIGHT_X = SCENE_W + MASCOT_W / 2f  // centre x when fully off the right edge
-private const val FRAME_MS = 110L
-private const val CROSS_MS = 9_000L      // one length of the yard
+// Mascot dimensions live in MascotBehavior.kt; the behaviour script (walk / hammer /
+// chop / think / write) is MascotScript, a pure function of the elapsed clock.
 private const val FOOT_PAD = 8f          // sprite has a few empty px below the feet
 private const val ANIMATION_START_DELAY_MS = 5_000L  // hold a static scene before animating
 private const val HOUSE_FRAME_MS = 700L  // per-frame hold for the house idle sprite loop
@@ -100,11 +94,29 @@ internal fun HomeYardScene(
     // whole scene.
     val elapsed = rememberElapsedMillis(animate)
 
-    // Mascot walk frames decoded once (not per frame).
-    val mascotFrames = rememberPixelBmps(
-        R.drawable.mascot_walk_01, R.drawable.mascot_walk_02, R.drawable.mascot_walk_03,
-        R.drawable.mascot_walk_04, R.drawable.mascot_walk_05, R.drawable.mascot_walk_06,
-        R.drawable.mascot_walk_07, R.drawable.mascot_walk_08
+    // Mascot frames per animation, decoded once (not per frame).
+    val mascotFrames = mapOf(
+        MascotAnim.WALK to rememberPixelBmps(
+            R.drawable.mascot_walk_01, R.drawable.mascot_walk_02, R.drawable.mascot_walk_03,
+            R.drawable.mascot_walk_04, R.drawable.mascot_walk_05, R.drawable.mascot_walk_06,
+            R.drawable.mascot_walk_07, R.drawable.mascot_walk_08
+        ),
+        MascotAnim.IDLE to rememberPixelBmps(
+            R.drawable.mascot2_idle_01, R.drawable.mascot2_idle_02, R.drawable.mascot2_idle_03,
+            R.drawable.mascot2_idle_04, R.drawable.mascot2_idle_05, R.drawable.mascot2_idle_06
+        ),
+        MascotAnim.NOTES to rememberPixelBmps(
+            R.drawable.mascot2_notes_01, R.drawable.mascot2_notes_02, R.drawable.mascot2_notes_03,
+            R.drawable.mascot2_notes_04, R.drawable.mascot2_notes_05, R.drawable.mascot2_notes_06
+        ),
+        MascotAnim.CHOP to rememberPixelBmps(
+            R.drawable.mascot2_chop_01, R.drawable.mascot2_chop_02, R.drawable.mascot2_chop_03,
+            R.drawable.mascot2_chop_04, R.drawable.mascot2_chop_05, R.drawable.mascot2_chop_06
+        ),
+        MascotAnim.HAMMER to rememberPixelBmps(
+            R.drawable.mascot2_hammer_01, R.drawable.mascot2_hammer_02, R.drawable.mascot2_hammer_03,
+            R.drawable.mascot2_hammer_04, R.drawable.mascot2_hammer_05, R.drawable.mascot2_hammer_06
+        )
     )
 
     // Pre-rendered idle frames of the house: only the lantern and chimney smoke animate;
@@ -210,51 +222,39 @@ private fun HouseSprite(
 /**
  * Mascot sprite. Position is computed in the layout-phase `offset {}` lambda and the
  * facing flip in the draw-phase `graphicsLayer {}` lambda, so the 60fps clock never
- * recomposes this node. Only a change of the integer walk-frame (~9fps) recomposes it,
- * and even then the bitmaps are already decoded.
+ * recomposes this node. Only a change of the scripted frame key (animation + frame +
+ * flip, a few Hz) recomposes it, and even then the bitmaps are already decoded.
  */
 @Composable
 private fun MascotImage(
     elapsed: State<Long>,
-    frames: List<ImageBitmap>,
+    frames: Map<MascotAnim, List<ImageBitmap>>,
     s: Float,
     ox: Float
 ) {
-    val frameIndex by remember(frames) {
-        derivedStateOf { ((elapsed.value / FRAME_MS) % frames.size).toInt() }
+    // Only the compact frame key is read during composition; position and flip are read
+    // in the layout/draw lambdas below, so the 60fps clock never recomposes this node.
+    val frameKey by remember(frames) {
+        derivedStateOf { MascotScript.frameKeyAt(elapsed.value) }
     }
     Image(
-        bitmap = frames[frameIndex],
+        bitmap = frames.getValue(MascotScript.animOf(frameKey))[MascotScript.frameOf(frameKey)],
         contentDescription = null,
         filterQuality = FilterQuality.None,
         modifier = Modifier
             .offset {
-                val centerX = mascotCenterX(elapsed.value)
-                val left = (ox + (centerX - MASCOT_W / 2f) * s).dp
-                val top = ((GROUND_Y - MASCOT_H + FOOT_PAD) * s).dp
+                val centerX = MascotScript.stateAt(elapsed.value).centerX
+                val left = (ox + (centerX - MascotScript.MASCOT_W / 2f) * s).dp
+                val top = ((GROUND_Y - MascotScript.MASCOT_H + FOOT_PAD) * s).dp
                 IntOffset(left.roundToPx(), top.roundToPx())
             }
-            .size((MASCOT_W * s).dp, (MASCOT_H * s).dp)
+            .size((MascotScript.MASCOT_W * s).dp, (MascotScript.MASCOT_H * s).dp)
             .graphicsLayer {
-                scaleX = if (mascotFacingLeft(elapsed.value)) -1f else 1f
+                scaleX = if (MascotScript.stateAt(elapsed.value).facingLeft) -1f else 1f
                 transformOrigin = TransformOrigin.Center
             }
     )
 }
-
-// Mascot ping-pongs across the yard; sprite faces right and is flipped when walking left.
-private fun mascotCenterX(elapsed: Long): Float {
-    val t = (elapsed % (CROSS_MS * 2)).toFloat() / CROSS_MS  // 0..2
-    val p = if (t <= 1f) t else 2f - t                       // 0..1 along the path
-    return lerp(WALK_LEFT_X, WALK_RIGHT_X, p)
-}
-
-private fun mascotFacingLeft(elapsed: Long): Boolean {
-    val t = (elapsed % (CROSS_MS * 2)).toFloat() / CROSS_MS
-    return t > 1f
-}
-
-private fun lerp(a: Float, b: Float, f: Float) = a + (b - a) * f.coerceIn(0f, 1f)
 
 @Composable
 private fun pixelBmp(drawableId: Int): ImageBitmap {
