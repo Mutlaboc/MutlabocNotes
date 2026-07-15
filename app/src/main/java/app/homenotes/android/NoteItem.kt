@@ -1,6 +1,8 @@
 package app.homenotes.android
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -25,24 +27,47 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private const val BURST_MS = 380
+
+// Entrance sequence: the list first frees vertical space, then the card unrolls
+// left-to-right like a sheet of parchment, then the coins pop in one after another.
+private const val ENTRANCE_EXPAND_MS = 260
+private const val ENTRANCE_UNFOLD_MS = 2000
+private const val ENTRANCE_COIN_POP_MS = 340
+private const val ENTRANCE_COIN_STAGGER_MS = 110L
+
+private const val SPARK_COUNT = 6
+private val GoldSparkLight = Color(0xFFFFE082)
+private val GoldSpark = Color(0xFFFFC94D)
+private val GoldSparkDeep = Color(0xFFD99A2B)
 
 @Composable
 fun NoteItem(
@@ -60,7 +85,12 @@ fun NoteItem(
     // card's bounds so the screen can float this note to the centre and run the timer.
     onStartTimer: ((originRect: Rect) -> Unit)? = null,
     // True while this note is the one floated to the centre — hide it in its list slot.
-    isExpanded: Boolean = false
+    isExpanded: Boolean = false,
+    // True for a just-created note: plays a one-shot entrance (space opens up, the card
+    // unrolls left-to-right, coins pop in sequentially). [onEntranceShown] fires once
+    // the entrance has been handled so the caller can clear the "new note" flag.
+    animateEntrance: Boolean = false,
+    onEntranceShown: () -> Unit = {}
 ) {
     val categoryColors = noteCategoryColors(note.category)
     val density = LocalDensity.current
@@ -73,9 +103,46 @@ fun NoteItem(
         if (bursting) burst.animateTo(1f, animationSpec = tween(BURST_MS))
     }
 
+    // --- One-shot entrance. All values start settled (1f) unless this composition was
+    // created for a brand-new note with system animations enabled.
+    val animationsEnabled = rememberAnimationsEnabled()
+    val runEntrance = remember { animateEntrance && animationsEnabled }
+    var entrancePlayed by remember { mutableStateOf(!runEntrance) }
+    val expandIn = remember { Animatable(if (runEntrance) 0f else 1f) }   // height fraction
+    val unfold = remember { Animatable(if (runEntrance) 0f else 1f) }     // left-to-right reveal
+    val coinCount = note.coinCount.coerceAtLeast(0)
+    val coinPops = remember(coinCount) {
+        List(coinCount) { Animatable(if (!entrancePlayed) 0f else 1f) }
+    }
+    val currentOnEntranceShown by rememberUpdatedState(onEntranceShown)
+    LaunchedEffect(coinPops) {
+        if (entrancePlayed) {
+            // Reduced motion: render statically but still consume the "new note" flag.
+            if (animateEntrance && !runEntrance) currentOnEntranceShown()
+            return@LaunchedEffect
+        }
+        expandIn.animateTo(1f, animationSpec = tween(ENTRANCE_EXPAND_MS, easing = FastOutSlowInEasing))
+        unfold.animateTo(1f, animationSpec = tween(ENTRANCE_UNFOLD_MS, easing = LinearOutSlowInEasing))
+        coinPops.forEach { pop ->
+            launch {
+                pop.animateTo(1f, animationSpec = tween(ENTRANCE_COIN_POP_MS, easing = LinearOutSlowInEasing))
+            }
+            delay(ENTRANCE_COIN_STAGGER_MS)
+        }
+        entrancePlayed = true
+        currentOnEntranceShown()
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
+            // Entrance phase 1: the item grows from zero height, so neighbours slide
+            // apart smoothly before anything is drawn. Read in the layout phase only.
+            .layout { measurable, constraints ->
+                val placeable = measurable.measure(constraints)
+                val h = (placeable.height * expandIn.value).roundToInt()
+                layout(placeable.width, h) { placeable.placeRelative(0, 0) }
+            }
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .onGloballyPositioned { cardBounds = it.boundsInRoot() }
             .graphicsLayer {
@@ -97,6 +164,17 @@ fun NoteItem(
                 }
                 rotationZ = 6f * sin(PI * 3 * p).toFloat() * (1f - p)
                 transformOrigin = TransformOrigin.Center
+            }
+            // Entrance phase 2: unroll the card left-to-right like parchment. Read in
+            // the draw phase only; a no-op once the entrance has settled.
+            .drawWithContent {
+                val reveal = unfold.value
+                when {
+                    reveal >= 1f -> drawContent()
+                    reveal > 0f -> clipRect(right = size.width * reveal) {
+                        this@drawWithContent.drawContent()
+                    }
+                }
             }
     ) {
         PixelPanel(
@@ -192,11 +270,27 @@ fun NoteItem(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.onGloballyPositioned { coinRowBounds = it.boundsInRoot() }
                         ) {
-                            repeat(note.coinCount.coerceAtLeast(0)) {
+                            repeat(coinCount) { i ->
+                                // Entrance phase 3: each coin pops in with a slight
+                                // overshoot and a small golden spark burst behind it.
+                                val pop = coinPops.getOrNull(i)
                                 Image(
                                     painter = painterResource(id = R.drawable.gold_coin),
                                     contentDescription = stringResource(R.string.coin_description),
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .drawBehind { pop?.let { drawCoinSparks(it.value) } }
+                                        .graphicsLayer {
+                                            val p = pop?.value ?: 1f
+                                            val s = if (p < 0.55f) {
+                                                1.25f * (p / 0.55f)
+                                            } else {
+                                                1.25f - 0.25f * ((p - 0.55f) / 0.45f)
+                                            }
+                                            scaleX = s
+                                            scaleY = s
+                                            alpha = (p / 0.3f).coerceIn(0f, 1f)
+                                        }
                                 )
                             }
                         }
@@ -204,6 +298,36 @@ fun NoteItem(
                 }
             }
         }
+    }
+}
+
+/**
+ * A small "golden burst": [SPARK_COUNT] pixel squares radiating out from the coin's
+ * centre, decelerating and fading as [progress] runs 0..1. Drawn behind the coin and
+ * outside its pop-scale layer, so the sparks fly at full size from the first frame.
+ */
+private fun DrawScope.drawCoinSparks(progress: Float) {
+    if (progress <= 0f || progress >= 1f) return
+    val ease = 1f - (1f - progress) * (1f - progress)
+    val alpha = (1f - progress).coerceIn(0f, 1f)
+    val reach = size.minDimension * (0.45f + 0.75f * ease)
+    val spark = size.minDimension * 0.14f
+    repeat(SPARK_COUNT) { i ->
+        val angle = (i.toFloat() / SPARK_COUNT) * 2f * PI.toFloat() - PI.toFloat() / 2f
+        val color = when (i % 3) {
+            0 -> GoldSparkLight
+            1 -> GoldSpark
+            else -> GoldSparkDeep
+        }
+        drawRect(
+            color = color,
+            topLeft = Offset(
+                center.x + cos(angle) * reach - spark / 2f,
+                center.y + sin(angle) * reach - spark / 2f
+            ),
+            size = Size(spark, spark),
+            alpha = alpha
+        )
     }
 }
 

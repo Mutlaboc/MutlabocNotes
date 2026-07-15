@@ -65,6 +65,10 @@ fun HomeScreen(
     onHomeInfoClick: () -> Unit,
     onCompletionChange: (noteId: String, Boolean) -> Unit,
     onChecklistItemToggle: (noteId: String, index: Int, checked: Boolean) -> Unit = { _, _, _ -> },
+    // Id of a just-created note: its NoteItem plays a one-shot entrance animation and
+    // reports back via [onNewNoteShown] so the flag is cleared after the first show.
+    newlyCreatedNoteId: String? = null,
+    onNewNoteShown: () -> Unit = {},
     onSwitchUser: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenCharacter: () -> Unit = {},
@@ -236,6 +240,8 @@ fun HomeScreen(
                                 onCompletionChange = { isCompleted ->
                                     onCompletionChange(note.id, isCompleted)
                                 },
+                                animateEntrance = note.id == newlyCreatedNoteId,
+                                onEntranceShown = onNewNoteShown,
                                 onBurstComplete = { burstCenter, coinSource, coinCount, color ->
                                     nextFlightId += 1
                                     bursts.add(

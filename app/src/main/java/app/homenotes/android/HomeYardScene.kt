@@ -1,7 +1,6 @@
 package app.homenotes.android
 
 import android.graphics.BitmapFactory
-import android.provider.Settings
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -269,18 +268,6 @@ private fun rememberPixelBmps(vararg drawableIds: Int): List<ImageBitmap> {
     val resources = LocalContext.current.resources
     return remember(resources, drawableIds.contentHashCode()) {
         drawableIds.map { BitmapFactory.decodeResource(resources, it).asImageBitmap() }
-    }
-}
-
-@Composable
-private fun rememberAnimationsEnabled(): Boolean {
-    val context = LocalContext.current
-    return remember(context) {
-        runCatching {
-            Settings.Global.getFloat(
-                context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f
-            ) != 0f
-        }.getOrDefault(true)
     }
 }
 

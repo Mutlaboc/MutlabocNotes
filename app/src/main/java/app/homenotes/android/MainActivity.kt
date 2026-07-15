@@ -280,6 +280,8 @@ fun MyApp(
                     onChecklistItemToggle = { noteId, index, checked ->
                         notesViewModel.toggleChecklistItem(noteId, index, checked)
                     },
+                    newlyCreatedNoteId = notesViewModel.lastCreatedNoteId,
+                    onNewNoteShown = notesViewModel::onNewNoteShown,
                     onSwitchUser = authViewModel::logout,
                     onOpenSettings = {
                         navController.navigate("settings")

@@ -1,7 +1,6 @@
 package app.homenotes.android
 
 import android.graphics.BitmapFactory
-import android.provider.Settings
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
@@ -40,20 +39,6 @@ internal fun pixelImageBitmap(drawableId: Int): ImageBitmap {
     val resources = LocalContext.current.resources
     return remember(drawableId, resources) {
         BitmapFactory.decodeResource(resources, drawableId).asImageBitmap()
-    }
-}
-
-@Composable
-private fun rememberAnimationsEnabled(): Boolean {
-    val context = LocalContext.current
-    return remember(context) {
-        runCatching {
-            Settings.Global.getFloat(
-                context.contentResolver,
-                Settings.Global.ANIMATOR_DURATION_SCALE,
-                1f
-            ) != 0f
-        }.getOrDefault(true)
     }
 }
 

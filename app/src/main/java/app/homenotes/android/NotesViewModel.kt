@@ -27,6 +27,17 @@ class NotesViewModel(
     var uiMessage by mutableStateOf<UiMessage?>(null)
         private set
 
+    /**
+     * Id of the most recently created note; the notes list plays an entrance animation
+     * for it once and then clears the flag via [onNewNoteShown].
+     */
+    var lastCreatedNoteId by mutableStateOf<String?>(null)
+        private set
+
+    fun onNewNoteShown() {
+        lastCreatedNoteId = null
+    }
+
     fun loadNotes() {
         uiState = NotesUiState.Loading
         viewModelScope.launch(ioDispatcher) {
@@ -51,6 +62,7 @@ class NotesViewModel(
                 result.onSuccess { id ->
                     val noteWithId = rewardedNote.copy(id = id)
                     val notes = currentNotes() + noteWithId
+                    lastCreatedNoteId = noteWithId.id
                     applyNotes(notes)
                     reschedule { notificationScheduler.schedule(noteWithId) }
                 }.onFailure { error ->
