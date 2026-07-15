@@ -4,6 +4,7 @@
     <string name="action_settings">Settings</string>
     <string name="action_back">Back</string>
     <string name="action_add">Add</string>
+    <string name="bottom_bar_create">Create</string>
     <string name="action_delete">Delete</string>
     <string name="action_save">Save</string>
     <string name="action_cancel">Cancel</string>

@@ -4,6 +4,7 @@
     <string name="action_settings">Настройки</string>
     <string name="action_back">Назад</string>
     <string name="action_add">Добавить</string>
+    <string name="bottom_bar_create">Создать</string>
     <string name="action_delete">Удалить</string>
     <string name="action_save">Сохранить</string>
     <string name="action_cancel">Отмена</string>
