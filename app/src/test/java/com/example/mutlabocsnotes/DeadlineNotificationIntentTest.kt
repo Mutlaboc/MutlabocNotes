@@ -76,8 +76,9 @@ class DeadlineNotificationIntentTest {
             Note(
                 id = "task",
                 title = "Task",
-                category = NoteCategory.TASKS,
-                deadlineMillis = DEADLINE,
+                category = NoteCategory.RECURRING_TASKS,
+                startAtMillis = DEADLINE - 60 * 60_000L,
+                durationMinutes = 60,
                 repeatRule = RepeatRule.WEEKLY
             ),
             note

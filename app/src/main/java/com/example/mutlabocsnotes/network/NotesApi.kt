@@ -37,7 +37,7 @@ interface NotesApi {
     suspend fun updateNoteCompletion(
         @Path("id") noteId: String,
         @Body request: NoteCompletionRequestDto,
-    )
+    ): NoteCompletionResponseDto
 
     // Удаление заметки.
     @DELETE("notes/{id}")

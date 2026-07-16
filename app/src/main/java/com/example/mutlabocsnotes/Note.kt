@@ -16,7 +16,7 @@ data class ChecklistItem(
 enum class NoteCategory {
     SHOPPING,
     TASKS,
-    NOTES
+    RECURRING_TASKS
 }
 
 enum class RepeatRule {
@@ -34,9 +34,11 @@ data class Note(
     val id: String = "",
     val title: String = "",
     val content: String = "",
-    val category: NoteCategory = NoteCategory.NOTES,
+    val category: NoteCategory = NoteCategory.TASKS,
     val checklist: List<ChecklistItem> = emptyList(),
     val deadlineMillis: Long? = null,
+    val startAtMillis: Long? = null,
+    val durationMinutes: Long? = null,
     val repeatRule: RepeatRule = RepeatRule.NONE,
     val coinCount: Int = 0,
     val isCompleted: Boolean = false

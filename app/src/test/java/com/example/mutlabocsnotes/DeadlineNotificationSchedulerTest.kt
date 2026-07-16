@@ -84,7 +84,7 @@ class DeadlineNotificationSchedulerTest {
 
         val blankIdResult = scheduler.schedule(task(id = "", deadlineMillis = futureDeadlineMillis))
         val noteResult = scheduler.schedule(
-            task(id = "note", category = NoteCategory.NOTES, deadlineMillis = futureDeadlineMillis)
+            task(id = "note", category = NoteCategory.SHOPPING, deadlineMillis = futureDeadlineMillis)
         )
         val completedResult = scheduler.schedule(
             task(id = "done", isCompleted = true, deadlineMillis = futureDeadlineMillis)
@@ -102,20 +102,23 @@ class DeadlineNotificationSchedulerTest {
     }
 
     @Test
-    fun repeatingPastDeadlineRollsForwardToNextDailyNineAm() {
+    fun recurringTaskSchedulesAtStartPlusDuration() {
         val backend = FakeDeadlineAlarmBackend()
         val scheduler = scheduler(backend)
 
         val result = scheduler.schedule(
             task(
-                deadlineMillis = pastDeadlineMillis,
+                category = NoteCategory.RECURRING_TASKS,
+                deadlineMillis = null,
+                startAtMillis = calendarMillis(2026, Calendar.JANUARY, 11, 8),
+                durationMinutes = 120,
                 repeatRule = RepeatRule.DAILY
             )
         )
 
         assertEquals(DeadlineScheduleResult.ScheduledExact, result)
         assertEquals(
-            calendarMillis(2026, Calendar.JANUARY, 11, 9),
+            calendarMillis(2026, Calendar.JANUARY, 11, 10),
             backend.exactCalls.single().triggerAtMillis
         )
     }
@@ -159,7 +162,7 @@ class DeadlineNotificationSchedulerTest {
         val result = scheduler.scheduleAll(
             listOf(
                 task(id = "needs-permission", deadlineMillis = futureDeadlineMillis),
-                task(id = "plain-note", category = NoteCategory.NOTES, deadlineMillis = futureDeadlineMillis)
+                task(id = "plain-note", category = NoteCategory.SHOPPING, deadlineMillis = futureDeadlineMillis)
             )
         )
 
@@ -202,6 +205,8 @@ class DeadlineNotificationSchedulerTest {
         id: String = "task",
         category: NoteCategory = NoteCategory.TASKS,
         deadlineMillis: Long? = futureDeadlineMillis,
+        startAtMillis: Long? = null,
+        durationMinutes: Long? = null,
         isCompleted: Boolean = false,
         repeatRule: RepeatRule = RepeatRule.NONE
     ): Note {
@@ -210,6 +215,8 @@ class DeadlineNotificationSchedulerTest {
             title = "Task",
             category = category,
             deadlineMillis = deadlineMillis,
+            startAtMillis = startAtMillis,
+            durationMinutes = durationMinutes,
             isCompleted = isCompleted,
             repeatRule = repeatRule
         )

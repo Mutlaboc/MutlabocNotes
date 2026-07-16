@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddTask
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.QuestionMark
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.primarySurface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -27,12 +28,13 @@ fun BottomBar(
     selectedAction: BottomBarAction?,
     onCompletedNotesClick: () -> Unit,
     onAddClick: () -> Unit,
-    onHomeInfoClick: () -> Unit
+    onHomeInfoClick: () -> Unit,
+    onUpcomingClick: (() -> Unit)? = null
 ) {
     val actions = listOf(
         BottomBarAction.CompletedNotes,
         BottomBarAction.AddNote,
-        BottomBarAction.HomeInfo
+        if (onUpcomingClick == null) BottomBarAction.HomeInfo else BottomBarAction.UpcomingTasks
     )
     Row(
         modifier = Modifier
@@ -54,6 +56,7 @@ fun BottomBar(
                             BottomBarAction.CompletedNotes -> onCompletedNotesClick()
                             BottomBarAction.AddNote -> onAddClick()
                             BottomBarAction.HomeInfo -> onHomeInfoClick()
+                            BottomBarAction.UpcomingTasks -> onUpcomingClick?.invoke()
                         }
                     },
                 contentAlignment = Alignment.Center
@@ -89,6 +92,12 @@ private fun BottomBarIcon(
         BottomBarAction.HomeInfo -> Icon(
             imageVector = Icons.Default.QuestionMark,
             contentDescription = stringResource(R.string.home_info_title),
+            tint = if (isSelected) MaterialTheme.colors.secondary else MaterialTheme.colors.onPrimary
+        )
+
+        BottomBarAction.UpcomingTasks -> Icon(
+            imageVector = Icons.Default.Schedule,
+            contentDescription = stringResource(R.string.upcoming_tasks_title),
             tint = if (isSelected) MaterialTheme.colors.secondary else MaterialTheme.colors.onPrimary
         )
     }

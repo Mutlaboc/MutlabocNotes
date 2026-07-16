@@ -35,7 +35,8 @@ fun noteItemTestTag(noteId: String): String = "note_item_$noteId"
 enum class BottomBarAction {
     CompletedNotes,
     AddNote,
-    HomeInfo
+    HomeInfo,
+    UpcomingTasks
 }
 
 @Composable
@@ -60,7 +61,8 @@ fun HomeScreen(
     val contentState = uiState as? NotesUiState.Content
     val notes = contentState?.notes.orEmpty()
     val totalCoins = contentState?.totalCoins ?: 0
-    val activeNotes = notes.filter { !it.isCompleted }
+    val nowMillis = rememberTaskClock(notes)
+    val activeNotes = homeNotes(notes, nowMillis)
     var search by remember { mutableStateOf("") }
 
     LaunchedEffect(uiMessage?.id) {

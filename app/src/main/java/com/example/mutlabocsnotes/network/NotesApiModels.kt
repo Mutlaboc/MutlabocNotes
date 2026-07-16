@@ -19,6 +19,8 @@ data class NoteDto(
     val category: String,
     val checklist: List<ChecklistItemDto>,
     val deadlineMillis: Long?,
+    val startAtMillis: Long? = null,
+    val durationMinutes: Long? = null,
     val repeatRule: String?,
     val coinCount: Int,
     val isCompleted: Boolean,
@@ -31,6 +33,8 @@ data class NoteUpsertRequestDto(
     val category: String,
     val checklist: List<ChecklistItemDto>,
     val deadlineMillis: Long?,
+    val startAtMillis: Long? = null,
+    val durationMinutes: Long? = null,
     val repeatRule: String,
     val coinCount: Int,
     val isCompleted: Boolean,
@@ -40,10 +44,15 @@ data class NoteCompletionRequestDto(
     val isCompleted: Boolean,
 )
 
+data class NoteCompletionResponseDto(
+    val completedNote: NoteDto,
+    val nextNote: NoteDto?
+)
+
 // Преобразует строку категории из backend в enum доменной модели с безопасным fallback.
 private fun String.toNoteCategory(): NoteCategory {
     return runCatching { NoteCategory.valueOf(this) }
-        .getOrDefault(NoteCategory.NOTES)
+        .getOrDefault(NoteCategory.TASKS)
 }
 
 private fun String?.toRepeatRule(): RepeatRule {
@@ -71,6 +80,8 @@ fun NoteDto.toDomain(): Note = Note(
     category = category.toNoteCategory(),
     checklist = checklist.map { it.toDomain() },
     deadlineMillis = deadlineMillis,
+    startAtMillis = startAtMillis,
+    durationMinutes = durationMinutes,
     repeatRule = repeatRule.toRepeatRule(),
     coinCount = coinCount,
     isCompleted = isCompleted
@@ -83,6 +94,8 @@ fun Note.toUpsertRequestDto(): NoteUpsertRequestDto = NoteUpsertRequestDto(
     category = category.name,
     checklist = checklist.map { it.toDto() },
     deadlineMillis = deadlineMillis,
+    startAtMillis = startAtMillis,
+    durationMinutes = durationMinutes,
     repeatRule = repeatRule.name,
     coinCount = coinCount,
     isCompleted = isCompleted

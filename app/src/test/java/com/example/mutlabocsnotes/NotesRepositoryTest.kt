@@ -2,6 +2,7 @@ package com.example.mutlabocsnotes
 
 import com.example.mutlabocsnotes.network.ChecklistItemDto
 import com.example.mutlabocsnotes.network.NoteCompletionRequestDto
+import com.example.mutlabocsnotes.network.NoteCompletionResponseDto
 import com.example.mutlabocsnotes.network.NoteDto
 import com.example.mutlabocsnotes.network.NoteUpsertRequestDto
 import com.example.mutlabocsnotes.network.NotesApi
@@ -218,10 +219,17 @@ private class FakeNotesApi : NotesApi {
         return noteDto(noteId)
     }
 
-    override suspend fun updateNoteCompletion(noteId: String, request: NoteCompletionRequestDto) {
+    override suspend fun updateNoteCompletion(
+        noteId: String,
+        request: NoteCompletionRequestDto
+    ): NoteCompletionResponseDto {
         completionError?.let { throw it }
         lastCompletionId = noteId
         lastCompletionRequest = request
+        return NoteCompletionResponseDto(
+            completedNote = noteDto(noteId).copy(isCompleted = request.isCompleted),
+            nextNote = null
+        )
     }
 
     override suspend fun deleteNote(noteId: String) {

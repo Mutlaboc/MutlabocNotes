@@ -105,7 +105,24 @@ class NotesViewModel(
         viewModelScope.launch(ioDispatcher) {
             val result = repository.updateCompletion(noteId, isCompleted)
             launch(Dispatchers.Main) {
-                result.onFailure { error ->
+                result.onSuccess { update ->
+                    val serverNotes = currentNotes()
+                        .filterNot { it.id == update.completedNote.id || it.id == update.nextNote?.id }
+                        .toMutableList()
+                        .apply {
+                            add(update.completedNote)
+                            update.nextNote?.let(::add)
+                        }
+                    applyNotes(serverNotes)
+                    handleScheduleResult(
+                        DeadlineScheduleResult.aggregate(
+                            listOfNotNull(
+                                notificationScheduler.schedule(update.completedNote),
+                                update.nextNote?.let(notificationScheduler::schedule)
+                            )
+                        )
+                    )
+                }.onFailure { error ->
                     applyNotes(existingNotes)
                     handleScheduleResult(notificationScheduler.schedule(existing))
                     showMessage(error)

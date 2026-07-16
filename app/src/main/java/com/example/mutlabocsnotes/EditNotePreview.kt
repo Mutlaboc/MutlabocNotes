@@ -10,7 +10,10 @@ fun EditNoteScreenPreview() {
         id = "1",
         title = "Sample",
         content = "Content",
-        category = NoteCategory.NOTES,
+        category = NoteCategory.RECURRING_TASKS,
+        startAtMillis = System.currentTimeMillis() + 86_400_000L,
+        durationMinutes = 60,
+        repeatRule = RepeatRule.DAILY,
         coinCount = 3
     )
     EditNoteScreen(

@@ -13,7 +13,7 @@ class EditNotePreparationTest {
             originalNote = null,
             title = "   ",
             content = "Body",
-            selectedCategory = NoteCategory.NOTES,
+            selectedCategory = NoteCategory.TASKS,
             checklistItems = emptyList(),
             selectedDeadlineMillis = DEADLINE,
             repeatRule = RepeatRule.MONTHLY,
@@ -30,7 +30,7 @@ class EditNotePreparationTest {
             id = "shopping",
             title = "Groceries",
             content = "stale hidden content",
-            category = NoteCategory.NOTES,
+            category = NoteCategory.TASKS,
             isCompleted = true
         )
 
@@ -83,21 +83,24 @@ class EditNotePreparationTest {
         assertEquals(NoteCategory.TASKS, prepared.category)
         assertEquals(emptyList<ChecklistItem>(), prepared.checklist)
         assertEquals(DEADLINE, prepared.deadlineMillis)
-        assertEquals(RepeatRule.WEEKLY, prepared.repeatRule)
+        assertEquals(RepeatRule.NONE, prepared.repeatRule)
         assertEquals(3, prepared.coinCount)
     }
 
     @Test
-    fun prepareNoteForSave_notesKeepsContentButClearsTaskOnlyFields() {
+    fun prepareNoteForSave_recurringTaskKeepsScheduleAndClearsDeadline() {
         val prepared = checkNotNull(
             prepareNoteForSave(
                 noteId = "note",
                 originalNote = null,
                 title = "Note",
                 content = "Note body",
-                selectedCategory = NoteCategory.NOTES,
+                selectedCategory = NoteCategory.RECURRING_TASKS,
                 checklistItems = listOf(ChecklistItem(text = "Milk")),
                 selectedDeadlineMillis = DEADLINE,
+                selectedStartAtMillis = DEADLINE,
+                durationDays = 1,
+                durationHours = 2,
                 repeatRule = RepeatRule.MONTHLY,
                 coinCountText = "5",
                 defaultCoinCount = 1
@@ -105,10 +108,12 @@ class EditNotePreparationTest {
         )
 
         assertEquals("Note body", prepared.content)
-        assertEquals(NoteCategory.NOTES, prepared.category)
+        assertEquals(NoteCategory.RECURRING_TASKS, prepared.category)
         assertEquals(emptyList<ChecklistItem>(), prepared.checklist)
         assertEquals(null, prepared.deadlineMillis)
-        assertEquals(RepeatRule.NONE, prepared.repeatRule)
+        assertEquals(DEADLINE, prepared.startAtMillis)
+        assertEquals(1_560L, prepared.durationMinutes)
+        assertEquals(RepeatRule.MONTHLY, prepared.repeatRule)
         assertEquals(5, prepared.coinCount)
     }
 

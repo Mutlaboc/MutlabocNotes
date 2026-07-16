@@ -321,7 +321,9 @@ private class FakeNotesDataSource : NotesDataSource {
     var notesResult: Result<List<Note>> = Result.success(emptyList())
     var insertResult: Result<String> = Result.failure(IllegalStateException("not set"))
     var updateResult: Result<Unit> = Result.success(Unit)
-    var updateCompletionResult: Result<Unit> = Result.success(Unit)
+    var updateCompletionResult: Result<CompletionUpdate> = Result.success(
+        CompletionUpdate(Note(id = "task", category = NoteCategory.TASKS, isCompleted = true), null)
+    )
     var deleteResult: Result<Unit> = Result.failure(IllegalStateException("not set"))
     val insertCalls = mutableListOf<Note>()
     val updateCalls = mutableListOf<Note>()
@@ -340,7 +342,7 @@ private class FakeNotesDataSource : NotesDataSource {
         return updateResult
     }
 
-    override suspend fun updateCompletion(noteId: String, isCompleted: Boolean): Result<Unit> {
+    override suspend fun updateCompletion(noteId: String, isCompleted: Boolean): Result<CompletionUpdate> {
         updateCompletionCalls.add(noteId to isCompleted)
         return updateCompletionResult
     }

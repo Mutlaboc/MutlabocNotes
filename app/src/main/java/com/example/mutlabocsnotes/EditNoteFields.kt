@@ -1,6 +1,5 @@
 package com.example.mutlabocsnotes
 
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.AlertDialog
@@ -50,8 +49,8 @@ internal fun NoteContentField(
         label = { Text(stringResource(R.string.note_content_label)) },
         modifier = Modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.4f)
             .testTag(EDIT_NOTE_CONTENT_FIELD_TEST_TAG),
+        minLines = 3,
         maxLines = Int.MAX_VALUE
     )
 }

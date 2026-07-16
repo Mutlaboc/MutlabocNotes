@@ -24,7 +24,8 @@ fun NoteItem(
     note: Note,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onCompletionChange: (Boolean) -> Unit
+    onCompletionChange: (Boolean) -> Unit,
+    showCompletion: Boolean = true
 ) {
     val categoryColors = noteCategoryColors(note.category)
     Column(
@@ -47,10 +48,12 @@ fun NoteItem(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Checkbox(
-                        checked = note.isCompleted,
-                        onCheckedChange = onCompletionChange
-                    )
+                    if (showCompletion) {
+                        Checkbox(
+                            checked = note.isCompleted,
+                            onCheckedChange = onCompletionChange
+                        )
+                    }
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -102,19 +105,19 @@ private fun NoteDetails(note: Note) {
             }
         }
 
-        NoteCategory.NOTES -> {
+        NoteCategory.RECURRING_TASKS -> {
             if (note.content.isNotBlank()) {
                 Text(text = note.content, style = MaterialTheme.typography.body2)
             }
-        }
-
-        NoteCategory.TASKS -> {
-            if (note.content.isNotBlank()) {
-                Text(text = note.content, style = MaterialTheme.typography.body2)
-            }
-            note.deadlineMillis?.let { millis ->
+            note.startAtMillis?.let { millis ->
                 Text(
-                    text = stringResource(R.string.note_deadline_value, formatDeadlineDate(millis)),
+                    text = stringResource(R.string.note_start_value, formatTaskDateTime(millis)),
+                    style = MaterialTheme.typography.caption
+                )
+            }
+            note.durationMinutes?.let { minutes ->
+                Text(
+                    text = stringResource(R.string.note_duration_value, minutes / 1_440, (minutes % 1_440) / 60),
                     style = MaterialTheme.typography.caption
                 )
             }
@@ -124,6 +127,16 @@ private fun NoteDetails(note: Note) {
                         R.string.note_repeating,
                         stringResource(note.repeatRule.labelRes())
                     ),
+                    style = MaterialTheme.typography.caption
+                )
+            }
+        }
+
+        NoteCategory.TASKS -> {
+            if (note.content.isNotBlank()) Text(text = note.content, style = MaterialTheme.typography.body2)
+            note.deadlineMillis?.let { millis ->
+                Text(
+                    text = stringResource(R.string.note_deadline_value, formatDeadlineDate(millis)),
                     style = MaterialTheme.typography.caption
                 )
             }

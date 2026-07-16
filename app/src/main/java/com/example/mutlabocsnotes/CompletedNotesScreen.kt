@@ -30,7 +30,7 @@ fun CompletedNotesScreen(
     onNoteClick: (noteId: String) -> Unit,
     onCompletionChange: (noteId: String, Boolean) -> Unit,
     onNavigateHome: () -> Unit,
-    onHomeInfoClick: () -> Unit
+    onUpcomingClick: () -> Unit
 ) {
     val scaffoldState = rememberScaffoldState()
     val snackbarText = uiMessage?.text?.asString()
@@ -61,7 +61,8 @@ fun CompletedNotesScreen(
                 selectedAction = BottomBarAction.CompletedNotes,
                 onCompletedNotesClick = onNavigateHome,
                 onAddClick = onaddNoteClick,
-                onHomeInfoClick = onHomeInfoClick
+                onHomeInfoClick = {},
+                onUpcomingClick = onUpcomingClick
             )
         }
     ) { paddingValues ->

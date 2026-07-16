@@ -57,15 +57,27 @@ class DeadlineNotificationScheduler internal constructor(
 
         cancel(note.id)
 
-        if (note.category != NoteCategory.TASKS) return DeadlineScheduleResult.NotScheduled
-        val deadlineMillis = note.deadlineMillis ?: return DeadlineScheduleResult.NotScheduled
+        if (note.category != NoteCategory.TASKS && note.category != NoteCategory.RECURRING_TASKS) {
+            return DeadlineScheduleResult.NotScheduled
+        }
+        val deadlineMillis = when (note.category) {
+            NoteCategory.TASKS -> note.deadlineMillis
+            NoteCategory.RECURRING_TASKS -> note.startAtMillis?.let { start ->
+                note.durationMinutes?.let { duration -> start + duration * 60_000L }
+            }
+            NoteCategory.SHOPPING -> null
+        } ?: return DeadlineScheduleResult.NotScheduled
         if (note.isCompleted) return DeadlineScheduleResult.NotScheduled
 
-        val triggerAtMillis = nextDeadlineTriggerMillis(
-            deadlineMillis = deadlineMillis,
-            nowMillis = nowProvider(),
-            repeatRule = note.repeatRule
-        ) ?: return DeadlineScheduleResult.NotScheduled
+        val triggerAtMillis = if (note.category == NoteCategory.RECURRING_TASKS) {
+            deadlineMillis.takeIf { it > nowProvider() }
+        } else {
+            nextDeadlineTriggerMillis(
+                deadlineMillis = deadlineMillis,
+                nowMillis = nowProvider(),
+                repeatRule = RepeatRule.NONE
+            )
+        } ?: return DeadlineScheduleResult.NotScheduled
         if (requiresExactAlarmPermission() && !alarmBackend.canScheduleExactAlarms()) {
             alarmBackend.scheduleInexact(triggerAtMillis, note)
             return DeadlineScheduleResult.ScheduledInexactPermissionRequired
@@ -293,7 +305,6 @@ private class AndroidDeadlineAlarmBackend(
             putExtra(DeadlineNotification.EXTRA_NOTE_ID, note.id)
             putExtra(DeadlineNotification.EXTRA_NOTE_TITLE, note.title)
             putExtra(DeadlineNotification.EXTRA_DEADLINE_MILLIS, note.deadlineMillis ?: 0L)
-            putExtra(DeadlineNotification.EXTRA_REPEAT_RULE, note.repeatRule.name)
         }
         return PendingIntent.getBroadcast(
             context,

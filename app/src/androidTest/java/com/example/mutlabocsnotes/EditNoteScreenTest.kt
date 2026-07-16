@@ -121,7 +121,7 @@ class EditNoteScreenTest {
             val note = checkNotNull(savedNote)
             assertEquals("Note", note.title)
             assertEquals("Note body", note.content)
-            assertEquals(NoteCategory.NOTES, note.category)
+            assertEquals(NoteCategory.TASKS, note.category)
             assertEquals(emptyList<ChecklistItem>(), note.checklist)
             assertEquals(null, note.deadlineMillis)
             assertEquals(RepeatRule.NONE, note.repeatRule)

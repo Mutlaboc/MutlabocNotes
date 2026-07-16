@@ -68,13 +68,14 @@
     <string name="checklist_preview_item">- %1$s</string>
     <string name="more_items_indicator">...</string>
 
+    <string name="create_note_title">Создание заметки</string>
     <string name="edit_note_title">Редактирование заметки</string>
     <string name="note_title_label">Заголовок</string>
     <string name="note_title_required">Введите заголовок</string>
     <string name="note_content_label">Содержимое</string>
-    <string name="note_category_shopping">Покупки</string>
-    <string name="note_category_tasks">Дела</string>
-    <string name="note_category_notes">Заметки</string>
+    <string name="note_category_shopping">Покупка</string>
+    <string name="note_category_tasks">Задачи</string>
+    <string name="note_category_recurring_tasks">Повторяющиеся задачи</string>
     <string name="checklist_add_item">Добавить</string>
     <string name="checklist_delete_item">Удалить пункт</string>
     <string name="deadline_label">Дедлайн</string>
@@ -83,6 +84,13 @@
     <string name="repeat_rule_daily">Ежедневно</string>
     <string name="repeat_rule_weekly">Еженедельно</string>
     <string name="repeat_rule_monthly">Ежемесячно</string>
+    <string name="first_task_start_value">Первая задача: %1$s</string>
+    <string name="duration_days">Дней</string>
+    <string name="duration_hours">Часов</string>
+    <string name="note_start_value">Начало: %1$s</string>
+    <string name="note_duration_value">Срок: %1$d дн. %2$d ч.</string>
+    <string name="upcoming_tasks_title">Предстоящие задачи</string>
+    <string name="upcoming_tasks_empty">Предстоящих задач пока нет</string>
     <string name="coin_count_label">Количество монет</string>
     <string name="note_delete_title">Удалить заметку?</string>
     <string name="note_delete_message">Это действие нельзя отменить.</string>

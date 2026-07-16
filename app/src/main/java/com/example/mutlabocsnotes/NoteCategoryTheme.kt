@@ -37,7 +37,7 @@ internal fun noteCategoryColors(category: NoteCategory): NoteCategoryColors {
             )
         }
 
-        NoteCategory.NOTES -> if (isLight) {
+        NoteCategory.RECURRING_TASKS -> if (isLight) {
             NoteCategoryColors(
                 container = Color(0xFFE1F5E3),
                 content = Color(0xFF1D4022)

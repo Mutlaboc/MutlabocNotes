@@ -82,7 +82,6 @@ class DeadlineNotificationReceiver: BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val noteId = intent.getStringExtra(DeadlineNotification.EXTRA_NOTE_ID).orEmpty()
         val noteTitle = intent.getStringExtra(DeadlineNotification.EXTRA_NOTE_TITLE)
-        rescheduleRepeatingDeadline(context, intent, noteId, noteTitle)
         val contentText = context.getString(
             R.string.deadline_notification_message,
             noteTitle?.takeIf { it.isNotBlank() } ?: context.getString(R.string.app_name)
@@ -115,27 +114,13 @@ class DeadlineNotificationReceiver: BroadcastReceiver() {
         }
     }
 
-    private fun rescheduleRepeatingDeadline(
-        context: Context,
-        intent: Intent,
-        noteId: String,
-        noteTitle: String?
-    ) {
-        val note = repeatingDeadlineNoteFromAlarm(
-            noteId = noteId,
-            noteTitle = noteTitle,
-            deadlineMillis = intent.getLongExtra(DeadlineNotification.EXTRA_DEADLINE_MILLIS, 0L),
-            repeatRule = intent.getStringExtra(DeadlineNotification.EXTRA_REPEAT_RULE).toRepeatRule()
-        ) ?: return
-        DeadlineNotificationScheduler(context).schedule(note)
-    }
 
     // Добавляет флаг immutable на поддерживаемых версиях Android для безопасности PendingIntent.
     private fun immutableFlag(): Int =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
 
 }
-
+@Deprecated("Recurring notifications are now backed by separate task instances")
 internal fun repeatingDeadlineNoteFromAlarm(
     noteId: String,
     noteTitle: String?,
@@ -146,12 +131,9 @@ internal fun repeatingDeadlineNoteFromAlarm(
     return Note(
         id = noteId,
         title = noteTitle.orEmpty(),
-        category = NoteCategory.TASKS,
-        deadlineMillis = deadlineMillis,
+        category = NoteCategory.RECURRING_TASKS,
+        startAtMillis = deadlineMillis - 60 * 60_000L,
+        durationMinutes = 60,
         repeatRule = repeatRule
     )
 }
-
-private fun String?.toRepeatRule(): RepeatRule =
-    runCatching { RepeatRule.valueOf(this.orEmpty()) }
-        .getOrDefault(RepeatRule.NONE)

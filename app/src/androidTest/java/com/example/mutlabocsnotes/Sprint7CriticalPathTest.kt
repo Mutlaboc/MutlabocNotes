@@ -266,8 +266,10 @@ class Sprint7CriticalPathTest {
             return Result.success(Unit)
         }
 
-        override suspend fun updateCompletion(noteId: String, isCompleted: Boolean): Result<Unit> {
-            return Result.success(Unit)
+        override suspend fun updateCompletion(noteId: String, isCompleted: Boolean): Result<CompletionUpdate> {
+            return Result.success(
+                CompletionUpdate(Note(id = noteId, category = NoteCategory.TASKS, isCompleted = isCompleted), null)
+            )
         }
 
         override suspend fun delete(noteId: String): Result<Unit> {

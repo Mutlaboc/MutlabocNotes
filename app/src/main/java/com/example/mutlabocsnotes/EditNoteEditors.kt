@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Checkbox
@@ -30,9 +32,9 @@ internal fun CategoryPicker(
     val categories = listOf(
         NoteCategory.SHOPPING to R.string.note_category_shopping,
         NoteCategory.TASKS to R.string.note_category_tasks,
-        NoteCategory.NOTES to R.string.note_category_notes
+        NoteCategory.RECURRING_TASKS to R.string.note_category_recurring_tasks
     )
-    Row {
+    Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
         categories.forEach { (category, labelResId) ->
             val categoryColors = noteCategoryColors(category)
             val modifier = Modifier

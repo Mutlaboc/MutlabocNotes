@@ -69,13 +69,14 @@
     <string name="checklist_preview_item">- %1$s</string>
     <string name="more_items_indicator">...</string>
 
+    <string name="create_note_title">Create note</string>
     <string name="edit_note_title">Edit note</string>
     <string name="note_title_label">Title</string>
     <string name="note_title_required">Enter a title</string>
     <string name="note_content_label">Content</string>
-    <string name="note_category_shopping">Shopping</string>
+    <string name="note_category_shopping">Purchase</string>
     <string name="note_category_tasks">Tasks</string>
-    <string name="note_category_notes">Notes</string>
+    <string name="note_category_recurring_tasks">Recurring tasks</string>
     <string name="checklist_add_item">Add</string>
     <string name="checklist_delete_item">Delete item</string>
     <string name="deadline_label">Deadline</string>
@@ -84,6 +85,13 @@
     <string name="repeat_rule_daily">Daily</string>
     <string name="repeat_rule_weekly">Weekly</string>
     <string name="repeat_rule_monthly">Monthly</string>
+    <string name="first_task_start_value">First task: %1$s</string>
+    <string name="duration_days">Days</string>
+    <string name="duration_hours">Hours</string>
+    <string name="note_start_value">Starts: %1$s</string>
+    <string name="note_duration_value">Duration: %1$d d %2$d h</string>
+    <string name="upcoming_tasks_title">Upcoming tasks</string>
+    <string name="upcoming_tasks_empty">There are no upcoming tasks</string>
     <string name="coin_count_label">Coin count</string>
     <string name="note_delete_title">Delete note?</string>
     <string name="note_delete_message">This action cannot be undone.</string>

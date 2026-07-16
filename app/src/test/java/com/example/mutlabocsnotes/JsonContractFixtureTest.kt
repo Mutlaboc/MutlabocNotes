@@ -36,7 +36,8 @@ class JsonContractFixtureTest {
         assertEquals(RepeatRule.NONE.name, response.repeatRule)
 
         assertEquals("Updated task", request.title)
-        assertEquals("TASKS", request.category)
+        assertEquals("RECURRING_TASKS", request.category)
+        assertEquals(60L, request.durationMinutes)
         assertEquals(3, request.coinCount)
         assertEquals(RepeatRule.WEEKLY.name, request.repeatRule)
     }

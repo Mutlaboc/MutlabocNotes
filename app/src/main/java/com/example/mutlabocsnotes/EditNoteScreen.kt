@@ -50,6 +50,9 @@ internal fun prepareNoteForSave(
     selectedCategory: NoteCategory,
     checklistItems: List<ChecklistItem>,
     selectedDeadlineMillis: Long,
+    selectedStartAtMillis: Long = selectedDeadlineMillis,
+    durationDays: Int = 0,
+    durationHours: Int = 1,
     repeatRule: RepeatRule,
     coinCountText: String,
     defaultCoinCount: Int
@@ -79,7 +82,13 @@ internal fun prepareNoteForSave(
         } else {
             null
         },
-        repeatRule = if (selectedCategory == NoteCategory.TASKS) {
+        startAtMillis = if (selectedCategory == NoteCategory.RECURRING_TASKS) {
+            selectedStartAtMillis
+        } else null,
+        durationMinutes = if (selectedCategory == NoteCategory.RECURRING_TASKS) {
+            (durationDays * 24L + durationHours) * 60L
+        } else null,
+        repeatRule = if (selectedCategory == NoteCategory.RECURRING_TASKS) {
             repeatRule
         } else {
             RepeatRule.NONE
@@ -99,7 +108,7 @@ fun EditNoteScreen(
     var title by remember(noteId) { mutableStateOf(note?.title ?: "") }
     var content by remember(noteId) { mutableStateOf(note?.content ?: "") }
     var selectedCategory by remember(noteId) {
-        mutableStateOf(note?.category ?: NoteCategory.NOTES)
+        mutableStateOf(note?.category ?: NoteCategory.TASKS)
     }
     val checklistItems = remember(noteId) {
         val initial = note
@@ -124,8 +133,14 @@ fun EditNoteScreen(
     var selectedDeadlineMillis by remember(noteId) {
         mutableStateOf(note?.deadlineMillis ?: defaultDeadline)
     }
+    var selectedStartAtMillis by remember(noteId) {
+        mutableStateOf(note?.startAtMillis ?: defaultDeadline)
+    }
+    val initialDurationHours = ((note?.durationMinutes ?: 60L) / 60L).coerceAtLeast(1L)
+    var durationDays by remember(noteId) { mutableStateOf((initialDurationHours / 24L).toInt()) }
+    var durationHours by remember(noteId) { mutableStateOf((initialDurationHours % 24L).toInt()) }
     var repeatRule by remember(noteId) {
-        mutableStateOf(note?.repeatRule ?: RepeatRule.NONE)
+        mutableStateOf(note?.repeatRule?.takeIf { it != RepeatRule.NONE } ?: RepeatRule.DAILY)
     }
     val defaultCoinCount = remember(noteId) { note?.coinCount ?: (1..5).random() }
     var coinCountText by remember(noteId) {
@@ -137,7 +152,13 @@ fun EditNoteScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.edit_note_title)) }
+                title = {
+                    Text(
+                        stringResource(
+                            if (note == null) R.string.create_note_title else R.string.edit_note_title
+                        )
+                    )
+                }
             )
         }
     ) { padding ->
@@ -187,9 +208,7 @@ fun EditNoteScreen(
                     DeadlinePicker(
                         selectedDeadlineMillis = selectedDeadlineMillis,
                         todayMillis = todayCalendar.timeInMillis,
-                        repeatRule = repeatRule,
                         onDeadlineSelected = { selectedDeadlineMillis = it },
-                        onRepeatRuleChange = { repeatRule = it }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     NoteContentField(
@@ -198,7 +217,22 @@ fun EditNoteScreen(
                     )
                 }
 
-                NoteCategory.NOTES -> {
+                NoteCategory.RECURRING_TASKS -> {
+                    RecurringScheduleEditor(
+                        selectedStartAtMillis = selectedStartAtMillis,
+                        todayMillis = todayCalendar.timeInMillis,
+                        durationDays = durationDays,
+                        durationHours = durationHours,
+                        repeatRule = repeatRule,
+                        onStartSelected = { selectedStartAtMillis = it },
+                        onDurationDaysChange = { durationDays = it.coerceAtLeast(0) },
+                        onDurationHoursChange = { newHours ->
+                            durationHours = newHours.coerceIn(0, 23)
+                            if (durationDays == 0 && durationHours == 0) durationHours = 1
+                        },
+                        onRepeatRuleChange = { repeatRule = it }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
                     NoteContentField(
                         content = content,
                         onContentChange = { content = it }
@@ -224,6 +258,9 @@ fun EditNoteScreen(
                             selectedCategory = selectedCategory,
                             checklistItems = checklistItems,
                             selectedDeadlineMillis = selectedDeadlineMillis,
+                            selectedStartAtMillis = selectedStartAtMillis,
+                            durationDays = durationDays,
+                            durationHours = durationHours,
                             repeatRule = repeatRule,
                             coinCountText = coinCountText,
                             defaultCoinCount = defaultCoinCount

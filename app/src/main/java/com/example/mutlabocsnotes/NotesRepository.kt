@@ -11,9 +11,14 @@ interface NotesDataSource {
     suspend fun getAllNotes(): Result<List<Note>>
     suspend fun insert(note: Note): Result<String>
     suspend fun update(note: Note): Result<Unit>
-    suspend fun updateCompletion(noteId: String, isCompleted: Boolean): Result<Unit>
+    suspend fun updateCompletion(noteId: String, isCompleted: Boolean): Result<CompletionUpdate>
     suspend fun delete(noteId: String): Result<Unit>
 }
+
+data class CompletionUpdate(
+    val completedNote: Note,
+    val nextNote: Note?
+)
 
 class NotesRepository(
     private val api: NotesApi,
@@ -49,15 +54,20 @@ class NotesRepository(
         }
     }
 
-    override suspend fun updateCompletion(noteId: String, isCompleted: Boolean): Result<Unit> =
+    override suspend fun updateCompletion(noteId: String, isCompleted: Boolean): Result<CompletionUpdate> =
         withContext(Dispatchers.IO) {
             if (noteId.isBlank()) {
                 return@withContext Result.failure(IllegalArgumentException("Blank note id"))
             }
 
             return@withContext try {
-                api.updateNoteCompletion(noteId, NoteCompletionRequestDto(isCompleted))
-                Result.success(Unit)
+                val response = api.updateNoteCompletion(noteId, NoteCompletionRequestDto(isCompleted))
+                Result.success(
+                    CompletionUpdate(
+                        completedNote = response.completedNote.toDomain(),
+                        nextNote = response.nextNote?.toDomain()
+                    )
+                )
             } catch (e: Exception) {
                 Result.failure(e)
             }

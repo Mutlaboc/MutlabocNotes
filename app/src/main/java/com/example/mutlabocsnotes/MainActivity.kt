@@ -311,8 +311,22 @@ fun MyApp(
                     onNavigateHome = {
                         navController.popBackStack()
                     },
-                    onHomeInfoClick = {
-                        navController.navigate("home_info")
+                    onUpcomingClick = {
+                        navController.navigate("upcoming") { launchSingleTop = true }
+                    }
+                )
+            }
+
+            composable("upcoming") {
+                UpcomingTasksScreen(
+                    uiState = notesViewModel.uiState,
+                    onRetryNotes = notesViewModel::loadNotes,
+                    onAddNoteClick = { navController.navigate("edit") },
+                    onNoteClick = { noteId ->
+                        navController.navigate("edit/${Uri.encode(noteId)}")
+                    },
+                    onCompletedNotesClick = {
+                        navController.navigate("completed") { launchSingleTop = true }
                     }
                 )
             }
