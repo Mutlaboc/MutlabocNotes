@@ -5,9 +5,12 @@ import app.homenotes.android.network.NotesApi
 import app.homenotes.android.network.toDomain
 import app.homenotes.android.network.toUpsertRequestDto
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 
 interface NotesDataSource {
+    fun observeNotes(): Flow<List<Note>> = flow { emit(getAllNotes().getOrThrow()) }
     suspend fun getAllNotes(): Result<List<Note>>
     suspend fun insert(note: Note): Result<String>
     suspend fun update(note: Note): Result<Unit>

@@ -29,6 +29,13 @@ data class CharacterSheetDto(
     val xpToNext: Int,
     val stats: List<CharacterStatDto>,
     val skills: List<CharacterSkillDto>,
+    val wallet: CharacterWalletDto = CharacterWalletDto(),
+)
+
+data class CharacterWalletDto(
+    val earnedCoins: Int = 0,
+    val spentCoins: Int = 0,
+    val availableCoins: Int = 0,
 )
 
 // Тело запроса на начисление опыта.
@@ -36,7 +43,11 @@ data class CharacterXpRequestDto(
     val characterXp: Int,
     val skillKey: String?,
     val skillXp: Int,
+    val operationId: String? = null,
 )
+
+data class CharacterStatUpgradeRequestDto(val operationId: String, val statKey: String)
+data class CharacterRenameRequestDto(val operationId: String, val name: String)
 
 // Преобразует DTO в доменную модель. Портрет — клиентский ресурс, его на бекенде нет.
 fun CharacterSheetDto.toDomain(): CharacterSheet = CharacterSheet(

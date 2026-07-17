@@ -22,7 +22,8 @@ fun UpcomingTasksScreen(
     onRetryNotes: () -> Unit,
     onAddNoteClick: () -> Unit,
     onNoteClick: (String) -> Unit,
-    onCompletedNotesClick: () -> Unit
+    onCompletedNotesClick: () -> Unit,
+    onNavigateHome: () -> Unit,
 ) {
     val notes = (uiState as? NotesUiState.Content)?.notes.orEmpty()
     val nowMillis = rememberTaskClock(notes)
@@ -36,7 +37,7 @@ fun UpcomingTasksScreen(
                 onCompletedNotesClick = onCompletedNotesClick,
                 onAddClick = onAddNoteClick,
                 onHomeInfoClick = {},
-                onUpcomingClick = {}
+                onUpcomingClick = onNavigateHome
             )
         }
     ) { paddingValues ->

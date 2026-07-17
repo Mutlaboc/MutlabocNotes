@@ -20,6 +20,20 @@ class EditNoteScreenTest {
     val composeRule = createComposeRule()
 
     @Test
+    fun questSceneIsPresentWhileCreatingNote() {
+        setEditNoteContent(note = null)
+
+        composeRule.onAllNodesWithTag(CREATE_NOTE_QUEST_SCENE_TEST_TAG).assertCountEquals(1)
+    }
+
+    @Test
+    fun questSceneIsAbsentWhileEditingNote() {
+        setEditNoteContent(note = Note(id = "existing", title = "Existing"))
+
+        composeRule.onAllNodesWithTag(CREATE_NOTE_QUEST_SCENE_TEST_TAG).assertCountEquals(0)
+    }
+
+    @Test
     fun savingWithEmptyTitleShowsValidationAndDoesNotSave() {
         var savedNote: Note? = null
         setEditNoteContent(

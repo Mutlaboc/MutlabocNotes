@@ -109,7 +109,15 @@ class NotesRepositoryTest {
     fun updateCompletion_successCallsPatchEndpointWithCompletionPayload() = runTest(mainDispatcherRule.dispatcher) {
         val result = repository.updateCompletion("note-id", true)
 
-        assertEquals(Result.success(Unit), result)
+        assertEquals(
+            Result.success(
+                CompletionUpdate(
+                    completedNote = note(id = "note-id").copy(isCompleted = true),
+                    nextNote = null
+                )
+            ),
+            result
+        )
         assertEquals("note-id", api.lastCompletionId)
         assertEquals(NoteCompletionRequestDto(isCompleted = true), api.lastCompletionRequest)
         assertEquals(null, api.lastUpdateRequest)

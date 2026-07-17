@@ -85,7 +85,7 @@ class CharacterViewModel(
         spentCoins += cost
 
         viewModelScope.launch(ioDispatcher) {
-            val result = repository.updateCharacter(upgraded)
+            val result = repository.upgradeStat(upgraded, statKey, cost)
             val persistedSpent = result.getOrNull()?.let { coinWallet.recordSpend(key, cost) }
             launch(Dispatchers.Main) {
                 result.onSuccess { sheet ->
@@ -135,7 +135,7 @@ class CharacterViewModel(
         uiState = CharacterUiState.Content(optimistic)
 
         viewModelScope.launch(ioDispatcher) {
-            val result = repository.updateCharacter(optimistic)
+            val result = repository.rename(optimistic)
             launch(Dispatchers.Main) {
                 result.onSuccess { sheet ->
                     uiState = CharacterUiState.Content(sheet)

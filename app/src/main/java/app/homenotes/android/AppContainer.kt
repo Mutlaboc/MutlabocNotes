@@ -7,12 +7,24 @@ import app.homenotes.android.network.AuthApi
 import app.homenotes.android.network.CharacterApi
 import app.homenotes.android.network.HomeCardsApi
 import app.homenotes.android.network.NotesApi
+import app.homenotes.android.local.HomeNotesDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 // Единая точка создания зависимостей приложения.
 // В экранах и ViewModel зависимости только используются, но больше не создаются напрямую.
 class AppContainer(
     private val application: Application
 ) {
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    val database: HomeNotesDatabase by lazy { HomeNotesDatabase.create(application) }
+    private val offlineDao by lazy { database.offlineDao() }
+
+    val syncCoordinator: WorkManagerSyncCoordinator by lazy {
+        WorkManagerSyncCoordinator(application, offlineDao)
+    }
     // Один общий store сессии нужен и репозиториям, и сетевому слою.
     val sessionManager: AuthSessionStore by lazy {
         SessionManager(application)
@@ -34,26 +46,39 @@ class AppContainer(
     val authRepository: AuthSessionRepository by lazy {
         AuthRepository(
             sessionManager = sessionManager,
-            api = authApi
+            api = authApi,
+            onSessionAvailable = { email ->
+                normalizeAccountKey(email)?.let { account ->
+                    applicationScope.launch {
+                        coinWalletRepository.spentCoins(email)
+                        syncCoordinator.activateAccount(account)
+                    }
+                }
+            },
+            onSessionCleared = { email ->
+                normalizeAccountKey(email)?.let(syncCoordinator::cancel)
+            },
         )
+    }
+
+    private val notesApi: NotesApi by lazy { authenticatedRetrofit.create(NotesApi::class.java) }
+    private val cardsApi: HomeCardsApi by lazy { authenticatedRetrofit.create(HomeCardsApi::class.java) }
+    private val characterApi: CharacterApi by lazy { authenticatedRetrofit.create(CharacterApi::class.java) }
+
+    val syncEngine: OfflineSyncEngine by lazy {
+        OfflineSyncEngine(offlineDao, notesApi, cardsApi, characterApi, sessionManager)
     }
 
     val notesRepository: NotesDataSource by lazy {
-        NotesRepository(
-            api = authenticatedRetrofit.create(NotesApi::class.java)
-        )
+        OfflineNotesRepository(offlineDao, sessionManager, syncCoordinator)
     }
 
     val homeInfoRepository: HomeInfoDataSource by lazy {
-        HomeInfoRepository(
-            api = authenticatedRetrofit.create(HomeCardsApi::class.java)
-        )
+        OfflineHomeInfoRepository(offlineDao, sessionManager, syncCoordinator)
     }
 
     val characterRepository: CharacterDataSource by lazy {
-        CharacterRepository(
-            api = authenticatedRetrofit.create(CharacterApi::class.java)
-        )
+        OfflineCharacterRepository(offlineDao, sessionManager, syncCoordinator)
     }
 
     val deadlineNotificationScheduler: DeadlineScheduler by lazy {
@@ -69,7 +94,7 @@ class AppContainer(
     }
 
     val coinWalletRepository: CoinWalletRepository by lazy {
-        DataStoreCoinWalletRepository(application)
+        RoomCoinWalletRepository(offlineDao, DataStoreCoinWalletRepository(application))
     }
 
     // Фабрика создаёт root ViewModel с зависимостями из контейнера.

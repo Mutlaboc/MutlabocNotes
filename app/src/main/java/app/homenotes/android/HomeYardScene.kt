@@ -19,7 +19,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
@@ -32,8 +31,8 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 
 /*
- * Shared "yard" scene: the dotLottie house on the left, the tree (trunk + swaying
- * canopy) on the right, and the mascot who strolls back and forth along the grass.
+ * Shared "yard" scene: either the starting construction plot or the established home,
+ * plus the mascot who strolls back and forth along the grass.
  *
  * Everything is positioned in one scene coordinate space (SCENE_W x SCENE_H, the
  * house's native 1254 grid extended to the right for the tree). The space is scaled
@@ -54,6 +53,13 @@ private const val GROUND_Y = 1165f
 // House occupies its native 1254 square at the scene origin.
 private const val HOUSE = 1254f
 
+// Starting-stage plot. The sign and surveyed soil are one static foreground layer;
+// the young tree is separate so the existing subtle tree sway can remain.
+private const val PLOT_X = 70f; private const val PLOT_Y = 599f
+private const val PLOT_W = 1978f; private const val PLOT_H = 560f
+private const val SAPLING_X = 1540f; private const val SAPLING_Y = 645f
+private const val SAPLING_W = 414f; private const val SAPLING_H = 520f
+
 // Tree v2 layers (scene offsets + sizes). The trunk's base sits on the ground line;
 // the canopy overlaps the upper trunk and sways from its lower edge.
 private const val TRUNK_X = 1250f; private const val TRUNK_Y = 242f
@@ -67,14 +73,18 @@ private const val FOOT_PAD = 8f          // sprite has a few empty px below the 
 private const val ANIMATION_START_DELAY_MS = 5_000L  // hold a static scene before animating
 private const val HOUSE_FRAME_MS = 700L  // per-frame hold for the house idle sprite loop
 
-
+internal enum class HomeSceneStage {
+    CONSTRUCTION_PLOT,
+    ESTABLISHED_HOME
+}
 
 @Composable
 internal fun HomeYardScene(
     animationRestartKey: Any,
     modifier: Modifier = Modifier,
     showHouse: Boolean = true,
-    startDelayMs: Long = ANIMATION_START_DELAY_MS
+    startDelayMs: Long = ANIMATION_START_DELAY_MS,
+    sceneStage: HomeSceneStage = HomeSceneStage.ESTABLISHED_HOME
 ) {
     val animationsEnabled = rememberAnimationsEnabled()
 
@@ -121,7 +131,7 @@ internal fun HomeYardScene(
     // Pre-rendered idle frames of the house: only the lantern and chimney smoke animate;
     // the windows are frozen to a steady glow to cut load on the notes screen. Only
     // decoded when the house is actually shown.
-    val houseFrames = if (showHouse) {
+    val houseFrames = if (sceneStage == HomeSceneStage.ESTABLISHED_HOME && showHouse) {
         // 12-frame loop: lantern flicker + chimney smoke only; windows are static.
         rememberPixelBmps(
             R.drawable.house_anim_01, R.drawable.house_anim_02, R.drawable.house_anim_03,
@@ -151,43 +161,67 @@ internal fun HomeYardScene(
         fun y(u: Float) = (u * s).dp
         fun d(u: Float) = (u * s).dp
 
-        // House at scene origin. The static pixel-art is drawn immediately so the house
-        // is on screen the moment the background is. Once the start delay elapses, the
-        // idle sprite loop is overlaid in the exact same slot and begins cycling.
-        if (showHouse) {
-            val houseModifier = Modifier.offset(x(0f), y(0f)).size(d(HOUSE), d(HOUSE))
-            Image(
-                bitmap = pixelBmp(R.drawable.house_static),
-                contentDescription = null,
-                filterQuality = FilterQuality.None,
-                modifier = houseModifier
-            )
-            if (animate) {
-                HouseSprite(elapsed = elapsed, frames = houseFrames, modifier = houseModifier)
+        when (sceneStage) {
+            HomeSceneStage.CONSTRUCTION_PLOT -> {
+                Image(
+                    bitmap = pixelBmp(R.drawable.construction_plot),
+                    contentDescription = null,
+                    filterQuality = FilterQuality.None,
+                    modifier = Modifier
+                        .offset(x(PLOT_X), y(PLOT_Y))
+                        .size(d(PLOT_W), d(PLOT_H))
+                )
+                Image(
+                    bitmap = pixelBmp(R.drawable.construction_sapling),
+                    contentDescription = null,
+                    filterQuality = FilterQuality.None,
+                    modifier = Modifier
+                        .offset(x(SAPLING_X), y(SAPLING_Y))
+                        .size(d(SAPLING_W), d(SAPLING_H))
+                        .graphicsLayer {
+                            rotationZ = if (animate) swayAngle.value else 0f
+                            transformOrigin = TransformOrigin(0.5f, 1f)
+                        }
+                )
+            }
+
+            HomeSceneStage.ESTABLISHED_HOME -> {
+                // The established-home stage is kept intact for later level progression.
+                // Its static art appears immediately; the slow idle loop starts after the
+                // usual scene delay.
+                if (showHouse) {
+                    val houseModifier = Modifier.offset(x(0f), y(0f)).size(d(HOUSE), d(HOUSE))
+                    Image(
+                        bitmap = pixelBmp(R.drawable.house_static),
+                        contentDescription = null,
+                        filterQuality = FilterQuality.None,
+                        modifier = houseModifier
+                    )
+                    if (animate) {
+                        HouseSprite(elapsed = elapsed, frames = houseFrames, modifier = houseModifier)
+                    }
+                }
+
+                Image(
+                    bitmap = pixelBmp(R.drawable.tree2_trunk),
+                    contentDescription = null,
+                    filterQuality = FilterQuality.None,
+                    modifier = Modifier.offset(x(TRUNK_X), y(TRUNK_Y)).size(d(TRUNK_W), d(TRUNK_H))
+                )
+                Image(
+                    bitmap = pixelBmp(R.drawable.tree2_canopy),
+                    contentDescription = null,
+                    filterQuality = FilterQuality.None,
+                    modifier = Modifier
+                        .offset(x(CANOPY_X), y(CANOPY_Y))
+                        .size(d(CANOPY_W), d(CANOPY_H))
+                        .graphicsLayer {
+                            rotationZ = if (animate) swayAngle.value else 0f
+                            transformOrigin = TransformOrigin(0.5f, 1f)
+                        }
+                )
             }
         }
-
-        // Tree trunk (static).
-        Image(
-            bitmap = pixelBmp(R.drawable.tree2_trunk),
-            contentDescription = null,
-            filterQuality = FilterQuality.None,
-            modifier = Modifier.offset(x(TRUNK_X), y(TRUNK_Y)).size(d(TRUNK_W), d(TRUNK_H))
-        )
-        // Tree canopy (sways from its lower edge, where it meets the trunk). The sway
-        // value is read inside graphicsLayer (draw phase) so it never recomposes.
-        Image(
-            bitmap = pixelBmp(R.drawable.tree2_canopy),
-            contentDescription = null,
-            filterQuality = FilterQuality.None,
-            modifier = Modifier
-                .offset(x(CANOPY_X), y(CANOPY_Y))
-                .size(d(CANOPY_W), d(CANOPY_H))
-                .graphicsLayer {
-                    rotationZ = if (animate) swayAngle.value else 0f
-                    transformOrigin = TransformOrigin(0.5f, 1f)
-                }
-        )
 
         // Mascot strolling along the grass — only once the animation has started.
         if (animate) {
@@ -261,25 +295,4 @@ private fun pixelBmp(drawableId: Int): ImageBitmap {
     return remember(drawableId, resources) {
         BitmapFactory.decodeResource(resources, drawableId).asImageBitmap()
     }
-}
-
-@Composable
-private fun rememberPixelBmps(vararg drawableIds: Int): List<ImageBitmap> {
-    val resources = LocalContext.current.resources
-    return remember(resources, drawableIds.contentHashCode()) {
-        drawableIds.map { BitmapFactory.decodeResource(resources, it).asImageBitmap() }
-    }
-}
-
-@Composable
-private fun rememberElapsedMillis(enabled: Boolean): State<Long> {
-    val elapsed = remember { mutableStateOf(0L) }
-    LaunchedEffect(enabled) {
-        if (!enabled) { elapsed.value = 0L; return@LaunchedEffect }
-        val start = withFrameMillis { it }
-        while (true) {
-            withFrameMillis { frameMs -> elapsed.value = frameMs - start }
-        }
-    }
-    return elapsed
 }

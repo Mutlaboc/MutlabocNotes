@@ -4,9 +4,12 @@ import app.homenotes.android.network.HomeCardsApi
 import app.homenotes.android.network.toDomain
 import app.homenotes.android.network.toUpsertRequestDto
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 
 interface HomeInfoDataSource {
+    fun observeCards(): Flow<List<HomeInfoCard>> = flow { emit(getAllCards().getOrThrow()) }
     suspend fun getAllCards(): Result<List<HomeInfoCard>>
     suspend fun insert(card: HomeInfoCard): Result<HomeInfoCard>
     suspend fun update(card: HomeInfoCard): Result<HomeInfoCard>

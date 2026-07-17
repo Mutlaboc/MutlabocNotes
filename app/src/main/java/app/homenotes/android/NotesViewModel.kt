@@ -9,6 +9,8 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -20,6 +22,7 @@ class NotesViewModel(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val coinRewardProvider: () -> Int = { (1..3).random() }
 ) : AndroidViewModel(application) {
+    private var observationJob: Job? = null
 
     var uiState by mutableStateOf<NotesUiState>(NotesUiState.Loading)
         private set
@@ -40,17 +43,18 @@ class NotesViewModel(
 
     fun loadNotes() {
         uiState = NotesUiState.Loading
-        viewModelScope.launch(ioDispatcher) {
-            val result = repository.getAllNotes()
-
-            launch(Dispatchers.Main) {
-                result.onSuccess { loadedNotes ->
+        observationJob?.cancel()
+        observationJob = viewModelScope.launch(ioDispatcher) {
+            repository.observeNotes()
+                .catch { error ->
+                    withContext(Dispatchers.Main) { uiState = NotesUiState.Error(ApiErrorMapper.map(error)) }
+                }
+                .collect { loadedNotes ->
+                    withContext(Dispatchers.Main) {
                     applyNotes(loadedNotes)
                     reschedule { notificationScheduler.scheduleAll(loadedNotes) }
-                }.onFailure { error ->
-                    uiState = NotesUiState.Error(ApiErrorMapper.map(error))
+                    }
                 }
-            }
         }
     }
 
@@ -73,6 +77,8 @@ class NotesViewModel(
     }
 
     fun clearAll() {
+        observationJob?.cancel()
+        observationJob = null
         runScheduler { notificationScheduler.cancelAll() }
         uiState = NotesUiState.Empty
         uiMessage = null
@@ -167,7 +173,9 @@ class NotesViewModel(
                     handleScheduleResult(
                         DeadlineScheduleResult.aggregate(
                             listOfNotNull(
-                                notificationScheduler.schedule(update.completedNote),
+                                update.completedNote
+                                    .takeIf { it != updatedNote }
+                                    ?.let(notificationScheduler::schedule),
                                 update.nextNote?.let(notificationScheduler::schedule)
                             )
                         )

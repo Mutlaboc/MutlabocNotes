@@ -211,6 +211,9 @@ class NotesViewModelTest {
     @Test
     fun setNoteCompletion_successOptimisticallyUpdatesAndPersists() = runTest(mainDispatcherRule.dispatcher) {
         val existing = note(id = "task", isCompleted = false, coinCount = 3)
+        repository.updateCompletionResult = Result.success(
+            CompletionUpdate(existing.copy(isCompleted = true), null)
+        )
         loadContent(existing)
 
         viewModel.setNoteCompletion("task", true)

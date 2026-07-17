@@ -22,4 +22,10 @@ interface CharacterApi {
     suspend fun addExperience(
         @Body request: CharacterXpRequestDto,
     ): CharacterSheetDto
+
+    @POST("character/stat-upgrades")
+    suspend fun upgradeStat(@Body request: CharacterStatUpgradeRequestDto): CharacterSheetDto
+
+    @POST("character/rename")
+    suspend fun rename(@Body request: CharacterRenameRequestDto): CharacterSheetDto
 }

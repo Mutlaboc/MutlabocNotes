@@ -236,7 +236,7 @@ class AppContainerWiringTest {
         assertTrue(receiver.contains("EXTRA_REPEAT_RULE"))
         assertTrue(receiver.contains("repeatingDeadlineNoteFromAlarm("))
         assertTrue(scheduler.contains("putExtra(DeadlineNotification.EXTRA_DEADLINE_MILLIS"))
-        assertTrue(scheduler.contains("putExtra(DeadlineNotification.EXTRA_REPEAT_RULE"))
+        assertTrue(!scheduler.contains("putExtra(DeadlineNotification.EXTRA_REPEAT_RULE"))
     }
 
     @Test

@@ -9,12 +9,16 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.withContext
 
 class HomeInfoViewModel(
     application: Application,
     private val repository: HomeInfoDataSource,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : AndroidViewModel(application) {
+    private var observationJob: Job? = null
 
     var uiState by mutableStateOf<HomeInfoUiState>(HomeInfoUiState.Loading)
         private set
@@ -23,20 +27,19 @@ class HomeInfoViewModel(
         private set
 
     fun loadCards() {
-        viewModelScope.launch(ioDispatcher) {
+        observationJob?.cancel()
+        observationJob = viewModelScope.launch(ioDispatcher) {
             launch(Dispatchers.Main) {
                 uiState = HomeInfoUiState.Loading
             }
 
-            val result = repository.getAllCards()
-
-            launch(Dispatchers.Main) {
-                result.onSuccess { loadedCards ->
-                    applyCards(loadedCards)
-                }.onFailure { error ->
-                    uiState = HomeInfoUiState.Error(ApiErrorMapper.map(error))
+            repository.observeCards()
+                .catch { error ->
+                    withContext(Dispatchers.Main) { uiState = HomeInfoUiState.Error(ApiErrorMapper.map(error)) }
                 }
-            }
+                .collect { loadedCards ->
+                    withContext(Dispatchers.Main) { applyCards(loadedCards) }
+                }
         }
     }
 
@@ -89,6 +92,8 @@ class HomeInfoViewModel(
     }
 
     fun clearAll() {
+        observationJob?.cancel()
+        observationJob = null
         uiState = HomeInfoUiState.Empty
         uiMessage = null
     }

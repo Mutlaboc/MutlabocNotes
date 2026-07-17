@@ -10,4 +10,7 @@
     <include domain="sharedpref" path="." />
     <exclude domain="sharedpref" path="secure_session.xml" />
     <exclude domain="sharedpref" path="deadline_notification_alarms.xml" />
+    <exclude domain="database" path="homenotes.db" />
+    <exclude domain="database" path="homenotes.db-shm" />
+    <exclude domain="database" path="homenotes.db-wal" />
 </full-backup-content>

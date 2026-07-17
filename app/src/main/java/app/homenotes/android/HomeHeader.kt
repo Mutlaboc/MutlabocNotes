@@ -67,6 +67,7 @@ internal fun HomeHeader(
         )
         HomeYardScene(
             animationRestartKey = animationRestartKey,
+            sceneStage = HomeSceneStage.CONSTRUCTION_PLOT,
             modifier = Modifier
                 .height(232.dp)
                 .fillMaxWidth()

@@ -154,7 +154,7 @@ val releaseSigning = releaseSigningConfig()
 
 android {
     namespace = "app.homenotes.android"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "app.homenotes.android"
@@ -164,6 +164,13 @@ android {
         versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments["room.schemaLocation"] = "$projectDir/schemas"
+                arguments["room.incremental"] = "true"
+            }
+        }
     }
 
     flavorDimensions += "environment"
@@ -268,6 +275,7 @@ dependencies {
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.work.runtime.ktx)
     kapt(libs.androidx.room.compiler)
 
     testImplementation(libs.junit)
@@ -275,6 +283,7 @@ dependencies {
     testImplementation(libs.okhttp.mockwebserver)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)

@@ -1,12 +1,15 @@
 package app.homenotes.android
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -21,6 +24,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -153,118 +157,148 @@ fun EditNoteScreen(
             )
         }
     ) { padding ->
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
                 .background(CozyAuth.Cream)
                 .pixelScreenFrame()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
         ) {
-            NoteTitleField(
-                title = title,
-                isError = isTitleError,
-                onTitleChange = {
-                    title = it
-                    isTitleError = false
-                }
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            CategoryPicker(
-                selectedCategory = selectedCategory,
-                onCategorySelected = { selectedCategory = it }
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            when (selectedCategory) {
-                NoteCategory.SHOPPING -> {
-                    ChecklistEditor(
-                        checklistItems = checklistItems,
-                        onItemTextChange = { index, text ->
-                            checklistItems[index] = checklistItems[index].copy(text = text)
-                        },
-                        onItemCheckedChange = { index, checked ->
-                            checklistItems[index] = checklistItems[index].copy(isChecked = checked)
-                        },
-                        onAddItem = { checklistItems.add(ChecklistItem()) },
-                        onRemoveItem = { index ->
-                            if (checklistItems.size == 1) {
-                                checklistItems[index] = ChecklistItem()
-                            } else {
-                                checklistItems.removeAt(index)
-                            }
+            val showQuestScene = note == null
+            val sceneHeight = if (maxHeight < 720.dp) 112.dp else 164.dp
+
+            if (showQuestScene) {
+                CreateNoteQuestScene(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(sceneHeight)
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (showQuestScene) {
+                            Modifier
+                                .imePadding()
+                                .navigationBarsPadding()
+                        } else {
+                            Modifier
                         }
                     )
-                }
-
-                NoteCategory.TASKS -> {
-                    DeadlinePicker(
-                        selectedDeadlineMillis = selectedDeadlineMillis,
-                        todayMillis = todayCalendar.timeInMillis,
-                        onDeadlineSelected = { selectedDeadlineMillis = it },
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp)
+                    .padding(
+                        top = 16.dp,
+                        bottom = if (showQuestScene) sceneHeight + 16.dp else 16.dp
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    NoteContentField(
-                        content = content,
-                        onContentChange = { content = it }
-                    )
-                }
-
-                NoteCategory.RECURRING_TASKS -> {
-                    RecurringScheduleEditor(
-                        selectedStartAtMillis = selectedStartAtMillis,
-                        todayMillis = todayCalendar.timeInMillis,
-                        durationDays = durationDays,
-                        durationHours = durationHours,
-                        repeatRule = repeatRule,
-                        onStartSelected = { selectedStartAtMillis = it },
-                        onDurationDaysChange = { durationDays = it.coerceAtLeast(0) },
-                        onDurationHoursChange = { newHours ->
-                            durationHours = newHours.coerceIn(0, 23)
-                            if (durationDays == 0 && durationHours == 0) durationHours = 1
-                        },
-                        onRepeatRuleChange = { repeatRule = it }
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    NoteContentField(
-                        content = content,
-                        onContentChange = { content = it }
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth()) {
-                PixelPrimaryButton(
-                    text = stringResource(R.string.action_save),
-                    onClick = {
-                        val preparedNote = prepareNoteForSave(
-                            noteId = noteId,
-                            originalNote = note,
-                            title = title,
-                            content = content,
-                            selectedCategory = selectedCategory,
+            ) {
+                NoteTitleField(
+                    title = title,
+                    isError = isTitleError,
+                    onTitleChange = {
+                        title = it
+                        isTitleError = false
+                    }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                CategoryPicker(
+                    selectedCategory = selectedCategory,
+                    onCategorySelected = { selectedCategory = it }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                when (selectedCategory) {
+                    NoteCategory.SHOPPING -> {
+                        ChecklistEditor(
                             checklistItems = checklistItems,
+                            onItemTextChange = { index, text ->
+                                checklistItems[index] = checklistItems[index].copy(text = text)
+                            },
+                            onItemCheckedChange = { index, checked ->
+                                checklistItems[index] = checklistItems[index].copy(isChecked = checked)
+                            },
+                            onAddItem = { checklistItems.add(ChecklistItem()) },
+                            onRemoveItem = { index ->
+                                if (checklistItems.size == 1) {
+                                    checklistItems[index] = ChecklistItem()
+                                } else {
+                                    checklistItems.removeAt(index)
+                                }
+                            }
+                        )
+                    }
+
+                    NoteCategory.TASKS -> {
+                        DeadlinePicker(
                             selectedDeadlineMillis = selectedDeadlineMillis,
+                            todayMillis = todayCalendar.timeInMillis,
+                            onDeadlineSelected = { selectedDeadlineMillis = it },
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        NoteContentField(
+                            content = content,
+                            onContentChange = { content = it }
+                        )
+                    }
+
+                    NoteCategory.RECURRING_TASKS -> {
+                        RecurringScheduleEditor(
                             selectedStartAtMillis = selectedStartAtMillis,
+                            todayMillis = todayCalendar.timeInMillis,
                             durationDays = durationDays,
                             durationHours = durationHours,
-                            repeatRule = repeatRule
+                            repeatRule = repeatRule,
+                            onStartSelected = { selectedStartAtMillis = it },
+                            onDurationDaysChange = { durationDays = it.coerceAtLeast(0) },
+                            onDurationHoursChange = { newHours ->
+                                durationHours = newHours.coerceIn(0, 23)
+                                if (durationDays == 0 && durationHours == 0) durationHours = 1
+                            },
+                            onRepeatRuleChange = { repeatRule = it }
                         )
-                        if (preparedNote == null) {
-                            isTitleError = true
-                            return@PixelPrimaryButton
-                        }
-                        onSaveClick(preparedNote)
-                    },
-                    modifier = Modifier.testTag(EDIT_NOTE_SAVE_BUTTON_TEST_TAG)
-                )
-                Spacer(Modifier.weight(1f))
-                if (note != null && onDeleteClick != null) {
-                    PixelOutlineButton(
-                        text = stringResource(R.string.action_delete),
-                        onClick = { showDeleteDialog = true },
-                        modifier = Modifier.testTag(EDIT_NOTE_DELETE_BUTTON_TEST_TAG)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        NoteContentField(
+                            content = content,
+                            onContentChange = { content = it }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    PixelPrimaryButton(
+                        text = stringResource(R.string.action_save),
+                        onClick = {
+                            val preparedNote = prepareNoteForSave(
+                                noteId = noteId,
+                                originalNote = note,
+                                title = title,
+                                content = content,
+                                selectedCategory = selectedCategory,
+                                checklistItems = checklistItems,
+                                selectedDeadlineMillis = selectedDeadlineMillis,
+                                selectedStartAtMillis = selectedStartAtMillis,
+                                durationDays = durationDays,
+                                durationHours = durationHours,
+                                repeatRule = repeatRule
+                            )
+                            if (preparedNote == null) {
+                                isTitleError = true
+                                return@PixelPrimaryButton
+                            }
+                            onSaveClick(preparedNote)
+                        },
+                        modifier = Modifier.testTag(EDIT_NOTE_SAVE_BUTTON_TEST_TAG)
                     )
+                    Spacer(Modifier.weight(1f))
+                    if (note != null && onDeleteClick != null) {
+                        PixelOutlineButton(
+                            text = stringResource(R.string.action_delete),
+                            onClick = { showDeleteDialog = true },
+                            modifier = Modifier.testTag(EDIT_NOTE_DELETE_BUTTON_TEST_TAG)
+                        )
+                    }
                 }
             }
         }

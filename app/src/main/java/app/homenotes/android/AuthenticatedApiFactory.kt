@@ -65,11 +65,14 @@ class RefreshTokenAuthenticator(
                     .build()
             }
 
-            val refreshResponse = refreshTokens(currentSession.refreshToken)
-                ?: run {
+            val refreshResponse = when (val refresh = refreshTokens(currentSession.refreshToken)) {
+                is RefreshResult.Success -> refresh.response
+                RefreshResult.TemporaryFailure -> return null
+                RefreshResult.Rejected -> {
                     clearSessionAndNotify(currentSession.refreshToken)
                     return null
                 }
+            }
 
             val saved = sessionManager.saveSessionIfRefreshTokenMatches(
                 expectedRefreshToken = currentSession.refreshToken,
@@ -87,7 +90,7 @@ class RefreshTokenAuthenticator(
         }
     }
 
-    private fun refreshTokens(refreshToken: String): AuthResponseDto? {
+    private fun refreshTokens(refreshToken: String): RefreshResult {
         val requestBody = gson.toJson(
             RefreshTokenRequestDto(refreshToken = refreshToken)
         ).toRequestBody("application/json".toMediaType())
@@ -103,16 +106,24 @@ class RefreshTokenAuthenticator(
             .writeTimeout(15, TimeUnit.SECONDS)
             .build()
 
-        return runCatching {
+        return try {
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    return null
+                    return if (response.code >= 500) RefreshResult.TemporaryFailure else RefreshResult.Rejected
                 }
 
-                val body = response.body?.string() ?: return null
-                gson.fromJson(body, AuthResponseDto::class.java)
+                val body = response.body?.string() ?: return RefreshResult.TemporaryFailure
+                RefreshResult.Success(gson.fromJson(body, AuthResponseDto::class.java))
             }
-        }.getOrNull()
+        } catch (_: java.io.IOException) {
+            RefreshResult.TemporaryFailure
+        }
+    }
+
+    private sealed interface RefreshResult {
+        data class Success(val response: AuthResponseDto) : RefreshResult
+        data object Rejected : RefreshResult
+        data object TemporaryFailure : RefreshResult
     }
 
     private fun clearSessionAndNotify(expectedRefreshToken: String?) {

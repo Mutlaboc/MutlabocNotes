@@ -23,6 +23,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.Surface
+import androidx.compose.material.Text
+import androidx.compose.material.TextButton
+import androidx.compose.material.LinearProgressIndicator
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,8 +60,14 @@ class MainActivity : ComponentActivity() {
         // Activity получает готовую фабрику из Application и передаёт её в Compose-root.
         val appContainer = (application as HomeNotesApplication).appContainer
         setContent {
+            val syncStatus by appContainer.syncCoordinator.status.collectAsState()
             MyApp(
                 viewModelFactory = appContainer.viewModelFactory,
+                syncStatus = syncStatus,
+                onRetrySync = {
+                    normalizeAccountKey(appContainer.sessionManager.getEmail())
+                        ?.let(appContainer.syncCoordinator::request)
+                },
                 pendingNotificationNoteId = pendingNotificationNoteId,
                 onPendingNotificationHandled = { handledNoteId ->
                     if (pendingNotificationNoteId == handledNoteId) {
@@ -114,6 +130,8 @@ internal fun homeInfoLinkIntent(link: String): Intent {
 @Composable
 fun MyApp(
     viewModelFactory: ViewModelProvider.Factory,
+    syncStatus: SyncStatus = SyncStatus.Idle,
+    onRetrySync: () -> Unit = {},
     pendingNotificationNoteId: String? = null,
     onPendingNotificationHandled: (String) -> Unit = {},
     // Все root ViewModel создаются одной фабрикой, чтобы зависимости не собирались внутри UI.
@@ -220,10 +238,11 @@ fun MyApp(
     }
 
     MaterialTheme(colors = if (settingsPreferences.isDarkTheme) cozyDarkColors() else cozyLightColors()) {
-        NavHost(
-            navController = navController,
-            startDestination = "bootstrap"
-        ) {
+        Box(Modifier.fillMaxSize()) {
+            NavHost(
+                navController = navController,
+                startDestination = "bootstrap"
+            ) {
             composable("bootstrap") {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -361,6 +380,9 @@ fun MyApp(
                     },
                     onCompletedNotesClick = {
                         navController.navigate("completed") { launchSingleTop = true }
+                    },
+                    onNavigateHome = {
+                        navController.popBackStack()
                     }
                 )
             }
@@ -452,6 +474,45 @@ fun MyApp(
                         navController.popBackStack()
                     }
                 )
+            }
+            }
+            SyncStatusBanner(
+                status = syncStatus,
+                onRetry = onRetrySync,
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SyncStatusBanner(
+    status: SyncStatus,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (status == SyncStatus.Idle) return
+    val text = when (status) {
+        SyncStatus.Idle -> return
+        SyncStatus.Syncing -> stringResource(R.string.sync_status_syncing)
+        is SyncStatus.Pending -> stringResource(R.string.sync_status_pending, status.count)
+        is SyncStatus.Offline -> stringResource(R.string.sync_status_offline, status.count)
+        is SyncStatus.Blocked -> stringResource(R.string.sync_status_blocked)
+    }
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = MaterialTheme.colors.surface,
+        elevation = 6.dp,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (status == SyncStatus.Syncing) {
+                LinearProgressIndicator(modifier = Modifier.weight(1f))
+            } else {
+                Text(text = text, modifier = Modifier.weight(1f), style = MaterialTheme.typography.caption)
+                TextButton(onClick = onRetry) { Text(stringResource(R.string.sync_retry)) }
             }
         }
     }

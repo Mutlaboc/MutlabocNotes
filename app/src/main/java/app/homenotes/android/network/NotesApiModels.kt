@@ -24,6 +24,8 @@ data class NoteDto(
     val repeatRule: String?,
     val coinCount: Int,
     val isCompleted: Boolean,
+    val createdAt: Long = 0L,
+    val updatedAt: Long = 0L,
 )
 
 // Модель данных для request payload, отправляемого в backend.
@@ -38,6 +40,7 @@ data class NoteUpsertRequestDto(
     val repeatRule: String,
     val coinCount: Int,
     val isCompleted: Boolean,
+    val clientMutationId: String? = null,
 )
 
 data class NoteCompletionRequestDto(
@@ -88,7 +91,7 @@ fun NoteDto.toDomain(): Note = Note(
 )
 
 // Формирует DTO upsert-запроса из данных доменной модели.
-fun Note.toUpsertRequestDto(): NoteUpsertRequestDto = NoteUpsertRequestDto(
+fun Note.toUpsertRequestDto(clientMutationId: String? = null): NoteUpsertRequestDto = NoteUpsertRequestDto(
     title = title,
     content = content,
     category = category.name,
@@ -98,5 +101,6 @@ fun Note.toUpsertRequestDto(): NoteUpsertRequestDto = NoteUpsertRequestDto(
     durationMinutes = durationMinutes,
     repeatRule = repeatRule.name,
     coinCount = coinCount,
-    isCompleted = isCompleted
+    isCompleted = isCompleted,
+    clientMutationId = clientMutationId,
 )

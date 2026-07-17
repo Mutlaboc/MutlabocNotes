@@ -68,6 +68,7 @@ fun BottomBar(
         BottomBarAction.CompletedNotes,
         BottomBarAction.AddNote,
         if (onUpcomingClick == null) BottomBarAction.HomeInfo else BottomBarAction.UpcomingTasks
+
     )
     Column {
         Box(

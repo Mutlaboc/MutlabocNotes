@@ -12,6 +12,8 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import app.homenotes.android.local.LocalWalletEntity
+import app.homenotes.android.local.OfflineDao
 
 /**
  * Кошелёк потраченных монет. Заработанные монеты считаются на лету из выполненных
@@ -72,5 +74,39 @@ class InMemoryCoinWalletRepository : CoinWalletRepository {
     override suspend fun recordSpend(userKey: String, amount: Int): Int {
         if (amount <= 0) return spentCoins(userKey)
         return spent.merge(userKey, amount, Int::plus) ?: amount
+    }
+}
+
+/** One-time bridge from the legacy per-account DataStore value into the Room wallet. */
+class RoomCoinWalletRepository(
+    private val dao: OfflineDao,
+    private val legacy: CoinWalletRepository,
+) : CoinWalletRepository {
+    override suspend fun spentCoins(userKey: String): Int {
+        val account = normalizeAccountKey(userKey) ?: return 0
+        val current = dao.wallet(account)
+        if (current?.legacySpendMigrated == true) return current.spentCoins
+        val legacySpent = legacy.spentCoins(userKey)
+        val migrated = (current ?: LocalWalletEntity(account)).copy(
+            spentCoins = maxOf(current?.spentCoins ?: 0, legacySpent),
+            availableCoins = ((current?.earnedCoins ?: 0) - maxOf(current?.spentCoins ?: 0, legacySpent)).coerceAtLeast(0),
+            legacySpendMigrated = true,
+        )
+        dao.putWallet(migrated)
+        return migrated.spentCoins
+    }
+
+    override suspend fun recordSpend(userKey: String, amount: Int): Int {
+        val account = normalizeAccountKey(userKey) ?: return 0
+        val existingSpent = spentCoins(userKey)
+        if (amount <= 0) return existingSpent
+        val current = dao.wallet(account) ?: LocalWalletEntity(account, spentCoins = existingSpent, legacySpendMigrated = true)
+        val updated = current.copy(
+            spentCoins = current.spentCoins + amount,
+            availableCoins = (current.earnedCoins - current.spentCoins - amount).coerceAtLeast(0),
+            legacySpendMigrated = true,
+        )
+        dao.putWallet(updated)
+        return updated.spentCoins
     }
 }
