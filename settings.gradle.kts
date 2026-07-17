@@ -23,10 +23,11 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
+        maven("https://jitpack.io")
         mavenCentral()
     }
 }
 
 // Метаданные корневого проекта и подключённые модули.
-rootProject.name = "Mutlaboc's notes"
+rootProject.name = "HomeNotes"
 include(":app")

@@ -153,11 +153,11 @@ val environmentConfigs = mapOf(
 val releaseSigning = releaseSigningConfig()
 
 android {
-    namespace = "com.example.mutlabocsnotes"
+    namespace = "app.homenotes.android"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.mutlabocsnotes"
+        applicationId = "app.homenotes.android"
         minSdk = 24
         targetSdk = 34
         versionCode = 2
@@ -206,7 +206,7 @@ android {
 
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             if (releaseSigning != null) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -265,8 +265,6 @@ dependencies {
     implementation(libs.retrofit.converter.gson)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
-    implementation(libs.coil.compose)
-    implementation(libs.coil.gif)
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

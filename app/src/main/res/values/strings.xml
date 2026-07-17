@@ -1,9 +1,10 @@
 <resources>
-    <string name="app_name">Mutlaboc\'s notes</string>
+    <string name="app_name">HomeNotes</string>
 
     <string name="action_settings">Настройки</string>
     <string name="action_back">Назад</string>
     <string name="action_add">Добавить</string>
+    <string name="bottom_bar_create">Создать</string>
     <string name="action_delete">Удалить</string>
     <string name="action_save">Сохранить</string>
     <string name="action_cancel">Отмена</string>
@@ -32,14 +33,26 @@
     <string name="auth_sign_in">Войти</string>
     <string name="auth_signing_in">Вход...</string>
     <string name="auth_sign_up">Зарегистрироваться</string>
-    <string name="auth_sign_in_google">Войти через Google</string>
-    <string name="auth_sign_in_yandex">Войти через Yandex</string>
+    <string name="auth_sign_in_google">Продолжить с Google</string>
+    <string name="auth_sign_in_yandex">Продолжить с Яндекс</string>
     <string name="auth_error_google_token_empty">Google id token пустой</string>
     <string name="auth_error_yandex_token_empty">Yandex access token пустой</string>
     <string name="auth_error_google_sign_in_failed">Не удалось войти через Google</string>
     <string name="auth_error_yandex_sign_in_failed">Не удалось войти через Yandex</string>
     <string name="auth_error_yandex_sign_in_cancelled">Вход через Yandex отменён</string>
     <string name="auth_error_invalid_credentials">Введите корректный email и пароль не короче 8 символов</string>
+    <string name="auth_welcome_title">Добро пожаловать</string>
+    <string name="auth_brand_name">HomeNotes</string>
+    <string name="auth_subtitle">Ваш дом. Ваши заметки.</string>
+    <string name="auth_sign_in_title">Войти в аккаунт</string>
+    <string name="auth_create_account_title">Создать аккаунт</string>
+    <string name="auth_confirm_password_label">Повторите пароль</string>
+    <string name="auth_error_passwords_do_not_match">Пароли не совпадают</string>
+    <string name="auth_divider_or">или</string>
+    <string name="auth_existing_account_sign_in">Уже есть аккаунт? Войти</string>
+    <string name="auth_switch_to_sign_up">Нет аккаунта? Зарегистрироваться</string>
+    <string name="auth_google_glyph">G</string>
+    <string name="auth_yandex_glyph">Я</string>
 
     <string name="settings_title">Настройки</string>
     <string name="settings_account">Аккаунт</string>
@@ -96,6 +109,7 @@
     <string name="note_delete_message">Это действие нельзя отменить.</string>
 
     <string name="home_info_title">Информация о доме</string>
+    <string name="home_info_header_description">Хозяин пишет заметку за столом в избе</string>
     <string name="home_info_empty">Нет карточек для отображения</string>
     <string name="home_info_add_card">Добавить карточку</string>
     <string name="home_info_section">Раздел</string>
@@ -128,4 +142,34 @@
     <string name="auth_show_password">Показать пароль</string>
     <string name="auth_hide_password">Скрыть пароль</string>
     <string name="notes_title">Заметки</string>
+
+    <string name="character_title">Лист персонажа</string>
+    <string name="character_section_stats">Характеристики</string>
+    <string name="character_section_skills">Навыки</string>
+    <string name="character_mascot_description">Маскот</string>
+    <string name="character_rename_title">Сменить имя</string>
+    <string name="character_name_label">Имя</string>
+    <string name="character_xp_label">Опыт</string>
+    <string name="character_xp_max">MAX</string>
+    <string name="character_level_short">Ур. %1$d</string>
+    <string name="character_level_xp_label">Ур. %1$d · опыт</string>
+    <string name="character_skill_level">ур. %1$d</string>
+    <string name="character_stat_max">МАКС</string>
+    <string name="start_timer_description">Запустить таймер</string>
+    <string name="timer_stop">Стоп</string>
+    <string name="timer_resume">Возобновить</string>
+    <string name="timer_done">Выполнено</string>
+    <string name="timer_home">На главную</string>
+
+    <string name="onboarding_welcome_title">Добро пожаловать!</string>
+    <string name="onboarding_welcome_message">Привет! Добро пожаловать в приложение заметок. На твоём примере я постараюсь упорядочить свой дом и буду вместе с тобой заниматься делами. Как только ты запустишь задачу, я тоже пойду заниматься полезными делами!</string>
+    <string name="onboarding_welcome_button">Начать</string>
+    <string name="onboarding_next">Далее</string>
+    <string name="onboarding_done">Готово</string>
+    <string name="onboarding_hint_add_note_title">Создание заметок</string>
+    <string name="onboarding_hint_add_note_message">Нажми «плюс», чтобы создать новую заметку или задачу.</string>
+    <string name="onboarding_hint_home_info_title">Информация о доме</string>
+    <string name="onboarding_hint_home_info_message">Здесь создаются карточки с информацией о доме: счётчики, техника, документы и контакты.</string>
+    <string name="onboarding_hint_completed_title">Выполненные задачи</string>
+    <string name="onboarding_hint_completed_message">Тут собираются выполненные заметки — загляни, чтобы увидеть, что уже сделано.</string>
 </resources>

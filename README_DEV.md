@@ -1,6 +1,6 @@
 # README для разработки
 
-Документ описывает локальную разработку Android-приложения Mutlaboc Notes, его окружения, связь с backend, тесты и release build.
+Документ описывает локальную разработку Android-приложения HomeNotes, его окружения, связь с backend, тесты и release build.
 
 ## Ветки и рабочий процесс
 
@@ -181,7 +181,7 @@ Release signing config подключается только когда зада
 Локальная production-сборка может использовать `local.properties` или Gradle properties:
 
 ```properties
-ANDROID_KEYSTORE_FILE=C\:\\secure\\mutlaboc-notes-release.jks
+ANDROID_KEYSTORE_FILE=C\:\\secure\\homenotes-release.jks
 ANDROID_KEYSTORE_PASSWORD=...
 ANDROID_KEY_ALIAS=...
 ANDROID_KEY_PASSWORD=...
@@ -189,7 +189,7 @@ ANDROID_KEY_PASSWORD=...
 
 ```powershell
 .\gradlew.bat :app:bundleProdRelease :app:assembleProdRelease `
-  -PANDROID_KEYSTORE_FILE=C:\secure\mutlaboc-notes-release.jks `
+  -PANDROID_KEYSTORE_FILE=C:\secure\homenotes-release.jks `
   -PANDROID_KEYSTORE_PASSWORD=... `
   -PANDROID_KEY_ALIAS=... `
   -PANDROID_KEY_PASSWORD=... `
