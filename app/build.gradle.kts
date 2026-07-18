@@ -214,6 +214,7 @@ android {
     buildTypes {
         getByName("release") {
             isMinifyEnabled = true
+            isShrinkResources = true
             if (releaseSigning != null) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -235,7 +236,6 @@ android {
 
     buildFeatures {
         compose = true
-        viewBinding = true
         buildConfig = true
     }
 

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +31,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import kotlin.math.min
 
@@ -116,12 +118,12 @@ fun AuthMascotWalk(
     modifier: Modifier = Modifier
 ) {
     val animationsEnabled = rememberAnimationsEnabled()
-    var elapsed by remember { mutableStateOf(0L) }
+    val elapsed = remember { mutableStateOf(0L) }
     LaunchedEffect(animationsEnabled) {
         if (!animationsEnabled) return@LaunchedEffect
         val start = withFrameMillis { it }
         while (true) {
-            withFrameMillis { now -> elapsed = now - start }
+            withFrameMillis { now -> elapsed.value = now - start }
         }
     }
 
@@ -129,17 +131,15 @@ fun AuthMascotWalk(
         val w = maxWidth
         val h = mascotHeight.dp
         val mascotW = h * MASCOT_ASPECT
+        val density = LocalDensity.current
+        val startXPx = with(density) { (-mascotW).toPx() }
+        val endXPx = with(density) { w.toPx() }
 
-        // ping-pong progress 0..1..0 over a full there-and-back cycle
-        val period = CROSS_MS * 2
-        val t = (elapsed % period).toFloat() / CROSS_MS
-        val goingRight = t <= 1f
-        val p = if (goingRight) t else 2f - t
-
-        val startX = -mascotW
-        val endX = w
-        val x = startX + (endX - startX) * p
-        val frameIndex = ((elapsed / FRAME_MS) % mascotFrames.size).toInt()
+        // Only the frame index needs a real recomposition (~9x/sec); derivedStateOf
+        // filters out the 60x/sec `elapsed` ticks that don't change which sprite frame shows.
+        val frameIndex by remember {
+            derivedStateOf { ((elapsed.value / FRAME_MS) % mascotFrames.size).toInt() }
+        }
         val frameId = if (animationsEnabled) mascotFrames[frameIndex] else mascotFrames[0]
 
         Image(
@@ -148,10 +148,16 @@ fun AuthMascotWalk(
             filterQuality = FilterQuality.None,
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .offset(x = x, y = (-bottomPadding).dp)
+                .offset(y = (-bottomPadding).dp)
                 .size(width = mascotW, height = h)
                 .graphicsLayer {
-                    // sprite faces right; flip when walking left
+                    // Position/flip read `elapsed` here (draw phase) so the per-frame walk
+                    // animation only re-draws instead of re-running composition every vsync.
+                    val period = CROSS_MS * 2
+                    val t = (elapsed.value % period).toFloat() / CROSS_MS
+                    val goingRight = t <= 1f
+                    val p = if (goingRight) t else 2f - t
+                    translationX = startXPx + (endXPx - startXPx) * p
                     scaleX = if (goingRight) 1f else -1f
                     transformOrigin = TransformOrigin.Center
                 }

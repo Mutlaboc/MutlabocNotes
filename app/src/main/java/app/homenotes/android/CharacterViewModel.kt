@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class CharacterViewModel(
     application: Application,
@@ -28,14 +29,10 @@ class CharacterViewModel(
     private var userKey: String? = null
 
     fun loadCharacter() {
+        uiState = CharacterUiState.Loading
         viewModelScope.launch(ioDispatcher) {
-            launch(Dispatchers.Main) {
-                uiState = CharacterUiState.Loading
-            }
-
             val result = repository.getCharacter()
-
-            launch(Dispatchers.Main) {
+            withContext(Dispatchers.Main) {
                 result.onSuccess { sheet ->
                     uiState = CharacterUiState.Content(sheet)
                 }.onFailure { error ->
@@ -55,7 +52,7 @@ class CharacterViewModel(
         }
         viewModelScope.launch(ioDispatcher) {
             val loaded = coinWallet.spentCoins(normalized)
-            launch(Dispatchers.Main) { spentCoins = loaded }
+            withContext(Dispatchers.Main) { spentCoins = loaded }
         }
     }
 
@@ -87,7 +84,7 @@ class CharacterViewModel(
         viewModelScope.launch(ioDispatcher) {
             val result = repository.upgradeStat(upgraded, statKey, cost)
             val persistedSpent = result.getOrNull()?.let { coinWallet.recordSpend(key, cost) }
-            launch(Dispatchers.Main) {
+            withContext(Dispatchers.Main) {
                 result.onSuccess { sheet ->
                     uiState = CharacterUiState.Content(sheet)
                     if (persistedSpent != null) spentCoins = persistedSpent
@@ -117,7 +114,7 @@ class CharacterViewModel(
                     sheet
                 }
             }
-            launch(Dispatchers.Main) {
+            withContext(Dispatchers.Main) {
                 if (resolved != null) {
                     uiState = CharacterUiState.Content(resolved)
                 }
@@ -136,7 +133,7 @@ class CharacterViewModel(
 
         viewModelScope.launch(ioDispatcher) {
             val result = repository.rename(optimistic)
-            launch(Dispatchers.Main) {
+            withContext(Dispatchers.Main) {
                 result.onSuccess { sheet ->
                     uiState = CharacterUiState.Content(sheet)
                 }.onFailure {

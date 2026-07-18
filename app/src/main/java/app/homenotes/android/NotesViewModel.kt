@@ -62,7 +62,7 @@ class NotesViewModel(
         viewModelScope.launch(ioDispatcher) {
             val rewardedNote = note.copy(coinCount = coinRewardProvider())
             val result = repository.insert(rewardedNote)
-            launch(Dispatchers.Main) {
+            withContext(Dispatchers.Main) {
                 result.onSuccess { id ->
                     val noteWithId = rewardedNote.copy(id = id)
                     val notes = currentNotes() + noteWithId
@@ -98,7 +98,7 @@ class NotesViewModel(
 
         viewModelScope.launch(ioDispatcher) {
             val result = repository.update(note)
-            launch(Dispatchers.Main) {
+            withContext(Dispatchers.Main) {
                 result.onSuccess {
                     val notes = currentNotes().map { existing ->
                         if (existing.id == note.id) note else existing
@@ -136,7 +136,7 @@ class NotesViewModel(
 
         viewModelScope.launch(ioDispatcher) {
             val result = repository.update(updatedNote)
-            launch(Dispatchers.Main) {
+            withContext(Dispatchers.Main) {
                 result.onFailure { error ->
                     applyNotes(existingNotes)
                     showMessage(error)
@@ -160,7 +160,7 @@ class NotesViewModel(
 
         viewModelScope.launch(ioDispatcher) {
             val result = repository.updateCompletion(noteId, isCompleted)
-            launch(Dispatchers.Main) {
+            withContext(Dispatchers.Main) {
                 result.onSuccess { update ->
                     val serverNotes = currentNotes()
                         .filterNot { it.id == update.completedNote.id || it.id == update.nextNote?.id }
@@ -192,7 +192,7 @@ class NotesViewModel(
     fun deleteNote(noteId: String) {
         viewModelScope.launch(ioDispatcher) {
             val result = repository.delete(noteId)
-            launch(Dispatchers.Main) {
+            withContext(Dispatchers.Main) {
                 result.onSuccess {
                     val notes = currentNotes()
                     val deletedNote = notes.find { it.id == noteId }
