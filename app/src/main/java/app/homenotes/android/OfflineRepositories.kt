@@ -8,11 +8,13 @@ import app.homenotes.android.local.LocalHomeCardEntity
 import app.homenotes.android.local.LocalHomeCardWithChildren
 import app.homenotes.android.local.LocalHomeFieldEntity
 import app.homenotes.android.local.LocalHomeLinkEntity
+import app.homenotes.android.local.LocalInventoryItemEntity
 import app.homenotes.android.local.LocalNoteEntity
 import app.homenotes.android.local.LocalNoteWithChecklist
 import app.homenotes.android.local.OfflineDao
 import app.homenotes.android.local.OutboxEntity
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import java.util.Calendar
 import java.util.Locale
 import java.util.TimeZone
@@ -41,12 +43,21 @@ internal object OutboxKind {
     const val CHARACTER_XP = "CHARACTER_XP"
     const val CHARACTER_STAT_UPGRADE = "CHARACTER_STAT_UPGRADE"
     const val CHARACTER_RENAME = "CHARACTER_RENAME"
+    const val INVENTORY_EQUIP = "INVENTORY_EQUIP"
+    const val INVENTORY_UNEQUIP = "INVENTORY_UNEQUIP"
+    const val EVENT_CLAIM = "EVENT_CLAIM"
 }
+
+/** Ключ outbox/hasPending для операций инвентаря — отдельный от листа персонажа. */
+internal fun inventoryLocalId(account: String): String = "inventory::$account"
 
 private data class CompletionPayload(val isCompleted: Boolean)
 internal data class XpPayload(val characterXp: Int, val skillKey: String?, val skillXp: Int)
 internal data class StatPayload(val statKey: String)
 internal data class RenamePayload(val name: String)
+internal data class EquipPayload(val itemId: String)
+internal data class UnequipPayload(val slot: String)
+internal data class EventClaimPayload(val eventKey: String, val skillKey: String?, val locale: String?)
 
 class OfflineNotesRepository(
     private val dao: OfflineDao,
@@ -317,6 +328,85 @@ class OfflineCharacterRepository(
         ?: throw IllegalStateException("No active account")
 }
 
+class OfflineInventoryRepository(
+    private val dao: OfflineDao,
+    private val session: AuthSessionStore,
+    private val scheduler: SyncScheduler,
+    private val gson: Gson = Gson(),
+) : InventoryDataSource {
+
+    override suspend fun getInventory(): Result<Inventory> = runCatching {
+        dao.inventoryItems(requireAccount()).toDomainInventory(gson)
+    }
+
+    override suspend fun equip(itemId: String): Result<Inventory> = runCatching {
+        val account = requireAccount()
+        val current = dao.inventoryItems(account).toDomainInventory(gson)
+        val item = requireNotNull(current.items.firstOrNull { it.id == itemId }) { "Unknown item: $itemId" }
+        require(item.isEquippable) { "Item is not equippable: $itemId" }
+        val updated = current.applyEquip(itemId)
+        putProjection(account, updated)
+        enqueue(account, OutboxKind.INVENTORY_EQUIP, gson.toJson(EquipPayload(itemId)))
+        updated
+    }
+
+    override suspend fun unequip(slot: EquipSlot): Result<Inventory> = runCatching {
+        val account = requireAccount()
+        val current = dao.inventoryItems(account).toDomainInventory(gson)
+        val updated = current.applyUnequip(slot)
+        if (updated != current) {
+            putProjection(account, updated)
+            enqueue(account, OutboxKind.INVENTORY_UNEQUIP, gson.toJson(UnequipPayload(slot.name)))
+        }
+        updated
+    }
+
+    private suspend fun putProjection(account: String, inventory: Inventory) {
+        dao.replaceInventory(account, inventory.items.mapIndexed { i, item -> item.toEntity(account, i, gson) })
+    }
+
+    private suspend fun enqueue(account: String, kind: String, payload: String) {
+        dao.enqueue(OutboxEntity(
+            accountKey = account, kind = kind, localId = inventoryLocalId(account),
+            operationId = UUID.randomUUID().toString(), payload = payload,
+            createdAt = System.currentTimeMillis(),
+        ))
+        scheduler.request(account)
+    }
+
+    private fun requireAccount(): String = normalizeAccountKey(session.getEmail())
+        ?: throw IllegalStateException("No active account")
+}
+
+internal fun List<LocalInventoryItemEntity>.toDomainInventory(gson: Gson): Inventory =
+    Inventory(items = map { it.toDomain(gson) })
+
+private fun LocalInventoryItemEntity.toDomain(gson: Gson): InventoryItem = InventoryItem(
+    id = itemId,
+    name = name,
+    description = description,
+    icon = icon,
+    slot = EquipSlot.fromKey(slot),
+    rarity = ItemRarity.fromKey(rarity),
+    bonuses = runCatching {
+        gson.fromJson<List<ItemBonus>>(bonusesJson, object : TypeToken<List<ItemBonus>>() {}.type)
+    }.getOrNull().orEmpty(),
+    equippedSlot = EquipSlot.fromKey(equippedSlot),
+)
+
+internal fun InventoryItem.toEntity(account: String, position: Int, gson: Gson) = LocalInventoryItemEntity(
+    accountKey = account,
+    itemId = id,
+    position = position,
+    name = name,
+    description = description,
+    icon = icon,
+    slot = slot?.name,
+    rarity = rarity.name,
+    bonusesJson = gson.toJson(bonuses),
+    equippedSlot = equippedSlot?.name,
+)
+
 private fun Note.toEntity(
     localId: String,
     accountKey: String,
@@ -364,7 +454,7 @@ internal fun toDomain(row: LocalHomeCardWithChildren) = HomeInfoCard(
     updatedAt = row.card.updatedAt,
 )
 
-private fun LocalCharacterEntity.toDomain(
+internal fun LocalCharacterEntity.toDomain(
     stats: List<LocalCharacterStatEntity>,
     skills: List<LocalCharacterSkillEntity>,
 ) = CharacterSheet(
@@ -377,7 +467,7 @@ private fun LocalCharacterEntity.toDomain(
     skills = skills.map { CharacterSkill(it.name, it.level, it.progress.toFloat(), it.skillKey) },
 )
 
-private fun applyExperience(sheet: CharacterSheet, characterXp: Int, skillKey: String?, skillXp: Int): CharacterSheet {
+internal fun applyExperience(sheet: CharacterSheet, characterXp: Int, skillKey: String?, skillXp: Int): CharacterSheet {
     var level = sheet.level
     var xp = sheet.xp.toLong() + characterXp.coerceAtLeast(0)
     var threshold = sheet.xpToNext.coerceAtLeast(1)

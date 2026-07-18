@@ -160,6 +160,12 @@
     <string name="timer_resume">Возобновить</string>
     <string name="timer_done">Выполнено</string>
     <string name="timer_home">На главную</string>
+    <string name="focus_events_title">События</string>
+    <string name="focus_events_empty">Работай — и что-нибудь обязательно произойдёт…</string>
+    <string name="focus_event_xp">+%1$d опыта</string>
+    <string name="focus_event_skill">%1$s: +%2$d опыта навыка</string>
+    <string name="focus_event_item">В инвентаре: %1$s</string>
+    <string name="focus_event_new_skill">Новый навык: %1$s</string>
 
     <string name="onboarding_welcome_title">Добро пожаловать!</string>
     <string name="onboarding_welcome_message">Привет! Добро пожаловать в приложение заметок. На твоём примере я постараюсь упорядочить свой дом и буду вместе с тобой заниматься делами. Как только ты запустишь задачу, я тоже пойду заниматься полезными делами!</string>
@@ -177,4 +183,26 @@
     <string name="sync_status_offline">Нет сети · ожидают: %1$d</string>
     <string name="sync_status_blocked">Не удалось синхронизировать некоторые изменения</string>
     <string name="sync_retry">Повторить</string>
+
+    <string name="action_close">Закрыть</string>
+    <string name="inventory_title">Инвентарь</string>
+    <string name="inventory_open">Инвентарь</string>
+    <string name="inventory_section_equipment">Экипировка</string>
+    <string name="inventory_section_backpack">Рюкзак</string>
+    <string name="inventory_empty_backpack">Рюкзак пуст</string>
+    <string name="inventory_bonus_total">Бонусы экипировки</string>
+    <string name="inventory_action_equip">Надеть</string>
+    <string name="inventory_action_unequip">Снять</string>
+    <string name="inventory_item_slot">Слот: %1$s</string>
+    <string name="inventory_slot_head">Голова</string>
+    <string name="inventory_slot_body">Тело</string>
+    <string name="inventory_slot_legs">Ноги</string>
+    <string name="inventory_slot_weapon">Оружие</string>
+    <string name="inventory_slot_offhand">Щит</string>
+    <string name="inventory_slot_accessory">Аксессуар</string>
+    <string name="inventory_rarity_common">Обычный</string>
+    <string name="inventory_rarity_uncommon">Необычный</string>
+    <string name="inventory_rarity_rare">Редкий</string>
+    <string name="inventory_rarity_epic">Эпический</string>
+    <string name="inventory_rarity_legendary">Легендарный</string>
 </resources>

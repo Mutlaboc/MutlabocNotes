@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import app.homenotes.android.network.AuthApi
 import app.homenotes.android.network.CharacterApi
+import app.homenotes.android.network.EventsApi
 import app.homenotes.android.network.HomeCardsApi
+import app.homenotes.android.network.InventoryApi
 import app.homenotes.android.network.NotesApi
 import app.homenotes.android.local.HomeNotesDatabase
 import kotlinx.coroutines.CoroutineScope
@@ -64,9 +66,11 @@ class AppContainer(
     private val notesApi: NotesApi by lazy { authenticatedRetrofit.create(NotesApi::class.java) }
     private val cardsApi: HomeCardsApi by lazy { authenticatedRetrofit.create(HomeCardsApi::class.java) }
     private val characterApi: CharacterApi by lazy { authenticatedRetrofit.create(CharacterApi::class.java) }
+    private val inventoryApi: InventoryApi by lazy { authenticatedRetrofit.create(InventoryApi::class.java) }
+    private val eventsApi: EventsApi by lazy { authenticatedRetrofit.create(EventsApi::class.java) }
 
     val syncEngine: OfflineSyncEngine by lazy {
-        OfflineSyncEngine(offlineDao, notesApi, cardsApi, characterApi, sessionManager)
+        OfflineSyncEngine(offlineDao, notesApi, cardsApi, characterApi, inventoryApi, eventsApi, sessionManager)
     }
 
     val notesRepository: NotesDataSource by lazy {
@@ -79,6 +83,14 @@ class AppContainer(
 
     val characterRepository: CharacterDataSource by lazy {
         OfflineCharacterRepository(offlineDao, sessionManager, syncCoordinator)
+    }
+
+    val inventoryRepository: InventoryDataSource by lazy {
+        OfflineInventoryRepository(offlineDao, sessionManager, syncCoordinator)
+    }
+
+    val focusEventsRepository: FocusEventsRepository by lazy {
+        FocusEventsRepository(offlineDao, sessionManager, syncCoordinator)
     }
 
     val deadlineNotificationScheduler: DeadlineScheduler by lazy {
@@ -105,10 +117,12 @@ class AppContainer(
             notesRepository = notesRepository,
             homeInfoRepository = homeInfoRepository,
             characterRepository = characterRepository,
+            inventoryRepository = inventoryRepository,
             deadlineNotificationScheduler = deadlineNotificationScheduler,
             settingsRepository = settingsRepository,
             onboardingRepository = onboardingRepository,
-            coinWalletRepository = coinWalletRepository
+            coinWalletRepository = coinWalletRepository,
+            focusEventsRepository = focusEventsRepository
         )
     }
 }
@@ -120,10 +134,12 @@ class HomeNotesViewModelFactory(
     private val notesRepository: NotesDataSource,
     private val homeInfoRepository: HomeInfoDataSource,
     private val characterRepository: CharacterDataSource,
+    private val inventoryRepository: InventoryDataSource,
     private val deadlineNotificationScheduler: DeadlineScheduler,
     private val settingsRepository: SettingsRepository,
     private val onboardingRepository: OnboardingRepository = InMemoryOnboardingRepository(),
-    private val coinWalletRepository: CoinWalletRepository = InMemoryCoinWalletRepository()
+    private val coinWalletRepository: CoinWalletRepository = InMemoryCoinWalletRepository(),
+    private val focusEventsRepository: FocusEventsRepository? = null
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -151,6 +167,18 @@ class HomeNotesViewModelFactory(
                 application = application,
                 repository = characterRepository,
                 coinWallet = coinWalletRepository
+            ) as T
+
+            modelClass.isAssignableFrom(InventoryViewModel::class.java) -> InventoryViewModel(
+                application = application,
+                repository = inventoryRepository
+            ) as T
+
+            modelClass.isAssignableFrom(FocusEventsViewModel::class.java) -> FocusEventsViewModel(
+                application = application,
+                repository = requireNotNull(focusEventsRepository) {
+                    "FocusEventsRepository is required for FocusEventsViewModel"
+                }
             ) as T
 
             modelClass.isAssignableFrom(SettingsViewModel::class.java) -> SettingsViewModel(

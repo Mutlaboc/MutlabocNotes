@@ -4,7 +4,6 @@ import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -12,19 +11,16 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Checkbox
@@ -36,8 +32,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -53,12 +47,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlin.math.roundToInt
-import kotlin.random.Random
 import kotlinx.coroutines.delay
 
 /** Formats milliseconds as mm:ss (or h:mm:ss past an hour). */
@@ -71,16 +61,15 @@ fun formatTimer(ms: Long): String {
 }
 
 private const val SPLIT_SLIDE_DP = 64f
-private const val PARTICLE_EMIT_MS = 700L
-private const val PARTICLE_FALL_MS = 1300
 
-private data class XpParticle(val id: Long, val xFrac: Float)
+/** Интервал ролла случайного события во время работы таймера. */
+private const val FOCUS_EVENT_INTERVAL_MS = 60_000L
 
 /**
  * Full-screen "focus" overlay shown while a note's timer runs. The screen splits at the
  * centre: the top half is the yard animation (meadow + tree + strolling mascot, no house),
- * the bottom half is the timer window with an XP level bar (filled by particles drifting
- * down from the animation), a skill bar, and the controls.
+ * the bottom half is the focus-event feed (a random event rolls in once per minute of
+ * running time) and the timer window with the controls.
  */
 @Composable
 fun ExpandedNoteOverlay(
@@ -93,8 +82,8 @@ fun ExpandedNoteOverlay(
     onComplete: () -> Unit,
     onReturnHome: () -> Unit,
     onClosed: () -> Unit,
-    characterSheet: CharacterSheet? = null,
-    timerSkill: CharacterSkill? = null,
+    focusEvents: List<FocusFeedEntry> = emptyList(),
+    onFocusMinuteTick: () -> Unit = {},
     onChecklistItemToggle: (index: Int, checked: Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
@@ -122,6 +111,15 @@ fun ExpandedNoteOverlay(
     }
     val timerText = formatTimer(elapsed)
 
+    // Раз в минуту работы таймера роллим случайное событие. Пауза останавливает
+    // отсчёт; после возобновления минута отсчитывается заново.
+    LaunchedEffect(running) {
+        while (running) {
+            delay(FOCUS_EVENT_INTERVAL_MS)
+            onFocusMinuteTick()
+        }
+    }
+
     val progress = remember { Animatable(0f) }
     var closing by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -143,25 +141,8 @@ fun ExpandedNoteOverlay(
     // Back press returns to the notes screen (instead of the exit dialog).
     BackHandler(enabled = !closing) { closeWith(onReturnHome) }
 
-    // Character data drives the bars: real sheet from the backend if available, else a
-    // local sample as a fallback while it loads. The bars are the real XP source — XP
-    // earned this running segment (1 per 2s for the character, 1 per 10s for the skill)
-    // fills them live, rolling the level over when full. The same amounts are persisted
-    // to the backend when the session settles (pause / done / home).
-    val fallbackSheet = remember { sampleCharacterSheet() }
-    val sheet = characterSheet ?: fallbackSheet
-    val fallbackSkill = remember(sheet) { sheet.skills.randomOrNull() }
-    val skill = timerSkill ?: fallbackSkill
-
-    val runMsLive = if (running) (now - runStartUptime).coerceAtLeast(0L) else 0L
-    val charLive = applyCharacterXp(sheet.level, sheet.xp.toDouble(), runMsLive / 2000.0)
-    val skillLive = skill?.let {
-        val startXpInLevel = it.progress.toDouble() * characterXpToNext(it.level)
-        applyCharacterXp(it.level, startXpInLevel, runMsLive / 10000.0)
-    }
-
     Column(modifier = modifier.fillMaxSize()) {
-        // TOP — animated yard scene (no house) + XP particles drifting down into the bar.
+        // TOP — animated yard scene (no house).
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -185,10 +166,9 @@ fun ExpandedNoteOverlay(
                 startDelayMs = 0L,
                 modifier = Modifier.fillMaxSize()
             )
-            XpParticles(running = running && !closing)
         }
 
-        // BOTTOM — bars + timer window, parts downward from the centre seam.
+        // BOTTOM — event feed + timer window, parts downward from the centre seam.
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -201,18 +181,7 @@ fun ExpandedNoteOverlay(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
-            val charValue = if (charLive.level >= CHARACTER_MAX_LEVEL) {
-                stringResource(R.string.character_xp_max)
-            } else {
-                "${charLive.xpInLevel} / ${charLive.xpToNext}"
-            }
-            BarLabel(stringResource(R.string.character_level_xp_label, charLive.level), charValue)
-            StatBar(progress = charLive.fraction, fill = CozyAuth.Terracotta)
-            if (skill != null && skillLive != null) {
-                Spacer(Modifier.height(10.dp))
-                BarLabel(skill.name, stringResource(R.string.character_skill_level, skillLive.level))
-                StatBar(progress = skillLive.fraction, fill = CozyAuth.SoftGreen)
-            }
+            FocusEventFeed(entries = focusEvents)
             Spacer(Modifier.height(16.dp))
             TimerWindow(
                 note = note,
@@ -227,87 +196,115 @@ fun ExpandedNoteOverlay(
     }
 }
 
+/* ------------------------------------------------------------------ *
+ * Полоса событий: случайные события сессии, новые сверху. Типы событий
+ * различаются цветом пиксельного маркера и строки награды.
+ * ------------------------------------------------------------------ */
+
+/** Цвет маркера и строки награды для типа события. */
+internal fun focusEventColor(type: FocusEventType): Color = when (type) {
+    FocusEventType.TEXT -> CozyAuth.InkSoft
+    FocusEventType.CHARACTER_XP -> CozyAuth.Terracotta
+    FocusEventType.SKILL_XP -> CozyAuth.SoftGreen
+    FocusEventType.ITEM -> CozyAuth.MutedYellow
+    FocusEventType.NEW_SKILL -> FocusNewSkillViolet
+}
+
+/** Фиолетовый для самого редкого события — нового навыка (в палитре CozyAuth его нет). */
+private val FocusNewSkillViolet = Color(0xFF8A6FB8)
+
 @Composable
-private fun XpParticles(running: Boolean) {
-    val particles = remember { mutableStateListOf<XpParticle>() }
-    var nextId by remember { mutableStateOf(0L) }
-    LaunchedEffect(running) {
-        while (running) {
-            delay(PARTICLE_EMIT_MS)
-            particles.add(XpParticle(nextId++, Random.nextFloat()))
+private fun FocusEventFeed(entries: List<FocusFeedEntry>, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(6.dp)
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(CozyAuth.FieldCream)
+            .border(2.dp, CozyAuth.BrownOutline, shape)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.focus_events_title),
+            fontFamily = CozyAuth.PixelFont,
+            color = CozyAuth.Ink,
+            fontWeight = FontWeight.Bold,
+            fontSize = 12.sp
+        )
+        Spacer(Modifier.height(6.dp))
+        if (entries.isEmpty()) {
+            Text(
+                text = stringResource(R.string.focus_events_empty),
+                fontFamily = CozyAuth.PixelFont,
+                color = CozyAuth.Hint,
+                fontSize = 12.sp
+            )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 148.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Новые события сверху — прокручивать не нужно.
+                entries.asReversed().forEach { entry ->
+                    FocusEventRow(entry)
+                }
+            }
         }
     }
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val width = maxWidth
-        val travel = maxHeight
-        particles.forEach { particle ->
-            key(particle.id) {
-                FallingParticle(
-                    xFrac = particle.xFrac,
-                    width = width,
-                    travel = travel,
-                    onDone = { particles.remove(particle) }
+}
+
+@Composable
+private fun FocusEventRow(entry: FocusFeedEntry) {
+    val accent = focusEventColor(entry.type)
+    Row(modifier = Modifier.fillMaxWidth()) {
+        // Пиксельный маркер типа события.
+        Box(
+            modifier = Modifier
+                .padding(top = 3.dp)
+                .size(8.dp)
+                .background(accent)
+                .border(1.dp, CozyAuth.BrownOutline)
+        )
+        Spacer(Modifier.size(8.dp))
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = entry.text,
+                fontFamily = CozyAuth.PixelFont,
+                color = CozyAuth.InkSoft,
+                fontSize = 12.sp
+            )
+            focusEventRewardText(entry)?.let { reward ->
+                Text(
+                    text = reward,
+                    fontFamily = CozyAuth.PixelFont,
+                    color = accent,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp
                 )
             }
         }
     }
 }
 
+/** Строка награды под текстом события; null — событие без награды (просто текст). */
 @Composable
-private fun FallingParticle(xFrac: Float, width: Dp, travel: Dp, onDone: () -> Unit) {
-    val prog = remember { Animatable(0f) }
-    LaunchedEffect(Unit) {
-        prog.animateTo(1f, animationSpec = tween(PARTICLE_FALL_MS, easing = LinearEasing))
-        onDone()
-    }
-    Box(
-        modifier = Modifier
-            .offset {
-                val sizePx = 8.dp.toPx()
-                val x = width.toPx() * xFrac - sizePx / 2f
-                val y = travel.toPx() * prog.value - sizePx / 2f
-                IntOffset(x.roundToInt(), y.roundToInt())
-            }
-            .size(8.dp)
-            .graphicsLayer { alpha = (1f - prog.value * 0.25f).coerceIn(0f, 1f) }
-            .clip(CircleShape)
-            .background(CozyAuth.MutedYellow)
-            .border(1.dp, CozyAuth.TerracottaDark, CircleShape)
-    )
-}
-
-@Composable
-private fun BarLabel(name: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(text = name, fontFamily = CozyAuth.PixelFont, color = CozyAuth.InkSoft, fontSize = 12.sp)
-        Text(text = value, fontFamily = CozyAuth.PixelFont, color = CozyAuth.InkSoft, fontSize = 12.sp)
-    }
-    Spacer(Modifier.height(4.dp))
-}
-
-@Composable
-private fun StatBar(progress: Float, fill: Color) {
-    val shape = RoundedCornerShape(3.dp)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(16.dp)
-            .clip(shape)
-            .background(CozyAuth.FieldCream)
-            .border(2.dp, CozyAuth.BrownOutline, shape)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(progress.coerceIn(0f, 1f))
-                .fillMaxHeight()
-                .padding(2.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(fill)
-        )
-    }
+private fun focusEventRewardText(entry: FocusFeedEntry): String? = when (entry.type) {
+    FocusEventType.TEXT -> null
+    FocusEventType.CHARACTER_XP ->
+        stringResource(R.string.focus_event_xp, entry.characterXp)
+    FocusEventType.SKILL_XP ->
+        entry.skillName?.let { stringResource(R.string.focus_event_skill, it, entry.skillXp) }
+    FocusEventType.ITEM ->
+        entry.itemName?.let { name ->
+            val icon = entry.itemIcon.orEmpty()
+            val display = if (icon.isBlank()) name else "$icon $name"
+            stringResource(R.string.focus_event_item, display)
+        }
+    FocusEventType.NEW_SKILL ->
+        entry.newSkillName?.let { stringResource(R.string.focus_event_new_skill, it) }
 }
 
 /**

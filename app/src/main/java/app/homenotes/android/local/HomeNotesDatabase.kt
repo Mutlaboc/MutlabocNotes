@@ -15,6 +15,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
 import androidx.room.Update
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 @Entity(
@@ -156,6 +158,40 @@ data class LocalCharacterSkillEntity(
     val name: String,
     val level: Int,
     val progress: Double,
+)
+
+@Entity(tableName = "inventory_items", primaryKeys = ["account_key", "item_id"])
+data class LocalInventoryItemEntity(
+    @ColumnInfo(name = "account_key") val accountKey: String,
+    @ColumnInfo(name = "item_id") val itemId: String,
+    val position: Int,
+    val name: String,
+    val description: String,
+    val icon: String,
+    // Слот экипировки (HEAD/BODY/...) или null для ненадеваемых предметов.
+    val slot: String?,
+    val rarity: String,
+    // Бонусы к характеристикам, сериализованные в JSON (List<ItemBonus>).
+    @ColumnInfo(name = "bonuses_json") val bonusesJson: String,
+    // Слот, в который предмет надет сейчас, или null.
+    @ColumnInfo(name = "equipped_slot") val equippedSlot: String?,
+)
+
+/**
+ * Кэш глобального каталога событий фокус-таймера (GET /events). Каталог общий для всех
+ * аккаунтов, поэтому account_key нет. Item/новый навык хранятся как JSON (Gson).
+ */
+@Entity(tableName = "focus_events")
+data class LocalFocusEventEntity(
+    @PrimaryKey @ColumnInfo(name = "event_key") val eventKey: String,
+    @ColumnInfo(name = "event_type") val eventType: String,
+    val weight: Int,
+    @ColumnInfo(name = "text_ru") val textRu: String,
+    @ColumnInfo(name = "text_en") val textEn: String,
+    @ColumnInfo(name = "character_xp") val characterXp: Int,
+    @ColumnInfo(name = "skill_xp") val skillXp: Int,
+    @ColumnInfo(name = "item_json") val itemJson: String?,
+    @ColumnInfo(name = "new_skill_json") val newSkillJson: String?,
 )
 
 @Entity(tableName = "wallet")
@@ -323,6 +359,36 @@ abstract class OfflineDao {
         putWallet(wallet)
     }
 
+    @Query("SELECT * FROM inventory_items WHERE account_key = :accountKey ORDER BY position")
+    abstract suspend fun inventoryItems(accountKey: String): List<LocalInventoryItemEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun putInventoryItems(items: List<LocalInventoryItemEntity>)
+
+    @Query("DELETE FROM inventory_items WHERE account_key = :accountKey")
+    abstract suspend fun clearInventory(accountKey: String)
+
+    @Transaction
+    open suspend fun replaceInventory(accountKey: String, items: List<LocalInventoryItemEntity>) {
+        clearInventory(accountKey)
+        if (items.isNotEmpty()) putInventoryItems(items)
+    }
+
+    @Query("SELECT * FROM focus_events")
+    abstract suspend fun focusEvents(): List<LocalFocusEventEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun putFocusEvents(events: List<LocalFocusEventEntity>)
+
+    @Query("DELETE FROM focus_events")
+    abstract suspend fun clearFocusEvents()
+
+    @Transaction
+    open suspend fun replaceFocusEvents(events: List<LocalFocusEventEntity>) {
+        clearFocusEvents()
+        if (events.isNotEmpty()) putFocusEvents(events)
+    }
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     abstract suspend fun putWallet(wallet: LocalWalletEntity)
 
@@ -362,9 +428,11 @@ abstract class OfflineDao {
         LocalNoteEntity::class, LocalChecklistItemEntity::class,
         LocalHomeCardEntity::class, LocalHomeFieldEntity::class, LocalHomeLinkEntity::class,
         LocalCharacterEntity::class, LocalCharacterStatEntity::class, LocalCharacterSkillEntity::class,
+        LocalInventoryItemEntity::class,
+        LocalFocusEventEntity::class,
         LocalWalletEntity::class, OutboxEntity::class, LocalSyncStateEntity::class,
     ],
-    version = 1,
+    version = 3,
     exportSchema = true,
 )
 abstract class HomeNotesDatabase : RoomDatabase() {
@@ -373,10 +441,49 @@ abstract class HomeNotesDatabase : RoomDatabase() {
     companion object {
         const val DATABASE_NAME = "homenotes.db"
 
+        // v1 -> v2: таблица предметов инвентаря и экипировки.
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `inventory_items` (" +
+                        "`account_key` TEXT NOT NULL, " +
+                        "`item_id` TEXT NOT NULL, " +
+                        "`position` INTEGER NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`description` TEXT NOT NULL, " +
+                        "`icon` TEXT NOT NULL, " +
+                        "`slot` TEXT, " +
+                        "`rarity` TEXT NOT NULL, " +
+                        "`bonuses_json` TEXT NOT NULL, " +
+                        "`equipped_slot` TEXT, " +
+                        "PRIMARY KEY(`account_key`, `item_id`))"
+                )
+            }
+        }
+
+        // v2 -> v3: кэш каталога событий фокус-таймера.
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `focus_events` (" +
+                        "`event_key` TEXT NOT NULL, " +
+                        "`event_type` TEXT NOT NULL, " +
+                        "`weight` INTEGER NOT NULL, " +
+                        "`text_ru` TEXT NOT NULL, " +
+                        "`text_en` TEXT NOT NULL, " +
+                        "`character_xp` INTEGER NOT NULL, " +
+                        "`skill_xp` INTEGER NOT NULL, " +
+                        "`item_json` TEXT, " +
+                        "`new_skill_json` TEXT, " +
+                        "PRIMARY KEY(`event_key`))"
+                )
+            }
+        }
+
         fun create(context: Context): HomeNotesDatabase = Room.databaseBuilder(
             context.applicationContext,
             HomeNotesDatabase::class.java,
             DATABASE_NAME,
-        ).build()
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
     }
 }

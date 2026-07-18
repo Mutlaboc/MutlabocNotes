@@ -74,7 +74,10 @@ fun HomeScreen(
     onOpenSettings: () -> Unit,
     onOpenCharacter: () -> Unit = {},
     characterSheet: CharacterSheet? = null,
-    onGrantXp: (characterXp: Int, skillKey: String?, skillXp: Int) -> Unit = { _, _, _ -> },
+    // Полоса событий фокус-таймера: записи текущей сессии и колбэки её жизненного цикла.
+    focusEventsFeed: List<FocusFeedEntry> = emptyList(),
+    onFocusSessionStart: () -> Unit = {},
+    onFocusMinuteTick: (skillKey: String?) -> Unit = {},
     onboarding: OnboardingState = OnboardingState.Completed,
     onWelcomeSeen: () -> Unit = {},
     onHintSeen: (OnboardingHintStep) -> Unit = {}
@@ -271,6 +274,7 @@ fun HomeScreen(
                                         timerSkillKey = characterSheet?.skills?.randomOrNull()?.key
                                         runningNoteId = note.id
                                         expandedNoteId = note.id
+                                        onFocusSessionStart()
                                     }
                                 }
                             )
@@ -293,15 +297,14 @@ fun HomeScreen(
 
             val expandedNote = expandedNoteId?.let { id -> notes.find { it.id == id } }
             if (expandedNote != null) {
-                // Commits the running segment to the accumulator and credits the earned XP
-                // (1 per 2s to the character, 1 per 10s to the session skill).
+                // Commits the running segment to the accumulator. XP за время больше не
+                // начисляется — награды приходят только из случайных событий полосы.
                 val settleRun: () -> Unit = settle@{
                     if (runningNoteId != expandedNote.id) return@settle
                     val segment = (SystemClock.uptimeMillis() - runStartUptime).coerceAtLeast(0L)
                     val base = timerAccum[expandedNote.id] ?: 0L
                     timerAccum[expandedNote.id] = base + segment
                     runningNoteId = null
-                    onGrantXp((segment / 2000L).toInt(), timerSkillKey, (segment / 10000L).toInt())
                 }
                 ExpandedNoteOverlay(
                     note = expandedNote,
@@ -319,8 +322,8 @@ fun HomeScreen(
                     },
                     onReturnHome = settleRun,
                     onClosed = { expandedNoteId = null },
-                    characterSheet = characterSheet,
-                    timerSkill = characterSheet?.skills?.firstOrNull { it.key == timerSkillKey },
+                    focusEvents = focusEventsFeed,
+                    onFocusMinuteTick = { onFocusMinuteTick(timerSkillKey) },
                     onChecklistItemToggle = { index, checked ->
                         onChecklistItemToggle(expandedNote.id, index, checked)
                     }

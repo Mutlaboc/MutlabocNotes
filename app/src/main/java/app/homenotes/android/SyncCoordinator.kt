@@ -28,15 +28,24 @@ import app.homenotes.android.network.CharacterRenameRequestDto
 import app.homenotes.android.network.CharacterSheetDto
 import app.homenotes.android.network.CharacterStatUpgradeRequestDto
 import app.homenotes.android.network.CharacterXpRequestDto
+import app.homenotes.android.network.EventsApi
+import app.homenotes.android.network.FocusEventClaimRequestDto
 import app.homenotes.android.network.HomeCardDto
 import app.homenotes.android.network.HomeCardsApi
+import app.homenotes.android.network.InventoryApi
+import app.homenotes.android.network.InventoryDto
+import app.homenotes.android.network.InventoryEquipRequestDto
+import app.homenotes.android.network.InventoryUnequipRequestDto
 import app.homenotes.android.network.NoteCompletionRequestDto
 import app.homenotes.android.network.NoteDto
 import app.homenotes.android.network.NotesApi
 import app.homenotes.android.network.toDomain
+import app.homenotes.android.network.toEntity
 import app.homenotes.android.network.toUpdateRequest
 import app.homenotes.android.network.toUpsertRequestDto
 import com.google.gson.Gson
+import com.google.gson.JsonParseException
+import com.google.gson.stream.MalformedJsonException
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -115,6 +124,8 @@ class OfflineSyncEngine(
     private val notesApi: NotesApi,
     private val cardsApi: HomeCardsApi,
     private val characterApi: CharacterApi,
+    private val inventoryApi: InventoryApi,
+    private val eventsApi: EventsApi,
     private val session: AuthSessionStore,
     private val gson: Gson = Gson(),
 ) {
@@ -131,6 +142,23 @@ class OfflineSyncEngine(
                 if (operation.kind == OutboxKind.CHARACTER_STAT_UPGRADE && statusCode in setOf(400, 409)) {
                     dao.removeOutbox(operation.id)
                     replaceServerCharacter(accountKey, characterApi.getCharacter())
+                    continue
+                }
+                // Конфликт экипировки (предмет удалён/уже надет) или бекенд ещё без
+                // эндпоинтов инвентаря — принимаем серверное состояние и не роняем синк.
+                if (operation.kind in setOf(OutboxKind.INVENTORY_EQUIP, OutboxKind.INVENTORY_UNEQUIP) &&
+                    (statusCode in setOf(400, 404, 409) || isEndpointUnsupported(error))
+                ) {
+                    dao.removeOutbox(operation.id)
+                    pullInventoryTolerant(accountKey)
+                    continue
+                }
+                // Неизвестное событие или бекенд ещё без /events — снимаем клейм и
+                // принимаем серверное состояние персонажа, не роняя синк.
+                if (operation.kind == OutboxKind.EVENT_CLAIM &&
+                    (statusCode in setOf(400, 404, 409) || isEndpointUnsupported(error))
+                ) {
+                    dao.removeOutbox(operation.id)
                     continue
                 }
                 val retryable = error is IOException || (error as? HttpException)?.code()?.let { it >= 500 } == true
@@ -179,6 +207,23 @@ class OfflineSyncEngine(
             OutboxKind.CHARACTER_RENAME -> {
                 val payload = gson.fromJson(operation.payload, RenamePayload::class.java)
                 characterApi.rename(CharacterRenameRequestDto(operation.operationId, payload.name))
+            }
+            OutboxKind.INVENTORY_EQUIP -> {
+                val payload = gson.fromJson(operation.payload, EquipPayload::class.java)
+                inventoryApi.equip(InventoryEquipRequestDto(operation.operationId, payload.itemId))
+            }
+            OutboxKind.INVENTORY_UNEQUIP -> {
+                val payload = gson.fromJson(operation.payload, UnequipPayload::class.java)
+                inventoryApi.unequip(InventoryUnequipRequestDto(operation.operationId, payload.slot))
+            }
+            OutboxKind.EVENT_CLAIM -> {
+                val payload = gson.fromJson(operation.payload, EventClaimPayload::class.java)
+                eventsApi.claim(FocusEventClaimRequestDto(
+                    operationId = operation.operationId,
+                    eventKey = payload.eventKey,
+                    skillKey = payload.skillKey,
+                    locale = payload.locale,
+                ))
             }
         }
     }
@@ -269,6 +314,51 @@ class OfflineSyncEngine(
         }.forEach { dao.deleteCard(accountKey, it.card.localId) }
 
         if (!dao.hasPending(accountKey, accountKey)) replaceServerCharacter(accountKey, characterApi.getCharacter())
+
+        if (!dao.hasPending(accountKey, inventoryLocalId(accountKey))) {
+            pullInventoryTolerant(accountKey)
+        }
+
+        pullFocusEventsTolerant()
+    }
+
+    /**
+     * Pull глобального каталога событий фокус-таймера в Room-кэш. Пока бекенд без
+     * /events (404/405/HTML-заглушка) — молча пропускаем, клиент живёт на фолбэке.
+     */
+    private suspend fun pullFocusEventsTolerant() {
+        try {
+            val catalog = eventsApi.getCatalog().events.map { it.toDomain().toEntity(gson) }
+            if (catalog.isNotEmpty()) dao.replaceFocusEvents(catalog)
+        } catch (error: Throwable) {
+            if (!isEndpointUnsupported(error)) throw error
+        }
+    }
+
+    /**
+     * Pull инвентаря, не роняющий общий синк, пока бекенд не поддерживает /inventory:
+     * 404/405 или HTML-заглушка вместо JSON (reverse-proxy) пропускаются молча.
+     * Настоящие сетевые ошибки пробрасываются дальше как обычно.
+     */
+    private suspend fun pullInventoryTolerant(accountKey: String) {
+        try {
+            replaceServerInventory(accountKey, inventoryApi.getInventory())
+        } catch (error: Throwable) {
+            if (!isEndpointUnsupported(error)) throw error
+        }
+    }
+
+    /** Ответ выглядит как «эндпоинта на бекенде ещё нет», а не как сетевая ошибка. */
+    private fun isEndpointUnsupported(error: Throwable): Boolean {
+        val code = (error as? HttpException)?.code()
+        if (code == 404 || code == 405) return true
+        // Вместо JSON пришёл HTML (заглушка nginx/лендинг) — ошибка парсинга Gson.
+        var cause: Throwable? = error
+        while (cause != null) {
+            if (cause is JsonParseException || cause is MalformedJsonException) return true
+            cause = cause.cause
+        }
+        return false
     }
 
     private suspend fun replaceServerNote(account: String, dto: NoteDto, localId: String) {
@@ -303,6 +393,12 @@ class OfflineSyncEngine(
             dto.skills.mapIndexed { i, skill -> LocalCharacterSkillEntity(account, skill.key, i, skill.name, skill.level, skill.progress) },
             LocalWalletEntity(account, dto.wallet.earnedCoins, dto.wallet.spentCoins, dto.wallet.availableCoins, true),
         )
+    }
+
+    private suspend fun replaceServerInventory(account: String, dto: InventoryDto) {
+        dao.replaceInventory(account, dto.toDomain().items.mapIndexed { i, item ->
+            item.toEntity(account, i, gson)
+        })
     }
 
     private suspend fun localCharacter(account: String): CharacterSheet {

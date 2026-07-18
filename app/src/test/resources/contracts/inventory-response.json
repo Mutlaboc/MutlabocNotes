@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "id": "iron-helmet",
+      "name": "Железный шлем",
+      "description": "Простой, но надёжный.",
+      "icon": "⛑",
+      "slot": "HEAD",
+      "rarity": "COMMON",
+      "bonuses": [
+        { "statKey": "con", "statName": "Телосложение", "value": 1 }
+      ],
+      "equippedSlot": "HEAD"
+    },
+    {
+      "id": "lucky-acorn",
+      "name": "Счастливый жёлудь",
+      "description": "Сувенир из леса.",
+      "icon": "🌰",
+      "slot": null,
+      "rarity": "RARE",
+      "bonuses": [],
+      "equippedSlot": null
+    }
+  ]
+}

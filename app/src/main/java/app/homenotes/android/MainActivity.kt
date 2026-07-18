@@ -140,6 +140,8 @@ fun MyApp(
     homeInfoViewModel: HomeInfoViewModel = viewModel(factory = viewModelFactory),
     settingsViewModel: SettingsViewModel = viewModel(factory = viewModelFactory),
     characterViewModel: CharacterViewModel = viewModel(factory = viewModelFactory),
+    focusEventsViewModel: FocusEventsViewModel = viewModel(factory = viewModelFactory),
+    inventoryViewModel: InventoryViewModel = viewModel(factory = viewModelFactory),
     onboardingViewModel: OnboardingViewModel = viewModel(factory = viewModelFactory)
 ) {
     val navController = rememberNavController()
@@ -308,8 +310,10 @@ fun MyApp(
                     onOpenCharacter = {
                         navController.navigate("character")
                     },
-                    onGrantXp = { characterXp, skillKey, skillXp ->
-                        characterViewModel.grantXp(characterXp, skillKey, skillXp)
+                    focusEventsFeed = focusEventsViewModel.feed,
+                    onFocusSessionStart = focusEventsViewModel::startSession,
+                    onFocusMinuteTick = { skillKey ->
+                        focusEventsViewModel.onMinuteTick(skillKey)
                     },
                     onboarding = onboardingViewModel.uiState,
                     onWelcomeSeen = onboardingViewModel::markWelcomeSeen,
@@ -327,7 +331,19 @@ fun MyApp(
                     onRetry = { characterViewModel.loadCharacter() },
                     onRename = { newName -> characterViewModel.updateName(newName) },
                     availableCoins = availableCoins,
-                    onUpgradeStat = { statKey -> characterViewModel.upgradeStat(statKey, earnedCoins) }
+                    onUpgradeStat = { statKey -> characterViewModel.upgradeStat(statKey, earnedCoins) },
+                    onOpenInventory = { navController.navigate("inventory") }
+                )
+            }
+
+            composable("inventory") {
+                LaunchedEffect(Unit) { inventoryViewModel.loadInventory() }
+                InventoryScreen(
+                    uiState = inventoryViewModel.uiState,
+                    onBack = { navController.popBackStack() },
+                    onRetry = { inventoryViewModel.loadInventory() },
+                    onEquip = { itemId -> inventoryViewModel.equip(itemId) },
+                    onUnequip = { slot -> inventoryViewModel.unequip(slot) }
                 )
             }
 

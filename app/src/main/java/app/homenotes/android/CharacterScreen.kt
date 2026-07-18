@@ -185,7 +185,8 @@ fun CharacterScreen(
     onRetry: () -> Unit,
     onRename: (String) -> Unit = {},
     availableCoins: Int = 0,
-    onUpgradeStat: (String) -> Unit = {}
+    onUpgradeStat: (String) -> Unit = {},
+    onOpenInventory: () -> Unit = {}
 ) {
     val scaffoldState = rememberScaffoldState()
     Scaffold(
@@ -214,7 +215,8 @@ fun CharacterScreen(
                     sheet = uiState.sheet,
                     onRename = onRename,
                     availableCoins = availableCoins,
-                    onUpgradeStat = onUpgradeStat
+                    onUpgradeStat = onUpgradeStat,
+                    onOpenInventory = onOpenInventory
                 )
             }
         }
@@ -226,7 +228,8 @@ private fun CharacterContent(
     sheet: CharacterSheet,
     onRename: (String) -> Unit,
     availableCoins: Int,
-    onUpgradeStat: (String) -> Unit
+    onUpgradeStat: (String) -> Unit,
+    onOpenInventory: () -> Unit
 ) {
     var showRenameDialog by remember { mutableStateOf(false) }
     if (showRenameDialog) {
@@ -248,6 +251,12 @@ private fun CharacterContent(
         CharacterPortrait(sheet, onEditName = { showRenameDialog = true })
         Spacer(Modifier.height(16.dp))
         XpSection(sheet)
+        Spacer(Modifier.height(16.dp))
+        PixelOutlineButton(
+            text = stringResource(R.string.inventory_open),
+            onClick = onOpenInventory,
+            modifier = Modifier.fillMaxWidth()
+        )
         Spacer(Modifier.height(20.dp))
 
         Row(

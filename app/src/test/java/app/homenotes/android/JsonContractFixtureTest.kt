@@ -3,6 +3,8 @@ package app.homenotes.android
 import app.homenotes.android.network.AuthResponseDto
 import app.homenotes.android.network.HomeCardDto
 import app.homenotes.android.network.HomeCardUpsertRequestDto
+import app.homenotes.android.network.InventoryDto
+import app.homenotes.android.network.toDomain
 import app.homenotes.android.network.NoteDto
 import app.homenotes.android.network.NoteUpsertRequestDto
 import com.google.gson.Gson
@@ -67,6 +69,24 @@ class JsonContractFixtureTest {
 
         assertEquals("invalid_request", response.code)
         assertEquals("Email is required", response.message)
+    }
+
+    @Test
+    fun inventoryFixtureMatchesAndroidDto() {
+        val dto = gson.fromJson(fixture("inventory-response.json"), InventoryDto::class.java)
+        val inventory = dto.toDomain()
+
+        val helmet = inventory.items.first { it.id == "iron-helmet" }
+        assertEquals(EquipSlot.HEAD, helmet.slot)
+        assertEquals(EquipSlot.HEAD, helmet.equippedSlot)
+        assertEquals(ItemRarity.COMMON, helmet.rarity)
+        assertEquals(1, helmet.bonuses.single().value)
+        assertEquals("con", helmet.bonuses.single().statKey)
+
+        val acorn = inventory.items.first { it.id == "lucky-acorn" }
+        assertEquals(null, acorn.slot)
+        assertEquals(ItemRarity.RARE, acorn.rarity)
+        assertEquals(false, acorn.isEquippable)
     }
 
     private fun fixture(name: String): String =

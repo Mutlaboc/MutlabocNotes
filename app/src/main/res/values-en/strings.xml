@@ -160,6 +160,12 @@
     <string name="timer_resume">Resume</string>
     <string name="timer_done">Done</string>
     <string name="timer_home">Home</string>
+    <string name="focus_events_title">Events</string>
+    <string name="focus_events_empty">Keep working — something is bound to happen…</string>
+    <string name="focus_event_xp">+%1$d XP</string>
+    <string name="focus_event_skill">%1$s: +%2$d skill XP</string>
+    <string name="focus_event_item">Added to inventory: %1$s</string>
+    <string name="focus_event_new_skill">New skill: %1$s</string>
 
     <string name="onboarding_welcome_title">Welcome!</string>
     <string name="onboarding_welcome_message">Hi! Welcome to the notes app. Following your lead, I will try to organise my home and take care of chores together with you. As soon as you start a task, I will go do something useful too!</string>
@@ -177,4 +183,26 @@
     <string name="sync_status_offline">Offline · waiting: %1$d</string>
     <string name="sync_status_blocked">Some changes could not be synced</string>
     <string name="sync_retry">Retry</string>
+
+    <string name="action_close">Close</string>
+    <string name="inventory_title">Inventory</string>
+    <string name="inventory_open">Inventory</string>
+    <string name="inventory_section_equipment">Equipment</string>
+    <string name="inventory_section_backpack">Backpack</string>
+    <string name="inventory_empty_backpack">The backpack is empty</string>
+    <string name="inventory_bonus_total">Equipment bonuses</string>
+    <string name="inventory_action_equip">Equip</string>
+    <string name="inventory_action_unequip">Unequip</string>
+    <string name="inventory_item_slot">Slot: %1$s</string>
+    <string name="inventory_slot_head">Head</string>
+    <string name="inventory_slot_body">Body</string>
+    <string name="inventory_slot_legs">Legs</string>
+    <string name="inventory_slot_weapon">Weapon</string>
+    <string name="inventory_slot_offhand">Shield</string>
+    <string name="inventory_slot_accessory">Accessory</string>
+    <string name="inventory_rarity_common">Common</string>
+    <string name="inventory_rarity_uncommon">Uncommon</string>
+    <string name="inventory_rarity_rare">Rare</string>
+    <string name="inventory_rarity_epic">Epic</string>
+    <string name="inventory_rarity_legendary">Legendary</string>
 </resources>
