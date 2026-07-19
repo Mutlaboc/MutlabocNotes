@@ -41,8 +41,13 @@ class NotesViewModel(
         lastCreatedNoteId = null
     }
 
+    // Список читается из офлайн-кэша (Flow над Room), поэтому повторный вызов (возврат
+    // из настроек, смена разрешений и т.п.) не должен гасить уже показанные заметки
+    // спиннером — Loading показываем только пока данных ещё не было ни разу.
     fun loadNotes() {
-        uiState = NotesUiState.Loading
+        if (uiState !is NotesUiState.Content) {
+            uiState = NotesUiState.Loading
+        }
         observationJob?.cancel()
         observationJob = viewModelScope.launch(ioDispatcher) {
             repository.observeNotes()

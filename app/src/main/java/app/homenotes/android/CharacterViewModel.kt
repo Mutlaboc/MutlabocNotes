@@ -28,8 +28,13 @@ class CharacterViewModel(
     // Аккаунт, к которому привязаны списания монет. null — баланс прокачки скрыт.
     private var userKey: String? = null
 
+    // Персонаж читается из офлайн-кэша, поэтому повторный вход на экран (навигация
+    // домой и обратно) не должен гасить уже показанный лист спиннером — Loading
+    // показываем только пока данных ещё не было ни разу.
     fun loadCharacter() {
-        uiState = CharacterUiState.Loading
+        if (uiState !is CharacterUiState.Content) {
+            uiState = CharacterUiState.Loading
+        }
         viewModelScope.launch(ioDispatcher) {
             val result = repository.getCharacter()
             withContext(Dispatchers.Main) {

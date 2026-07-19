@@ -62,13 +62,28 @@ class NotesViewModelTest {
     }
 
     @Test
-    fun loadNotes_setsLoadingStateBeforeRepositoryReturns() = runTest(mainDispatcherRule.dispatcher) {
-        loadContent(note(id = "existing"))
+    fun loadNotes_initialLoadSetsLoadingStateBeforeRepositoryReturns() = runTest(mainDispatcherRule.dispatcher) {
         repository.notesResult = Result.success(emptyList())
 
         viewModel.loadNotes()
 
         assertEquals(NotesUiState.Loading, viewModel.uiState)
+
+        advanceUntilIdle()
+        assertEquals(NotesUiState.Empty, viewModel.uiState)
+    }
+
+    @Test
+    fun loadNotes_keepsShowingCachedContentInsteadOfFlashingLoading() = runTest(mainDispatcherRule.dispatcher) {
+        val existing = note(id = "existing")
+        loadContent(existing)
+        val contentBeforeReload = viewModel.uiState
+        repository.notesResult = Result.success(emptyList())
+
+        viewModel.loadNotes()
+
+        // Offline-first: cached notes stay on screen instead of flashing back to Loading.
+        assertEquals(contentBeforeReload, viewModel.uiState)
 
         advanceUntilIdle()
         assertEquals(NotesUiState.Empty, viewModel.uiState)

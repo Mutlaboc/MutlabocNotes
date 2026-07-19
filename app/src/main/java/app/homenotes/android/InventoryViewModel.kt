@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class InventoryViewModel(
     application: Application,
@@ -19,15 +20,16 @@ class InventoryViewModel(
     var uiState by mutableStateOf<InventoryUiState>(InventoryUiState.Loading)
         private set
 
+    // Экран уже офлайн-first (репозиторий читает Room-кэш), поэтому повторный вход
+    // (навигация назад/вперёд) не должен гасить уже показанный инвентарь спиннером —
+    // Loading показываем только пока данных ещё не было ни разу.
     fun loadInventory() {
+        if (uiState !is InventoryUiState.Content) {
+            uiState = InventoryUiState.Loading
+        }
         viewModelScope.launch(ioDispatcher) {
-            launch(Dispatchers.Main) {
-                uiState = InventoryUiState.Loading
-            }
-
             val result = repository.getInventory()
-
-            launch(Dispatchers.Main) {
+            withContext(Dispatchers.Main) {
                 result.onSuccess { inventory ->
                     uiState = InventoryUiState.Content(inventory)
                 }.onFailure { error ->
