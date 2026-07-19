@@ -4,8 +4,10 @@ import app.homenotes.android.CharacterSheet
 import app.homenotes.android.CharacterSkill
 import app.homenotes.android.CharacterStat
 import app.homenotes.android.R
+import kotlinx.serialization.Serializable
 
 // DTO одной характеристики.
+@Serializable
 data class CharacterStatDto(
     val key: String,
     val name: String,
@@ -14,6 +16,7 @@ data class CharacterStatDto(
 )
 
 // DTO одного навыка.
+@Serializable
 data class CharacterSkillDto(
     val key: String,
     val name: String,
@@ -22,6 +25,7 @@ data class CharacterSkillDto(
 )
 
 // DTO полного листа персонажа (используется и для ответа GET, и для тела PUT).
+@Serializable
 data class CharacterSheetDto(
     val name: String,
     val level: Int,
@@ -32,6 +36,7 @@ data class CharacterSheetDto(
     val wallet: CharacterWalletDto = CharacterWalletDto(),
 )
 
+@Serializable
 data class CharacterWalletDto(
     val earnedCoins: Int = 0,
     val spentCoins: Int = 0,
@@ -39,6 +44,7 @@ data class CharacterWalletDto(
 )
 
 // Тело запроса на начисление опыта.
+@Serializable
 data class CharacterXpRequestDto(
     val characterXp: Int,
     val skillKey: String?,
@@ -46,7 +52,9 @@ data class CharacterXpRequestDto(
     val operationId: String? = null,
 )
 
+@Serializable
 data class CharacterStatUpgradeRequestDto(val operationId: String, val statKey: String)
+@Serializable
 data class CharacterRenameRequestDto(val operationId: String, val name: String)
 
 // Преобразует DTO в доменную модель. Портрет — клиентский ресурс, его на бекенде нет.

@@ -1,6 +1,7 @@
 package app.homenotes.android
 
 import kotlin.random.Random
+import kotlinx.serialization.Serializable
 
 /* ------------------------------------------------------------------ *
  * Доменная модель случайных событий фокус-таймера («полоса событий»).
@@ -19,6 +20,7 @@ enum class FocusEventType {
 }
 
 /** Предмет-награда события (обе локали, слоты/редкость — как в инвентаре). */
+@Serializable
 data class FocusEventItem(
     val key: String,
     val nameRu: String,
@@ -39,6 +41,7 @@ data class FocusEventItem(
 }
 
 /** Новый навык-награда события. */
+@Serializable
 data class FocusEventNewSkill(
     val key: String,
     val nameRu: String,

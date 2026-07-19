@@ -4,14 +4,17 @@ import app.homenotes.android.ChecklistItem
 import app.homenotes.android.Note
 import app.homenotes.android.NoteCategory
 import app.homenotes.android.RepeatRule
+import kotlinx.serialization.Serializable
 
 // Модель данных, общая для слоёв этого модуля.
+@Serializable
 data class ChecklistItemDto(
     val text: String,
     val isChecked: Boolean
 )
 
 // Модель данных, общая для слоёв этого модуля.
+@Serializable
 data class NoteDto(
     val id: String,
     val title: String,
@@ -29,6 +32,7 @@ data class NoteDto(
 )
 
 // Модель данных для request payload, отправляемого в backend.
+@Serializable
 data class NoteUpsertRequestDto(
     val title: String,
     val content: String,
@@ -43,10 +47,12 @@ data class NoteUpsertRequestDto(
     val clientMutationId: String? = null,
 )
 
+@Serializable
 data class NoteCompletionRequestDto(
     val isCompleted: Boolean,
 )
 
+@Serializable
 data class NoteCompletionResponseDto(
     val completedNote: NoteDto,
     val nextNote: NoteDto?

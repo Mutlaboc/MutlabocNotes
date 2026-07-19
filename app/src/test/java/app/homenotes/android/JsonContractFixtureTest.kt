@@ -1,5 +1,6 @@
 package app.homenotes.android
 
+import app.homenotes.android.network.ApiJson
 import app.homenotes.android.network.AuthResponseDto
 import app.homenotes.android.network.HomeCardDto
 import app.homenotes.android.network.HomeCardUpsertRequestDto
@@ -7,17 +8,16 @@ import app.homenotes.android.network.InventoryDto
 import app.homenotes.android.network.toDomain
 import app.homenotes.android.network.NoteDto
 import app.homenotes.android.network.NoteUpsertRequestDto
-import com.google.gson.Gson
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class JsonContractFixtureTest {
 
-    private val gson = Gson()
-
     @Test
     fun authResponseFixtureMatchesAndroidDto() {
-        val dto = gson.fromJson(fixture("auth-response.json"), AuthResponseDto::class.java)
+        val dto = ApiJson.decodeFromString<AuthResponseDto>(fixture("auth-response.json"))
 
         assertEquals("access-token", dto.accessToken)
         assertEquals("refresh-token", dto.refreshToken)
@@ -29,8 +29,8 @@ class JsonContractFixtureTest {
 
     @Test
     fun noteFixturesMatchAndroidDtos() {
-        val response = gson.fromJson(fixture("note-response.json"), NoteDto::class.java)
-        val request = gson.fromJson(fixture("note-upsert-request.json"), NoteUpsertRequestDto::class.java)
+        val response = ApiJson.decodeFromString<NoteDto>(fixture("note-response.json"))
+        val request = ApiJson.decodeFromString<NoteUpsertRequestDto>(fixture("note-upsert-request.json"))
 
         assertEquals("Groceries", response.title)
         assertEquals("SHOPPING", response.category)
@@ -46,8 +46,8 @@ class JsonContractFixtureTest {
 
     @Test
     fun homeCardFixturesMatchAndroidDtos() {
-        val response = gson.fromJson(fixture("home-card-response.json"), HomeCardDto::class.java)
-        val request = gson.fromJson(fixture("home-card-upsert-request.json"), HomeCardUpsertRequestDto::class.java)
+        val response = ApiJson.decodeFromString<HomeCardDto>(fixture("home-card-response.json"))
+        val request = ApiJson.decodeFromString<HomeCardUpsertRequestDto>(fixture("home-card-upsert-request.json"))
 
         assertEquals("Meter", response.title)
         assertEquals("METERS", response.section)
@@ -65,7 +65,7 @@ class JsonContractFixtureTest {
 
     @Test
     fun errorFixtureMatchesAndroidErrorShape() {
-        val response = gson.fromJson(fixture("error-response.json"), ApiErrorDto::class.java)
+        val response = ApiJson.decodeFromString<ApiErrorDto>(fixture("error-response.json"))
 
         assertEquals("invalid_request", response.code)
         assertEquals("Email is required", response.message)
@@ -73,7 +73,7 @@ class JsonContractFixtureTest {
 
     @Test
     fun inventoryFixtureMatchesAndroidDto() {
-        val dto = gson.fromJson(fixture("inventory-response.json"), InventoryDto::class.java)
+        val dto = ApiJson.decodeFromString<InventoryDto>(fixture("inventory-response.json"))
         val inventory = dto.toDomain()
 
         val helmet = inventory.items.first { it.id == "iron-helmet" }
@@ -94,6 +94,7 @@ class JsonContractFixtureTest {
             "Missing fixture contracts/$name"
         }.readText()
 
+    @Serializable
     private data class ApiErrorDto(
         val code: String? = null,
         val message: String? = null

@@ -1,8 +1,10 @@
 package app.homenotes.android
 
+import app.homenotes.android.network.ApiJson
 import app.homenotes.android.network.AuthResponseDto
 import app.homenotes.android.network.RefreshTokenRequestDto
-import com.google.gson.Gson
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import okhttp3.Authenticator
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
@@ -12,7 +14,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.Route
 import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.util.concurrent.TimeUnit
 
 class AuthorizationInterceptor(
@@ -39,8 +41,6 @@ class RefreshTokenAuthenticator(
     private val sessionManager: AuthSessionStore,
     private val baseUrl: String = ApiConfig.BASE_URL
 ) : Authenticator {
-
-    private val gson = Gson()
 
     override fun authenticate(route: Route?, response: Response): Request? {
         val requestAccessToken = response.request.header("Authorization")
@@ -91,7 +91,7 @@ class RefreshTokenAuthenticator(
     }
 
     private fun refreshTokens(refreshToken: String): RefreshResult {
-        val requestBody = gson.toJson(
+        val requestBody = ApiJson.encodeToString(
             RefreshTokenRequestDto(refreshToken = refreshToken)
         ).toRequestBody("application/json".toMediaType())
 
@@ -113,7 +113,7 @@ class RefreshTokenAuthenticator(
                 }
 
                 val body = response.body?.string() ?: return RefreshResult.TemporaryFailure
-                RefreshResult.Success(gson.fromJson(body, AuthResponseDto::class.java))
+                RefreshResult.Success(ApiJson.decodeFromString<AuthResponseDto>(body))
             }
         } catch (_: java.io.IOException) {
             RefreshResult.TemporaryFailure
@@ -169,7 +169,7 @@ object AuthenticatedApiFactory {
         return Retrofit.Builder()
             .baseUrl(baseUrl)
             .client(createOkHttpClient(sessionManager, baseUrl))
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(ApiJson.asConverterFactory("application/json".toMediaType()))
             .build()
     }
 }

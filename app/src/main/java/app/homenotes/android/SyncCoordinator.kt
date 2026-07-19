@@ -39,19 +39,21 @@ import app.homenotes.android.network.InventoryUnequipRequestDto
 import app.homenotes.android.network.NoteCompletionRequestDto
 import app.homenotes.android.network.NoteDto
 import app.homenotes.android.network.NotesApi
+import app.homenotes.android.network.ApiJson
 import app.homenotes.android.network.toDomain
 import app.homenotes.android.network.toEntity
 import app.homenotes.android.network.toUpdateRequest
 import app.homenotes.android.network.toUpsertRequestDto
-import com.google.gson.Gson
-import com.google.gson.JsonParseException
-import com.google.gson.stream.MalformedJsonException
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import retrofit2.HttpException
 
 sealed interface SyncStatus {
@@ -127,7 +129,6 @@ class OfflineSyncEngine(
     private val inventoryApi: InventoryApi,
     private val eventsApi: EventsApi,
     private val session: AuthSessionStore,
-    private val gson: Gson = Gson(),
 ) {
     suspend fun sync(accountKey: String): SyncRunResult {
         if (normalizeAccountKey(session.getEmail()) != accountKey) return SyncRunResult.SESSION_CHANGED
@@ -195,29 +196,29 @@ class OfflineSyncEngine(
                 characterApi.updateCharacter(sheet.toUpdateRequest())
             }
             OutboxKind.CHARACTER_XP -> {
-                val payload = gson.fromJson(operation.payload, XpPayload::class.java)
+                val payload = ApiJson.decodeFromString<XpPayload>(requireNotNull(operation.payload))
                 characterApi.addExperience(CharacterXpRequestDto(
                     payload.characterXp, payload.skillKey, payload.skillXp, operation.operationId,
                 ))
             }
             OutboxKind.CHARACTER_STAT_UPGRADE -> {
-                val payload = gson.fromJson(operation.payload, StatPayload::class.java)
+                val payload = ApiJson.decodeFromString<StatPayload>(requireNotNull(operation.payload))
                 characterApi.upgradeStat(CharacterStatUpgradeRequestDto(operation.operationId, payload.statKey))
             }
             OutboxKind.CHARACTER_RENAME -> {
-                val payload = gson.fromJson(operation.payload, RenamePayload::class.java)
+                val payload = ApiJson.decodeFromString<RenamePayload>(requireNotNull(operation.payload))
                 characterApi.rename(CharacterRenameRequestDto(operation.operationId, payload.name))
             }
             OutboxKind.INVENTORY_EQUIP -> {
-                val payload = gson.fromJson(operation.payload, EquipPayload::class.java)
+                val payload = ApiJson.decodeFromString<EquipPayload>(requireNotNull(operation.payload))
                 inventoryApi.equip(InventoryEquipRequestDto(operation.operationId, payload.itemId))
             }
             OutboxKind.INVENTORY_UNEQUIP -> {
-                val payload = gson.fromJson(operation.payload, UnequipPayload::class.java)
+                val payload = ApiJson.decodeFromString<UnequipPayload>(requireNotNull(operation.payload))
                 inventoryApi.unequip(InventoryUnequipRequestDto(operation.operationId, payload.slot))
             }
             OutboxKind.EVENT_CLAIM -> {
-                val payload = gson.fromJson(operation.payload, EventClaimPayload::class.java)
+                val payload = ApiJson.decodeFromString<EventClaimPayload>(requireNotNull(operation.payload))
                 eventsApi.claim(FocusEventClaimRequestDto(
                     operationId = operation.operationId,
                     eventKey = payload.eventKey,
@@ -256,7 +257,7 @@ class OfflineSyncEngine(
             pushNoteCreate(operation.copy(kind = OutboxKind.NOTE_CREATE))
             dao.note(operation.accountKey, localId)?.note?.remoteId
         } ?: return
-        val payload = gson.fromJson(operation.payload, CompletionPayloadWire::class.java)
+        val payload = ApiJson.decodeFromString<CompletionPayloadWire>(requireNotNull(operation.payload))
         val response = notesApi.updateNoteCompletion(remoteId, NoteCompletionRequestDto(payload.isCompleted))
         replaceServerNote(operation.accountKey, response.completedNote, localId)
         response.nextNote?.let { next ->
@@ -328,7 +329,7 @@ class OfflineSyncEngine(
      */
     private suspend fun pullFocusEventsTolerant() {
         try {
-            val catalog = eventsApi.getCatalog().events.map { it.toDomain().toEntity(gson) }
+            val catalog = eventsApi.getCatalog().events.map { it.toDomain().toEntity() }
             if (catalog.isNotEmpty()) dao.replaceFocusEvents(catalog)
         } catch (error: Throwable) {
             if (!isEndpointUnsupported(error)) throw error
@@ -352,10 +353,10 @@ class OfflineSyncEngine(
     private fun isEndpointUnsupported(error: Throwable): Boolean {
         val code = (error as? HttpException)?.code()
         if (code == 404 || code == 405) return true
-        // Вместо JSON пришёл HTML (заглушка nginx/лендинг) — ошибка парсинга Gson.
+        // Вместо JSON пришёл HTML (заглушка nginx/лендинг) — ошибка парсинга kotlinx.serialization.
         var cause: Throwable? = error
         while (cause != null) {
-            if (cause is JsonParseException || cause is MalformedJsonException) return true
+            if (cause is SerializationException) return true
             cause = cause.cause
         }
         return false
@@ -388,7 +389,7 @@ class OfflineSyncEngine(
 
     private suspend fun replaceServerCharacter(account: String, dto: CharacterSheetDto) {
         dao.replaceCharacter(
-            LocalCharacterEntity(account, dto.name, dto.level, dto.xp, dto.xpToNext, true, gson.toJson(dto)),
+            LocalCharacterEntity(account, dto.name, dto.level, dto.xp, dto.xpToNext, true, ApiJson.encodeToString(dto)),
             dto.stats.mapIndexed { i, stat -> LocalCharacterStatEntity(account, stat.key, i, stat.name, stat.description, stat.value) },
             dto.skills.mapIndexed { i, skill -> LocalCharacterSkillEntity(account, skill.key, i, skill.name, skill.level, skill.progress) },
             LocalWalletEntity(account, dto.wallet.earnedCoins, dto.wallet.spentCoins, dto.wallet.availableCoins, true),
@@ -397,7 +398,7 @@ class OfflineSyncEngine(
 
     private suspend fun replaceServerInventory(account: String, dto: InventoryDto) {
         dao.replaceInventory(account, dto.toDomain().items.mapIndexed { i, item ->
-            item.toEntity(account, i, gson)
+            item.toEntity(account, i)
         })
     }
 
@@ -419,6 +420,7 @@ class OfflineSyncEngine(
         dao.putSyncState(LocalSyncStateEntity(account, status, dao.pendingCount(account), error, lastSyncedAt))
     }
 
+    @Serializable
     private data class CompletionPayloadWire(val isCompleted: Boolean)
 }
 

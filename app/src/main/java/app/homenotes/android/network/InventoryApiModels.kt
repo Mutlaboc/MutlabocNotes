@@ -5,8 +5,10 @@ import app.homenotes.android.Inventory
 import app.homenotes.android.InventoryItem
 import app.homenotes.android.ItemBonus
 import app.homenotes.android.ItemRarity
+import kotlinx.serialization.Serializable
 
 // DTO бонуса предмета к характеристике.
+@Serializable
 data class ItemBonusDto(
     val statKey: String,
     val statName: String,
@@ -14,6 +16,7 @@ data class ItemBonusDto(
 )
 
 // DTO одного предмета инвентаря.
+@Serializable
 data class InventoryItemDto(
     val id: String,
     val name: String,
@@ -27,14 +30,17 @@ data class InventoryItemDto(
 )
 
 // DTO полного инвентаря (ответ GET и всех мутаций).
+@Serializable
 data class InventoryDto(
     val items: List<InventoryItemDto> = emptyList(),
 )
 
 // Тело запроса «надеть предмет». Слот определяет сам предмет.
+@Serializable
 data class InventoryEquipRequestDto(val operationId: String, val itemId: String)
 
 // Тело запроса «снять предмет из слота».
+@Serializable
 data class InventoryUnequipRequestDto(val operationId: String, val slot: String)
 
 fun InventoryDto.toDomain(): Inventory = Inventory(

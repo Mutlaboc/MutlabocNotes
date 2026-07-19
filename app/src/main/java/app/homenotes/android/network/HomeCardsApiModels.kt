@@ -3,14 +3,17 @@ package app.homenotes.android.network
 import app.homenotes.android.HomeField
 import app.homenotes.android.HomeInfoCard
 import app.homenotes.android.HomeSection
+import kotlinx.serialization.Serializable
 
 // Модель данных поля карточки дома.
+@Serializable
 data class HomeFieldDto(
     val key: String,
     val value: String,
 )
 
 // Модель данных для карточки дома.
+@Serializable
 data class HomeCardDto(
     val id: String,
     val title: String,
@@ -23,6 +26,7 @@ data class HomeCardDto(
 )
 
 // Модель данных для request payload, отправляемого в backend.
+@Serializable
 data class HomeCardUpsertRequestDto(
     val title: String,
     val section: String,

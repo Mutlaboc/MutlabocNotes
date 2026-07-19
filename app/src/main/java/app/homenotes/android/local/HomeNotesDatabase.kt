@@ -179,7 +179,7 @@ data class LocalInventoryItemEntity(
 
 /**
  * Кэш глобального каталога событий фокус-таймера (GET /events). Каталог общий для всех
- * аккаунтов, поэтому account_key нет. Item/новый навык хранятся как JSON (Gson).
+ * аккаунтов, поэтому account_key нет. Item/новый навык хранятся как JSON (kotlinx.serialization).
  */
 @Entity(tableName = "focus_events")
 data class LocalFocusEventEntity(

@@ -5,9 +5,12 @@ import app.homenotes.android.FocusEventItem
 import app.homenotes.android.FocusEventNewSkill
 import app.homenotes.android.FocusEventType
 import app.homenotes.android.local.LocalFocusEventEntity
-import com.google.gson.Gson
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 
 // DTO предмета-награды события (обе локали приходят разом — кэшируем целиком).
+@Serializable
 data class FocusEventItemDto(
     val key: String,
     val nameRu: String,
@@ -24,6 +27,7 @@ data class FocusEventItemDto(
 )
 
 // DTO нового навыка-награды события.
+@Serializable
 data class FocusEventNewSkillDto(
     val key: String,
     val nameRu: String,
@@ -31,6 +35,7 @@ data class FocusEventNewSkillDto(
 )
 
 // DTO одного события каталога.
+@Serializable
 data class FocusEventDto(
     val key: String,
     val type: String,
@@ -44,11 +49,13 @@ data class FocusEventDto(
 )
 
 // Ответ GET /events.
+@Serializable
 data class FocusEventsCatalogDto(
     val events: List<FocusEventDto> = emptyList(),
 )
 
 // Тело POST /events/claims. [locale] определяет язык имени предмета/навыка на сервере.
+@Serializable
 data class FocusEventClaimRequestDto(
     val operationId: String,
     val eventKey: String,
@@ -57,6 +64,7 @@ data class FocusEventClaimRequestDto(
 )
 
 // Ответ клейма: свежий лист персонажа и выданный предмет (если был).
+@Serializable
 data class FocusEventClaimResponseDto(
     val sheet: CharacterSheetDto,
     val grantedItem: InventoryItemDto? = null,
@@ -90,7 +98,7 @@ fun FocusEventDto.toDomain(): FocusEvent = FocusEvent(
 )
 
 // Сериализация домена в Room-кэш и обратно (item/новый навык — JSON-колонки).
-fun FocusEvent.toEntity(gson: Gson): LocalFocusEventEntity = LocalFocusEventEntity(
+fun FocusEvent.toEntity(): LocalFocusEventEntity = LocalFocusEventEntity(
     eventKey = key,
     eventType = type.name,
     weight = weight,
@@ -98,11 +106,11 @@ fun FocusEvent.toEntity(gson: Gson): LocalFocusEventEntity = LocalFocusEventEnti
     textEn = textEn,
     characterXp = characterXp,
     skillXp = skillXp,
-    itemJson = item?.let(gson::toJson),
-    newSkillJson = newSkill?.let(gson::toJson),
+    itemJson = item?.let { ApiJson.encodeToString(it) },
+    newSkillJson = newSkill?.let { ApiJson.encodeToString(it) },
 )
 
-fun LocalFocusEventEntity.toDomain(gson: Gson): FocusEvent = FocusEvent(
+fun LocalFocusEventEntity.toDomain(): FocusEvent = FocusEvent(
     key = eventKey,
     type = FocusEventType.fromKey(eventType),
     weight = weight,
@@ -110,6 +118,6 @@ fun LocalFocusEventEntity.toDomain(gson: Gson): FocusEvent = FocusEvent(
     textEn = textEn,
     characterXp = characterXp,
     skillXp = skillXp,
-    item = itemJson?.let { runCatching { gson.fromJson(it, FocusEventItem::class.java) }.getOrNull() },
-    newSkill = newSkillJson?.let { runCatching { gson.fromJson(it, FocusEventNewSkill::class.java) }.getOrNull() },
+    item = itemJson?.let { runCatching { ApiJson.decodeFromString<FocusEventItem>(it) }.getOrNull() },
+    newSkill = newSkillJson?.let { runCatching { ApiJson.decodeFromString<FocusEventNewSkill>(it) }.getOrNull() },
 )

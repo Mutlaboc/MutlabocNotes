@@ -13,14 +13,16 @@ import app.homenotes.android.local.LocalNoteEntity
 import app.homenotes.android.local.LocalNoteWithChecklist
 import app.homenotes.android.local.OfflineDao
 import app.homenotes.android.local.OutboxEntity
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import app.homenotes.android.network.ApiJson
 import java.util.Calendar
 import java.util.Locale
 import java.util.TimeZone
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 
 internal fun normalizeAccountKey(email: String?): String? = email
     ?.trim()
@@ -51,19 +53,25 @@ internal object OutboxKind {
 /** Ключ outbox/hasPending для операций инвентаря — отдельный от листа персонажа. */
 internal fun inventoryLocalId(account: String): String = "inventory::$account"
 
+@Serializable
 private data class CompletionPayload(val isCompleted: Boolean)
+@Serializable
 internal data class XpPayload(val characterXp: Int, val skillKey: String?, val skillXp: Int)
+@Serializable
 internal data class StatPayload(val statKey: String)
+@Serializable
 internal data class RenamePayload(val name: String)
+@Serializable
 internal data class EquipPayload(val itemId: String)
+@Serializable
 internal data class UnequipPayload(val slot: String)
+@Serializable
 internal data class EventClaimPayload(val eventKey: String, val skillKey: String?, val locale: String?)
 
 class OfflineNotesRepository(
     private val dao: OfflineDao,
     private val session: AuthSessionStore,
     private val scheduler: SyncScheduler,
-    private val gson: Gson = Gson(),
 ) : NotesDataSource {
 
     override fun observeNotes(): Flow<List<Note>> {
@@ -141,7 +149,7 @@ class OfflineNotesRepository(
         }
         enqueue(
             account, OutboxKind.NOTE_COMPLETION, noteId, current.note.remoteId,
-            payload = gson.toJson(CompletionPayload(isCompleted)),
+            payload = ApiJson.encodeToString(CompletionPayload(isCompleted)),
         )
         scheduler.request(account)
         CompletionUpdate(toDomain(LocalNoteWithChecklist(completed, current.checklist)), next)
@@ -249,7 +257,6 @@ class OfflineCharacterRepository(
     private val dao: OfflineDao,
     private val session: AuthSessionStore,
     private val scheduler: SyncScheduler,
-    private val gson: Gson = Gson(),
 ) : CharacterDataSource {
     override suspend fun getCharacter(): Result<CharacterSheet> = runCatching {
         val account = requireAccount()
@@ -279,7 +286,7 @@ class OfflineCharacterRepository(
         dao.enqueue(OutboxEntity(
             accountKey = account, kind = OutboxKind.CHARACTER_XP, localId = account,
             operationId = UUID.randomUUID().toString(),
-            payload = gson.toJson(XpPayload(characterXp, skillKey, skillXp)),
+            payload = ApiJson.encodeToString(XpPayload(characterXp, skillKey, skillXp)),
             createdAt = System.currentTimeMillis(),
         ))
         scheduler.request(account)
@@ -292,7 +299,7 @@ class OfflineCharacterRepository(
         putProjection(account, sheet, existing.hasServerSnapshot, existing.snapshotJson)
         dao.enqueue(OutboxEntity(
             accountKey = account, kind = OutboxKind.CHARACTER_STAT_UPGRADE, localId = account,
-            operationId = UUID.randomUUID().toString(), payload = gson.toJson(StatPayload(statKey)),
+            operationId = UUID.randomUUID().toString(), payload = ApiJson.encodeToString(StatPayload(statKey)),
             createdAt = System.currentTimeMillis(),
         ))
         scheduler.request(account)
@@ -305,7 +312,7 @@ class OfflineCharacterRepository(
         putProjection(account, sheet, existing.hasServerSnapshot, existing.snapshotJson)
         dao.enqueue(OutboxEntity(
             accountKey = account, kind = OutboxKind.CHARACTER_RENAME, localId = account,
-            operationId = UUID.randomUUID().toString(), payload = gson.toJson(RenamePayload(sheet.name)),
+            operationId = UUID.randomUUID().toString(), payload = ApiJson.encodeToString(RenamePayload(sheet.name)),
             createdAt = System.currentTimeMillis(),
         ))
         scheduler.request(account)
@@ -332,37 +339,36 @@ class OfflineInventoryRepository(
     private val dao: OfflineDao,
     private val session: AuthSessionStore,
     private val scheduler: SyncScheduler,
-    private val gson: Gson = Gson(),
 ) : InventoryDataSource {
 
     override suspend fun getInventory(): Result<Inventory> = runCatching {
-        dao.inventoryItems(requireAccount()).toDomainInventory(gson)
+        dao.inventoryItems(requireAccount()).toDomainInventory()
     }
 
     override suspend fun equip(itemId: String): Result<Inventory> = runCatching {
         val account = requireAccount()
-        val current = dao.inventoryItems(account).toDomainInventory(gson)
+        val current = dao.inventoryItems(account).toDomainInventory()
         val item = requireNotNull(current.items.firstOrNull { it.id == itemId }) { "Unknown item: $itemId" }
         require(item.isEquippable) { "Item is not equippable: $itemId" }
         val updated = current.applyEquip(itemId)
         putProjection(account, updated)
-        enqueue(account, OutboxKind.INVENTORY_EQUIP, gson.toJson(EquipPayload(itemId)))
+        enqueue(account, OutboxKind.INVENTORY_EQUIP, ApiJson.encodeToString(EquipPayload(itemId)))
         updated
     }
 
     override suspend fun unequip(slot: EquipSlot): Result<Inventory> = runCatching {
         val account = requireAccount()
-        val current = dao.inventoryItems(account).toDomainInventory(gson)
+        val current = dao.inventoryItems(account).toDomainInventory()
         val updated = current.applyUnequip(slot)
         if (updated != current) {
             putProjection(account, updated)
-            enqueue(account, OutboxKind.INVENTORY_UNEQUIP, gson.toJson(UnequipPayload(slot.name)))
+            enqueue(account, OutboxKind.INVENTORY_UNEQUIP, ApiJson.encodeToString(UnequipPayload(slot.name)))
         }
         updated
     }
 
     private suspend fun putProjection(account: String, inventory: Inventory) {
-        dao.replaceInventory(account, inventory.items.mapIndexed { i, item -> item.toEntity(account, i, gson) })
+        dao.replaceInventory(account, inventory.items.mapIndexed { i, item -> item.toEntity(account, i) })
     }
 
     private suspend fun enqueue(account: String, kind: String, payload: String) {
@@ -378,23 +384,21 @@ class OfflineInventoryRepository(
         ?: throw IllegalStateException("No active account")
 }
 
-internal fun List<LocalInventoryItemEntity>.toDomainInventory(gson: Gson): Inventory =
-    Inventory(items = map { it.toDomain(gson) })
+internal fun List<LocalInventoryItemEntity>.toDomainInventory(): Inventory =
+    Inventory(items = map { it.toDomain() })
 
-private fun LocalInventoryItemEntity.toDomain(gson: Gson): InventoryItem = InventoryItem(
+private fun LocalInventoryItemEntity.toDomain(): InventoryItem = InventoryItem(
     id = itemId,
     name = name,
     description = description,
     icon = icon,
     slot = EquipSlot.fromKey(slot),
     rarity = ItemRarity.fromKey(rarity),
-    bonuses = runCatching {
-        gson.fromJson<List<ItemBonus>>(bonusesJson, object : TypeToken<List<ItemBonus>>() {}.type)
-    }.getOrNull().orEmpty(),
+    bonuses = runCatching { ApiJson.decodeFromString<List<ItemBonus>>(bonusesJson) }.getOrNull().orEmpty(),
     equippedSlot = EquipSlot.fromKey(equippedSlot),
 )
 
-internal fun InventoryItem.toEntity(account: String, position: Int, gson: Gson) = LocalInventoryItemEntity(
+internal fun InventoryItem.toEntity(account: String, position: Int) = LocalInventoryItemEntity(
     accountKey = account,
     itemId = id,
     position = position,
@@ -403,7 +407,7 @@ internal fun InventoryItem.toEntity(account: String, position: Int, gson: Gson) 
     icon = icon,
     slot = slot?.name,
     rarity = rarity.name,
-    bonusesJson = gson.toJson(bonuses),
+    bonusesJson = ApiJson.encodeToString(bonuses),
     equippedSlot = equippedSlot?.name,
 )
 

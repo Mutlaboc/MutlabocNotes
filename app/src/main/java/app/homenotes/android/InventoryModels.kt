@@ -1,5 +1,7 @@
 package app.homenotes.android
 
+import kotlinx.serialization.Serializable
+
 /* ------------------------------------------------------------------ *
  * Доменная модель инвентаря и экипировки. Слоты — классика D&D.
  * Иконки предметов приходят с бекенда как текстовые глифы (emoji),
@@ -28,6 +30,7 @@ enum class ItemRarity {
 }
 
 /** Бонус предмета к характеристике: ключ и имя совпадают со статами листа персонажа. */
+@Serializable
 data class ItemBonus(
     val statKey: String,
     val statName: String,

@@ -1,11 +1,11 @@
 package app.homenotes.android
 
-import com.google.gson.Gson
+import app.homenotes.android.network.ApiJson
+import kotlinx.serialization.Serializable
 import retrofit2.HttpException
 import java.io.IOException
 
 object ApiErrorMapper {
-    private val gson = Gson()
 
     fun map(error: Throwable): UiText {
         val resId = when (error) {
@@ -57,10 +57,11 @@ object ApiErrorMapper {
     private fun HttpException.apiErrorCode(): String? {
         val body = response()?.errorBody()?.string()?.takeIf { it.isNotBlank() } ?: return null
         return runCatching {
-            gson.fromJson(body, ApiErrorDto::class.java)?.code?.trim()?.takeIf { it.isNotEmpty() }
+            ApiJson.decodeFromString(ApiErrorDto.serializer(), body).code?.trim()?.takeIf { it.isNotEmpty() }
         }.getOrNull()
     }
 
+    @Serializable
     private data class ApiErrorDto(
         val code: String? = null,
         val message: String? = null

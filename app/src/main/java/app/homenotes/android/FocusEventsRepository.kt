@@ -4,10 +4,11 @@ import app.homenotes.android.local.LocalCharacterSkillEntity
 import app.homenotes.android.local.LocalInventoryItemEntity
 import app.homenotes.android.local.OfflineDao
 import app.homenotes.android.local.OutboxEntity
+import app.homenotes.android.network.ApiJson
 import app.homenotes.android.network.toDomain
-import com.google.gson.Gson
 import java.util.UUID
 import kotlin.random.Random
+import kotlinx.serialization.encodeToString
 
 /**
  * Репозиторий полосы событий фокус-таймера (offline-first).
@@ -21,7 +22,6 @@ class FocusEventsRepository(
     private val dao: OfflineDao,
     private val session: AuthSessionStore,
     private val scheduler: SyncScheduler,
-    private val gson: Gson = Gson(),
     private val random: Random = Random.Default,
 ) {
 
@@ -34,7 +34,7 @@ class FocusEventsRepository(
         val account = normalizeAccountKey(session.getEmail()) ?: return null
 
         val cached = dao.focusEvents()
-        val catalog = if (cached.isEmpty()) builtInFocusEvents else cached.map { it.toDomain(gson) }
+        val catalog = if (cached.isEmpty()) builtInFocusEvents else cached.map { it.toDomain() }
         val ownedSkills = dao.characterSkills(account)
         val ownedItemKeys = dao.inventoryItems(account).mapTo(hashSetOf()) { it.itemId }
 
@@ -73,7 +73,7 @@ class FocusEventsRepository(
             kind = OutboxKind.EVENT_CLAIM,
             localId = localId,
             operationId = UUID.randomUUID().toString(),
-            payload = gson.toJson(EventClaimPayload(
+            payload = ApiJson.encodeToString(EventClaimPayload(
                 eventKey = event.key,
                 skillKey = sessionSkillKey.takeIf { event.type == FocusEventType.SKILL_XP },
                 locale = if (english) "en" else "ru",
@@ -147,7 +147,7 @@ class FocusEventsRepository(
                 icon = item.icon,
                 slot = item.slot?.takeIf { EquipSlot.fromKey(it) != null },
                 rarity = ItemRarity.fromKey(item.rarity).name,
-                bonusesJson = gson.toJson(listOfNotNull(bonus)),
+                bonusesJson = ApiJson.encodeToString(listOfNotNull(bonus)),
                 equippedSlot = null,
             )
         ))

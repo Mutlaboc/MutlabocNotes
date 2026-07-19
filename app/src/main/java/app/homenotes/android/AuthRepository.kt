@@ -1,5 +1,6 @@
 package app.homenotes.android
 
+import app.homenotes.android.network.ApiJson
 import app.homenotes.android.network.AuthApi
 import app.homenotes.android.network.AuthCredentialsDto
 import app.homenotes.android.network.AuthResponseDto
@@ -10,10 +11,11 @@ import app.homenotes.android.network.YandexSocialLoginRequestDto
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import retrofit2.HttpException
 import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.util.concurrent.TimeUnit
 import java.io.IOException
 
@@ -190,7 +192,7 @@ class AuthRepository(
             return Retrofit.Builder()
                 .baseUrl(baseUrl)
                 .client(client)
-                .addConverterFactory(GsonConverterFactory.create())
+                .addConverterFactory(ApiJson.asConverterFactory("application/json".toMediaType()))
                 .build()
                 .create(AuthApi::class.java)
         }
