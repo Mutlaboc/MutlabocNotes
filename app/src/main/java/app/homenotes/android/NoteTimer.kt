@@ -181,6 +181,8 @@ fun ExpandedNoteOverlay(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
+            FocusActivityStrip(category = note.category, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(8.dp))
             FocusEventFeed(entries = focusEvents)
             Spacer(Modifier.height(16.dp))
             TimerWindow(

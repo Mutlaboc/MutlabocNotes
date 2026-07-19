@@ -113,7 +113,8 @@ internal object MascotScript {
 
     fun frameOf(frameKey: Int): Int = frameKey and 0xFF
 
-    private fun frameAt(anim: MascotAnim, localMs: Long): Int {
+    /** Frame index for [anim] at [localMs] within its own loop (shared with other scripted scenes). */
+    internal fun frameAt(anim: MascotAnim, localMs: Long): Int {
         val timings = MASCOT_FRAME_TIMINGS_MS.getValue(anim)
         var t = localMs % timings.sum()
         for (i in timings.indices) {
