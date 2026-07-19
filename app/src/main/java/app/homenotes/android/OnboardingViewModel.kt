@@ -68,4 +68,11 @@ class OnboardingViewModel(
             repository.markHintSeen(key, step)
         }
     }
+
+    fun markNoteFormHintSeen() {
+        val key = userKey.value ?: return
+        viewModelScope.launch(ioDispatcher) {
+            repository.markNoteFormHintSeen(key)
+        }
+    }
 }

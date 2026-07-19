@@ -464,7 +464,9 @@ fun MyApp(
                     onSaveClick = { createdNote ->
                         notesViewModel.addNote(createdNote)
                         navController.popBackStack()
-                    }
+                    },
+                    showFormHint = !onboardingViewModel.uiState.noteFormHintSeen,
+                    onFormHintSeen = onboardingViewModel::markNoteFormHintSeen
                 )
             }
 

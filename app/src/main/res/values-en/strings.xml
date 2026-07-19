@@ -178,6 +178,8 @@
     <string name="onboarding_hint_home_info_message">Here you can create home info cards: meters, appliances, documents and contacts.</string>
     <string name="onboarding_hint_completed_title">Completed tasks</string>
     <string name="onboarding_hint_completed_message">Completed notes gather here — take a look to see what is already done.</string>
+    <string name="onboarding_note_form_title">New note</string>
+    <string name="onboarding_note_form_message">Pick a category — shopping gets a checklist. Need a deadline or reminder? Set the date and time below.</string>
     <string name="sync_status_syncing">Syncing…</string>
     <string name="sync_status_pending">Waiting to sync: %1$d</string>
     <string name="sync_status_offline">Offline · waiting: %1$d</string>

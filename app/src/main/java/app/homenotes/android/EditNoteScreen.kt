@@ -104,7 +104,9 @@ internal fun prepareNoteForSave(
 fun EditNoteScreen(
     note: Note?,
     onSaveClick: (Note) -> Unit,
-    onDeleteClick: (() -> Unit)? = null
+    onDeleteClick: (() -> Unit)? = null,
+    showFormHint: Boolean = false,
+    onFormHintSeen: () -> Unit = {}
 ) {
     val noteId = note?.id.orEmpty()
     var title by remember(noteId) { mutableStateOf(note?.title ?: "") }
@@ -195,6 +197,15 @@ fun EditNoteScreen(
                         bottom = if (showQuestScene) sceneHeight + 16.dp else 16.dp
                     )
             ) {
+                if (note == null && showFormHint) {
+                    NoteFormOnboardingTip(
+                        title = stringResource(R.string.onboarding_note_form_title),
+                        message = stringResource(R.string.onboarding_note_form_message),
+                        buttonText = stringResource(R.string.onboarding_done),
+                        onDismiss = onFormHintSeen
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
                 NoteTitleField(
                     title = title,
                     isError = isTitleError,

@@ -42,6 +42,8 @@ const val ONBOARDING_WELCOME_TEST_TAG = "onboarding_welcome"
 const val ONBOARDING_WELCOME_BUTTON_TEST_TAG = "onboarding_welcome_button"
 const val ONBOARDING_COACH_TEST_TAG = "onboarding_coach"
 const val ONBOARDING_COACH_BUTTON_TEST_TAG = "onboarding_coach_button"
+const val ONBOARDING_NOTE_FORM_HINT_TEST_TAG = "onboarding_note_form_hint"
+const val ONBOARDING_NOTE_FORM_HINT_BUTTON_TEST_TAG = "onboarding_note_form_hint_button"
 
 /**
  * Приветственный экран при первом запуске. Закрывается только кнопкой, чтобы
@@ -97,6 +99,54 @@ fun OnboardingWelcomeDialog(
                         .testTag(ONBOARDING_WELCOME_BUTTON_TEST_TAG)
                 )
             }
+        }
+    }
+}
+
+/**
+ * Одноразовая подсказка на экране создания заметки: обычная (не всплывающая) карточка
+ * в начале формы — там нет конкретной иконки, к которой можно было бы привязать коучмарк.
+ */
+@Composable
+fun NoteFormOnboardingTip(
+    title: String,
+    message: String,
+    buttonText: String,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    PixelPanel(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag(ONBOARDING_NOTE_FORM_HINT_TEST_TAG)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            androidx.compose.material.Text(
+                text = title,
+                color = CozyAuth.Ink,
+                fontFamily = CozyAuth.PixelFont,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            androidx.compose.material.Text(
+                text = message,
+                color = CozyAuth.InkSoft,
+                fontFamily = CozyAuth.PixelFont,
+                fontSize = 14.sp
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            PixelPrimaryButton(
+                text = buttonText,
+                onClick = onDismiss,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(ONBOARDING_NOTE_FORM_HINT_BUTTON_TEST_TAG)
+            )
         }
     }
 }

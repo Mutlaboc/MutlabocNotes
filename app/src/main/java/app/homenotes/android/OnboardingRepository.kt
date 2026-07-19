@@ -30,7 +30,8 @@ data class OnboardingState(
     val welcomeSeen: Boolean = false,
     val addNoteHintSeen: Boolean = false,
     val homeInfoHintSeen: Boolean = false,
-    val completedHintSeen: Boolean = false
+    val completedHintSeen: Boolean = false,
+    val noteFormHintSeen: Boolean = false
 ) {
     fun hintSeen(step: OnboardingHintStep): Boolean = when (step) {
         OnboardingHintStep.ADD_NOTE -> addNoteHintSeen
@@ -50,7 +51,8 @@ data class OnboardingState(
             welcomeSeen = true,
             addNoteHintSeen = true,
             homeInfoHintSeen = true,
-            completedHintSeen = true
+            completedHintSeen = true,
+            noteFormHintSeen = true
         )
     }
 }
@@ -63,6 +65,7 @@ interface OnboardingRepository {
     fun state(userKey: String): Flow<OnboardingState>
     suspend fun markWelcomeSeen(userKey: String)
     suspend fun markHintSeen(userKey: String, step: OnboardingHintStep)
+    suspend fun markNoteFormHintSeen(userKey: String)
 }
 
 private val Context.onboardingDataStore by preferencesDataStore(
@@ -89,7 +92,8 @@ class DataStoreOnboardingRepository internal constructor(
                 welcomeSeen = preferences[welcomeKey(userKey)] ?: false,
                 addNoteHintSeen = preferences[hintKey(userKey, OnboardingHintStep.ADD_NOTE)] ?: false,
                 homeInfoHintSeen = preferences[hintKey(userKey, OnboardingHintStep.HOME_INFO)] ?: false,
-                completedHintSeen = preferences[hintKey(userKey, OnboardingHintStep.COMPLETED)] ?: false
+                completedHintSeen = preferences[hintKey(userKey, OnboardingHintStep.COMPLETED)] ?: false,
+                noteFormHintSeen = preferences[noteFormHintKey(userKey)] ?: false
             )
         }
 
@@ -104,6 +108,14 @@ class DataStoreOnboardingRepository internal constructor(
             preferences[hintKey(userKey, step)] = true
         }
     }
+
+    override suspend fun markNoteFormHintSeen(userKey: String) {
+        dataStore.edit { preferences ->
+            preferences[noteFormHintKey(userKey)] = true
+        }
+    }
+
+    private fun noteFormHintKey(userKey: String) = booleanPreferencesKey("note_form_hint_seen::$userKey")
 
     private fun welcomeKey(userKey: String) = booleanPreferencesKey("welcome_seen::$userKey")
 
@@ -129,6 +141,10 @@ class InMemoryOnboardingRepository : OnboardingRepository {
 
     override suspend fun markHintSeen(userKey: String, step: OnboardingHintStep) {
         update(userKey) { it.withHintSeen(step) }
+    }
+
+    override suspend fun markNoteFormHintSeen(userKey: String) {
+        update(userKey) { it.copy(noteFormHintSeen = true) }
     }
 
     private fun update(userKey: String, transform: (OnboardingState) -> OnboardingState) {

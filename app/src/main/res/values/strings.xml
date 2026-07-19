@@ -178,6 +178,8 @@
     <string name="onboarding_hint_home_info_message">Здесь создаются карточки с информацией о доме: счётчики, техника, документы и контакты.</string>
     <string name="onboarding_hint_completed_title">Выполненные задачи</string>
     <string name="onboarding_hint_completed_message">Тут собираются выполненные заметки — загляни, чтобы увидеть, что уже сделано.</string>
+    <string name="onboarding_note_form_title">Новая заметка</string>
+    <string name="onboarding_note_form_message">Выбери категорию — для покупок появится список с чекбоксами. Если нужен срок или напоминание, задай дату и время ниже.</string>
     <string name="sync_status_syncing">Синхронизация…</string>
     <string name="sync_status_pending">Ожидают синхронизации: %1$d</string>
     <string name="sync_status_offline">Нет сети · ожидают: %1$d</string>
