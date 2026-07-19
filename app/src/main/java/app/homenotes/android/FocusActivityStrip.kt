@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 /*
@@ -141,4 +142,13 @@ internal fun FocusActivityStrip(
                 }
         )
     }
+}
+
+
+@Preview(showBackground = true)
+@Composable
+fun FocusActivityStripPreview() {
+
+    FocusActivityStrip(
+        NoteCategory.RECURRING_TASKS,)
 }

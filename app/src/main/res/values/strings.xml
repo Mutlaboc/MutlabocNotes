@@ -168,7 +168,7 @@
     <string name="timer_done">Выполнено</string>
     <string name="timer_home">На главную</string>
     <string name="focus_events_title">События</string>
-    <string name="focus_events_empty">Работай — и что-нибудь обязательно произойдёт…</string>
+    <string name="focus_events_empty">Давай примемся за дело и что-то обязательно произойдет…</string>
     <string name="focus_event_xp">+%1$d опыта</string>
     <string name="focus_event_skill">%1$s: +%2$d опыта навыка</string>
     <string name="focus_event_item">В инвентаре: %1$s</string>

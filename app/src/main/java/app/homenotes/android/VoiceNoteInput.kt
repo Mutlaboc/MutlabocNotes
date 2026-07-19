@@ -56,7 +56,7 @@ private fun rememberVoiceRecognitionLauncher(
     return {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toString())
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE,  "ru-RU")
             putExtra(RecognizerIntent.EXTRA_PROMPT, context.getString(R.string.note_voice_prompt))
         }
         try {
