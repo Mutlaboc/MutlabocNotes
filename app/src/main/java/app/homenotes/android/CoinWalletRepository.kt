@@ -81,6 +81,7 @@ class InMemoryCoinWalletRepository : CoinWalletRepository {
 class RoomCoinWalletRepository(
     private val dao: OfflineDao,
     private val legacy: CoinWalletRepository,
+    private val achievements: AchievementsTracker? = null,
 ) : CoinWalletRepository {
     override suspend fun spentCoins(userKey: String): Int {
         val account = normalizeAccountKey(userKey) ?: return 0
@@ -107,6 +108,7 @@ class RoomCoinWalletRepository(
             legacySpendMigrated = true,
         )
         dao.putWallet(updated)
+        achievements?.report(AchievementMetrics.COINS_SPENT, amount.toLong())
         return updated.spentCoins
     }
 }

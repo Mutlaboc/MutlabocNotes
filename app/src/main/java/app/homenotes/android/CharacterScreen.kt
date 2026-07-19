@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -58,10 +59,7 @@ data class CharacterStat(
     val description: String,
     val value: Int,
     val key: String = ""
-) {
-    /** D&D ability modifier: floor((value - 10) / 2). */
-    val modifier: Int get() = Math.floorDiv(value - 10, 2)
-}
+)
 
 data class CharacterSkill(
     val name: String,
@@ -81,7 +79,7 @@ data class CharacterSheet(
 )
 
 fun sampleCharacterSheet(): CharacterSheet = CharacterSheet(
-    name = "Юра",
+    name = "Player",
     level = 1,
     xp = 0,
     xpToNext = 100,
@@ -95,9 +93,7 @@ fun sampleCharacterSheet(): CharacterSheet = CharacterSheet(
         CharacterStat("Харизма", "Уверенность, самообладание и обаяние", 1)
     ),
     skills = listOf(
-        CharacterSkill("Лесоруб", 1, 0.0f),
-        CharacterSkill("Плотник", 1, 0.0f),
-        CharacterSkill("Архивариус", 1, 0.0f)
+        CharacterSkill("Лесоруб", 1, 0.0f)
     )
 )
 
@@ -186,7 +182,9 @@ fun CharacterScreen(
     onRename: (String) -> Unit = {},
     availableCoins: Int = 0,
     onUpgradeStat: (String) -> Unit = {},
-    onOpenInventory: () -> Unit = {}
+    onOpenInventory: () -> Unit = {},
+    achievementPoints: Int = 0,
+    onOpenAchievements: () -> Unit = {}
 ) {
     val scaffoldState = rememberScaffoldState()
     Scaffold(
@@ -216,7 +214,9 @@ fun CharacterScreen(
                     onRename = onRename,
                     availableCoins = availableCoins,
                     onUpgradeStat = onUpgradeStat,
-                    onOpenInventory = onOpenInventory
+                    onOpenInventory = onOpenInventory,
+                    achievementPoints = achievementPoints,
+                    onOpenAchievements = onOpenAchievements
                 )
             }
         }
@@ -229,7 +229,9 @@ private fun CharacterContent(
     onRename: (String) -> Unit,
     availableCoins: Int,
     onUpgradeStat: (String) -> Unit,
-    onOpenInventory: () -> Unit
+    onOpenInventory: () -> Unit,
+    achievementPoints: Int,
+    onOpenAchievements: () -> Unit
 ) {
     var showRenameDialog by remember { mutableStateOf(false) }
     if (showRenameDialog) {
@@ -257,6 +259,19 @@ private fun CharacterContent(
             onClick = onOpenInventory,
             modifier = Modifier.fillMaxWidth()
         )
+        Spacer(Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            PixelOutlineButton(
+                text = stringResource(R.string.achievements_open),
+                onClick = onOpenAchievements,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.width(10.dp))
+            AchievementPointsChip(achievementPoints)
+        }
         Spacer(Modifier.height(20.dp))
 
         Row(
@@ -475,8 +490,6 @@ private fun StatTile(
     onUpgrade: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val mod = stat.modifier
-    val modText = if (mod >= 0) "+$mod" else "$mod"
     val atMax = stat.value >= CHARACTER_STAT_MAX
     val cost = statUpgradeCost(stat.value)
     val canAfford = availableCoins >= cost
@@ -509,13 +522,6 @@ private fun StatTile(
                 color = CozyAuth.Ink,
                 fontWeight = FontWeight.Bold,
                 fontSize = 26.sp
-            )
-            Text(
-                text = modText,
-                fontFamily = CozyAuth.PixelFont,
-                color = CozyAuth.Terracotta,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
             )
             Spacer(Modifier.height(10.dp))
             StatUpgradeButton(
@@ -626,6 +632,33 @@ private fun CoinBalanceChip(coins: Int) {
     }
 }
 
+/** Суммарные очки достижений рядом с кнопкой «Достижения». */
+@Composable
+private fun AchievementPointsChip(points: Int) {
+    val shape = RoundedCornerShape(6.dp)
+    Row(
+        modifier = Modifier
+            .clip(shape)
+            .background(CozyAuth.FieldCream)
+            .border(2.dp, CozyAuth.BrownOutline, shape)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "🏆",
+            fontSize = 16.sp
+        )
+        Spacer(Modifier.size(6.dp))
+        Text(
+            text = points.toString(),
+            fontFamily = CozyAuth.PixelFont,
+            color = CozyAuth.Ink,
+            fontWeight = FontWeight.Bold,
+            fontSize = 15.sp
+        )
+    }
+}
+
 @Composable
 private fun SkillCard(skill: CharacterSkill) {
     PixelPanel(
@@ -664,34 +697,6 @@ private fun SkillCard(skill: CharacterSkill) {
                 height = 12.dp
             )
         }
-    }
-}
-
-/** Chunky pixel progress bar: outlined track with a flat coloured fill. */
-@Composable
-private fun PixelBar(
-    progress: Float,
-    fill: Color,
-    height: androidx.compose.ui.unit.Dp,
-    track: Color = CozyAuth.FieldCream
-) {
-    val shape = RoundedCornerShape(3.dp)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(height)
-            .clip(shape)
-            .background(track)
-            .border(2.dp, CozyAuth.BrownOutline, shape)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(progress.coerceIn(0f, 1f))
-                .fillMaxHeight()
-                .padding(2.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(fill)
-        )
     }
 }
 

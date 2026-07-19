@@ -92,3 +92,42 @@ internal fun DeleteNoteDialog(
         }
     )
 }
+
+/** Предупреждение при выходе с экрана заметки, когда есть несохранённый ввод. */
+@Composable
+internal fun DiscardChangesDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        backgroundColor = CozyAuth.CardCream,
+        title = {
+            Text(
+                text = stringResource(R.string.note_discard_title),
+                color = CozyAuth.Ink,
+                fontFamily = CozyAuth.PixelFont
+            )
+        },
+        text = {
+            Text(
+                text = stringResource(R.string.note_discard_message),
+                color = CozyAuth.InkSoft,
+                fontFamily = CozyAuth.PixelFont
+            )
+        },
+        confirmButton = {
+            PixelPrimaryButton(
+                text = stringResource(R.string.action_exit),
+                onClick = onConfirm,
+                modifier = Modifier.testTag(EDIT_NOTE_DISCARD_CONFIRM_BUTTON_TEST_TAG)
+            )
+        },
+        dismissButton = {
+            PixelOutlineButton(
+                text = stringResource(R.string.action_cancel),
+                onClick = onDismiss
+            )
+        }
+    )
+}

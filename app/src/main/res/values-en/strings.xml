@@ -106,6 +106,7 @@
     <string name="repeat_rule_weekly">Weekly</string>
     <string name="repeat_rule_monthly">Monthly</string>
     <string name="first_task_start_value">First task: %1$s</string>
+    <string name="duration_estimate_title">Estimated duration</string>
     <string name="duration_days">Days</string>
     <string name="duration_hours">Hours</string>
     <string name="note_start_value">Starts: %1$s</string>
@@ -115,6 +116,9 @@
     <string name="coin_count_label">Coin count</string>
     <string name="note_delete_title">Delete note?</string>
     <string name="note_delete_message">This action cannot be undone.</string>
+    <string name="note_discard_title">Leave without saving?</string>
+    <string name="note_discard_message">Your input will not be saved.</string>
+    <string name="action_exit">Leave</string>
 
     <string name="home_info_title">Home information</string>
     <string name="home_info_header_description">The host writes a note at a table in a wooden house</string>
@@ -214,4 +218,82 @@
     <string name="inventory_rarity_rare">Rare</string>
     <string name="inventory_rarity_epic">Epic</string>
     <string name="inventory_rarity_legendary">Legendary</string>
+
+    <string name="achievements_title">Achievements</string>
+    <string name="achievements_open">Achievements</string>
+    <string name="achievement_unlocked">Achievement unlocked!</string>
+    <string name="achievement_points_plus">+%1$d points</string>
+    <string name="achievement_points_total">Achievement points</string>
+    <string name="achievement_progress_format">%1$d / %2$d</string>
+    <string name="achievement_completed">Completed!</string>
+    <string name="achievement_tier_bronze">Bronze</string>
+    <string name="achievement_tier_silver">Silver</string>
+    <string name="achievement_tier_gold">Gold</string>
+    <string name="achievement_tier_platinum">Platinum</string>
+
+    <string name="achievement_notes_created_title">Chronicler</string>
+    <string name="achievement_notes_created_desc">Create %1$d notes</string>
+    <string name="achievement_notes_completed_title">Finisher</string>
+    <string name="achievement_notes_completed_desc">Complete %1$d notes</string>
+    <string name="achievement_notes_shopping_title">Shopper</string>
+    <string name="achievement_notes_shopping_desc">Create %1$d shopping lists</string>
+    <string name="achievement_notes_tasks_title">Businesslike</string>
+    <string name="achievement_notes_tasks_desc">Create %1$d tasks</string>
+    <string name="achievement_notes_recurring_title">Round and Round</string>
+    <string name="achievement_notes_recurring_desc">Create %1$d recurring tasks</string>
+    <string name="achievement_notes_edited_title">Editor</string>
+    <string name="achievement_notes_edited_desc">Edit %1$d notes</string>
+    <string name="achievement_notes_deleted_title">Cleaner</string>
+    <string name="achievement_notes_deleted_desc">Delete %1$d notes</string>
+    <string name="achievement_deadlines_set_title">All According to Plan</string>
+    <string name="achievement_deadlines_set_desc">Set %1$d deadlines</string>
+    <string name="achievement_before_deadline_title">Right on Time</string>
+    <string name="achievement_before_deadline_desc">Complete %1$d notes before the deadline</string>
+    <string name="achievement_checklist_checked_title">Tick by Tick</string>
+    <string name="achievement_checklist_checked_desc">Check off %1$d checklist items</string>
+    <string name="achievement_productive_day_title">Productive Day</string>
+    <string name="achievement_productive_day_desc">Complete %1$d notes in a single day</string>
+    <string name="achievement_voice_inputs_title">Voice of the Home</string>
+    <string name="achievement_voice_inputs_desc">Dictate %1$d notes by voice</string>
+
+    <string name="achievement_focus_minutes_title">Deep Dive</string>
+    <string name="achievement_focus_minutes_desc">Spend %1$d minutes in focus</string>
+    <string name="achievement_focus_marathon_title">Marathoner</string>
+    <string name="achievement_focus_marathon_desc">Focus for %1$d minutes in one session</string>
+    <string name="achievement_focus_sessions_title">Time After Time</string>
+    <string name="achievement_focus_sessions_desc">Run %1$d focus sessions</string>
+    <string name="achievement_focus_events_title">Event Seeker</string>
+    <string name="achievement_focus_events_desc">Receive %1$d focus events</string>
+
+    <string name="achievement_character_level_title">Ascension</string>
+    <string name="achievement_character_level_desc">Reach level %1$d</string>
+    <string name="achievement_character_xp_title">Seasoned</string>
+    <string name="achievement_character_xp_desc">Earn %1$d experience</string>
+    <string name="achievement_skills_learned_title">Versatile</string>
+    <string name="achievement_skills_learned_desc">Learn %1$d skills</string>
+    <string name="achievement_stat_upgrades_title">Training</string>
+    <string name="achievement_stat_upgrades_desc">Upgrade stats %1$d times</string>
+    <string name="achievement_character_renames_title">New Identity</string>
+    <string name="achievement_character_renames_desc">Rename your character %1$d times</string>
+
+    <string name="achievement_items_received_title">Collector</string>
+    <string name="achievement_items_received_desc">Receive %1$d items</string>
+    <string name="achievement_items_equipped_title">Dressed to Impress</string>
+    <string name="achievement_items_equipped_desc">Equip %1$d items</string>
+    <string name="achievement_coins_earned_title">Piggy Bank</string>
+    <string name="achievement_coins_earned_desc">Earn %1$d coins</string>
+    <string name="achievement_coins_spent_title">Big Spender</string>
+    <string name="achievement_coins_spent_desc">Spend %1$d coins</string>
+
+    <string name="achievement_home_cards_created_title">Homeowner</string>
+    <string name="achievement_home_cards_created_desc">Create %1$d home cards</string>
+    <string name="achievement_home_cards_edited_title">Handy</string>
+    <string name="achievement_home_cards_edited_desc">Edit %1$d home cards</string>
+
+    <string name="achievement_active_days_title">Consistency</string>
+    <string name="achievement_active_days_desc">Be active on %1$d days</string>
+    <string name="achievement_streak_title">Streak</string>
+    <string name="achievement_streak_desc">Stay active %1$d days in a row</string>
+    <string name="achievement_early_bird_title">Early Bird</string>
+    <string name="achievement_early_bird_desc">Complete %1$d notes before 9 AM</string>
 </resources>

@@ -1,5 +1,6 @@
 package app.homenotes.android
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -37,6 +38,7 @@ const val EDIT_NOTE_CONTENT_FIELD_TEST_TAG = "edit_note_content_field"
 const val EDIT_NOTE_SAVE_BUTTON_TEST_TAG = "edit_note_save_button"
 const val EDIT_NOTE_DELETE_BUTTON_TEST_TAG = "edit_note_delete_button"
 const val EDIT_NOTE_DELETE_CONFIRM_BUTTON_TEST_TAG = "edit_note_delete_confirm_button"
+const val EDIT_NOTE_DISCARD_CONFIRM_BUTTON_TEST_TAG = "edit_note_discard_confirm_button"
 const val EDIT_NOTE_CHECKLIST_ADD_BUTTON_TEST_TAG = "edit_note_checklist_add_button"
 
 fun editNoteCategoryChipTestTag(category: NoteCategory): String = "edit_note_category_${category.name}"
@@ -87,9 +89,11 @@ internal fun prepareNoteForSave(
         startAtMillis = if (selectedCategory == NoteCategory.RECURRING_TASKS) {
             selectedStartAtMillis
         } else null,
-        durationMinutes = if (selectedCategory == NoteCategory.RECURRING_TASKS) {
-            (durationDays * 24L + durationHours) * 60L
-        } else null,
+        durationMinutes = when (selectedCategory) {
+            NoteCategory.RECURRING_TASKS, NoteCategory.TASKS ->
+                (durationDays * 24L + durationHours) * 60L
+            else -> null
+        },
         repeatRule = if (selectedCategory == NoteCategory.RECURRING_TASKS) {
             repeatRule
         } else {
@@ -105,8 +109,10 @@ fun EditNoteScreen(
     note: Note?,
     onSaveClick: (Note) -> Unit,
     onDeleteClick: (() -> Unit)? = null,
+    onBack: (() -> Unit)? = null,
     showFormHint: Boolean = false,
-    onFormHintSeen: () -> Unit = {}
+    onFormHintSeen: () -> Unit = {},
+    onVoiceInputUsed: () -> Unit = {}
 ) {
     val noteId = note?.id.orEmpty()
     var title by remember(noteId) { mutableStateOf(note?.title ?: "") }
@@ -148,6 +154,21 @@ fun EditNoteScreen(
     }
     var isTitleError by remember(noteId) { mutableStateOf(false) }
     var showDeleteDialog by remember(noteId) { mutableStateOf(false) }
+    var showDiscardDialog by remember(noteId) { mutableStateOf(false) }
+
+    // «Есть введённый текст»: при создании — любой непустой ввод,
+    // при редактировании — текст, отличающийся от сохранённого.
+    val hasUnsavedInput = if (note == null) {
+        title.isNotBlank() || content.isNotBlank() || checklistItems.any { it.text.isNotBlank() }
+    } else {
+        title != note.title || content != note.content
+    }
+    val handleBack: (() -> Unit)? = onBack?.let { back ->
+        { if (hasUnsavedInput) showDiscardDialog = true else back() }
+    }
+    if (onBack != null) {
+        BackHandler(enabled = hasUnsavedInput) { showDiscardDialog = true }
+    }
 
     Scaffold(
         backgroundColor = CozyAuth.Cream,
@@ -155,7 +176,8 @@ fun EditNoteScreen(
             CozyTopBar(
                 title = stringResource(
                     if (note == null) R.string.create_note_title else R.string.edit_note_title
-                )
+                ),
+                onBack = handleBack
             )
         }
     ) { padding ->
@@ -247,6 +269,15 @@ fun EditNoteScreen(
                             todayMillis = todayCalendar.timeInMillis,
                             onDeadlineSelected = { selectedDeadlineMillis = it },
                         )
+                        DurationEditor(
+                            durationDays = durationDays,
+                            durationHours = durationHours,
+                            onDurationDaysChange = { durationDays = it.coerceAtLeast(0) },
+                            onDurationHoursChange = { newHours ->
+                                durationHours = newHours.coerceIn(0, 23)
+                                if (durationDays == 0 && durationHours == 0) durationHours = 1
+                            }
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
                         NoteContentField(
                             content = content,
@@ -255,6 +286,7 @@ fun EditNoteScreen(
                                 VoiceInputButton(
                                     onTextConfirmed = { dictated ->
                                         content = if (content.isBlank()) dictated else "$content\n$dictated"
+                                        onVoiceInputUsed()
                                     }
                                 )
                             }
@@ -284,6 +316,7 @@ fun EditNoteScreen(
                                 VoiceInputButton(
                                     onTextConfirmed = { dictated ->
                                         content = if (content.isBlank()) dictated else "$content\n$dictated"
+                                        onVoiceInputUsed()
                                     }
                                 )
                             }
@@ -336,6 +369,16 @@ fun EditNoteScreen(
                 onDeleteClick()
             },
             onDismiss = { showDeleteDialog = false }
+        )
+    }
+
+    if (showDiscardDialog && onBack != null) {
+        DiscardChangesDialog(
+            onConfirm = {
+                showDiscardDialog = false
+                onBack()
+            },
+            onDismiss = { showDiscardDialog = false }
         )
     }
 }

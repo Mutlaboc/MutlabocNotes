@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -46,6 +47,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
@@ -432,6 +434,34 @@ fun PixelOutlineButton(
             color = CozyAuth.Ink,
             fontFamily = CozyAuth.PixelFont,
             fontSize = 15.sp
+        )
+    }
+}
+
+/** Chunky pixel progress bar: outlined track with a flat coloured fill. */
+@Composable
+fun PixelBar(
+    progress: Float,
+    fill: Color,
+    height: Dp,
+    track: Color = CozyAuth.FieldCream
+) {
+    val shape = RoundedCornerShape(3.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(height)
+            .clip(shape)
+            .background(track)
+            .border(2.dp, CozyAuth.BrownOutline, shape)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(progress.coerceIn(0f, 1f))
+                .fillMaxHeight()
+                .padding(2.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(fill)
         )
     }
 }

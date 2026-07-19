@@ -21,8 +21,14 @@ import app.homenotes.android.local.LocalHomeLinkEntity
 import app.homenotes.android.local.LocalNoteEntity
 import app.homenotes.android.local.LocalSyncStateEntity
 import app.homenotes.android.local.LocalWalletEntity
+import app.homenotes.android.local.LocalAchievementMetricEntity
+import app.homenotes.android.local.LocalAchievementUnlockEntity
 import app.homenotes.android.local.OfflineDao
 import app.homenotes.android.local.OutboxEntity
+import app.homenotes.android.network.AchievementMetricDto
+import app.homenotes.android.network.AchievementMetricsRequestDto
+import app.homenotes.android.network.AchievementUnlockRequestDto
+import app.homenotes.android.network.AchievementsApi
 import app.homenotes.android.network.CharacterApi
 import app.homenotes.android.network.CharacterRenameRequestDto
 import app.homenotes.android.network.CharacterSheetDto
@@ -81,7 +87,8 @@ class WorkManagerSyncCoordinator(
             .build()
         workManager.enqueueUniqueWork(oneTimeName(normalized), ExistingWorkPolicy.APPEND_OR_REPLACE, request)
         schedulePeriodic(normalized)
-        _status.value = SyncStatus.Pending(1)
+        // Плашку не показываем сразу: синк обычно проходит за секунды,
+        // баннер появится только если операции залежатся (см. refreshStatus).
     }
 
     fun activateAccount(accountKey: String) {
@@ -96,8 +103,29 @@ class WorkManagerSyncCoordinator(
     }
 
     internal suspend fun refreshStatus(accountKey: String) {
-        val state = dao.pendingCount(accountKey)
-        _status.value = if (state == 0) SyncStatus.Idle else SyncStatus.Pending(state)
+        _status.value = staleAwareStatus(accountKey) { count -> SyncStatus.Pending(count) }
+    }
+
+    /** Синк упал по сети: показываем «нет сети», но тоже только для залежавшихся операций. */
+    internal suspend fun reportOffline(accountKey: String) {
+        _status.value = staleAwareStatus(accountKey) { count -> SyncStatus.Offline(count) }
+    }
+
+    /**
+     * Статус с учётом «возраста» очереди: пока самые старые операции моложе
+     * [PENDING_BANNER_AGE_MS], плашка не показывается — фоновый синк успеет сам.
+     */
+    private suspend fun staleAwareStatus(accountKey: String, visible: (Int) -> SyncStatus): SyncStatus {
+        val count = dao.pendingCount(accountKey)
+        if (count == 0) return SyncStatus.Idle
+        val oldest = dao.oldestPendingCreatedAt(accountKey) ?: return SyncStatus.Idle
+        val age = System.currentTimeMillis() - oldest
+        return if (age >= PENDING_BANNER_AGE_MS) visible(count) else SyncStatus.Idle
+    }
+
+    /** Показывает «Синхронизация…» только если плашка уже была видна (не мигаем на каждый фоновый синк). */
+    internal fun showSyncing() {
+        if (_status.value != SyncStatus.Idle) _status.value = SyncStatus.Syncing
     }
 
     internal fun setRunning(status: SyncStatus) {
@@ -117,6 +145,11 @@ class WorkManagerSyncCoordinator(
 
     private fun oneTimeName(account: String) = "offline-sync-once::$account"
     private fun periodicName(account: String) = "offline-sync-periodic::$account"
+
+    companion object {
+        /** Сколько операции должны «висеть» в очереди, чтобы показать плашку синхронизации. */
+        const val PENDING_BANNER_AGE_MS: Long = 15L * 60L * 1000L
+    }
 }
 
 enum class SyncRunResult { SUCCESS, RETRY, BLOCKED, SESSION_CHANGED }
@@ -129,6 +162,7 @@ class OfflineSyncEngine(
     private val inventoryApi: InventoryApi,
     private val eventsApi: EventsApi,
     private val session: AuthSessionStore,
+    private val achievementsApi: AchievementsApi? = null,
 ) {
     suspend fun sync(accountKey: String): SyncRunResult {
         if (normalizeAccountKey(session.getEmail()) != accountKey) return SyncRunResult.SESSION_CHANGED
@@ -157,6 +191,14 @@ class OfflineSyncEngine(
                 // Неизвестное событие или бекенд ещё без /events — снимаем клейм и
                 // принимаем серверное состояние персонажа, не роняя синк.
                 if (operation.kind == OutboxKind.EVENT_CLAIM &&
+                    (statusCode in setOf(400, 404, 409) || isEndpointUnsupported(error))
+                ) {
+                    dao.removeOutbox(operation.id)
+                    continue
+                }
+                // Достижения не критичны и бекенд может быть ещё без /achievements —
+                // конфликт или отсутствие эндпоинта не должны ронять синк.
+                if (operation.kind in setOf(OutboxKind.ACHIEVEMENT_UNLOCK, OutboxKind.ACHIEVEMENT_METRICS) &&
                     (statusCode in setOf(400, 404, 409) || isEndpointUnsupported(error))
                 ) {
                     dao.removeOutbox(operation.id)
@@ -225,6 +267,31 @@ class OfflineSyncEngine(
                     skillKey = payload.skillKey,
                     locale = payload.locale,
                 ))
+            }
+            OutboxKind.ACHIEVEMENT_UNLOCK -> {
+                val api = achievementsApi ?: return
+                val payload = ApiJson.decodeFromString<AchievementUnlockPayload>(requireNotNull(operation.payload))
+                api.postUnlock(AchievementUnlockRequestDto(
+                    operationId = operation.operationId,
+                    achievementId = payload.achievementId,
+                    tier = payload.tier,
+                    points = payload.points,
+                    unlockedAt = payload.unlockedAt,
+                ))
+            }
+            OutboxKind.ACHIEVEMENT_METRICS -> {
+                val api = achievementsApi ?: return
+                // Снапшот берётся в момент push, а не enqueue: одна операция уносит
+                // всё накопленное, поэтому частые инкременты не плодят очередь.
+                // Летучие ключи (дневные/сессионные) на сервер не уходят.
+                val metrics = dao.achievementMetrics(operation.accountKey)
+                    .filter { AchievementMetrics.isSyncable(it.metricKey) }
+                if (metrics.isNotEmpty()) {
+                    api.putMetrics(AchievementMetricsRequestDto(
+                        operationId = operation.operationId,
+                        metrics = metrics.map { AchievementMetricDto(it.metricKey, it.value) },
+                    ))
+                }
             }
         }
     }
@@ -321,6 +388,41 @@ class OfflineSyncEngine(
         }
 
         pullFocusEventsTolerant()
+
+        pullAchievementsTolerant(accountKey)
+    }
+
+    /**
+     * Pull достижений, не роняющий синк, пока бекенд без /achievements. Метрики
+     * сливаются по max(local, server) — счётчики монотонные; серверные анлоки
+     * вставляются с notified=true, чтобы не тостить взятое на другом устройстве.
+     * Пока в очереди висит локальный снапшот метрик, merge пропускается.
+     */
+    private suspend fun pullAchievementsTolerant(accountKey: String) {
+        val api = achievementsApi ?: return
+        if (dao.hasPending(accountKey, achievementsLocalId(accountKey))) return
+        try {
+            val snapshot = api.getAchievements()
+            val local = dao.achievementMetrics(accountKey).associate { it.metricKey to it.value }
+            val mergedChanges = snapshot.metrics
+                .filter { AchievementMetrics.isSyncable(it.key) && it.value > (local[it.key] ?: 0) }
+                .map { LocalAchievementMetricEntity(accountKey, it.key, it.value) }
+            val serverUnlocks = snapshot.unlocks.map { dto ->
+                LocalAchievementUnlockEntity(
+                    accountKey = accountKey,
+                    achievementId = dto.achievementId,
+                    tier = dto.tier,
+                    points = dto.points,
+                    unlockedAt = dto.unlockedAt,
+                    notified = true,
+                )
+            }
+            if (mergedChanges.isNotEmpty() || serverUnlocks.isNotEmpty()) {
+                dao.applyAchievementProgress(mergedChanges, serverUnlocks)
+            }
+        } catch (error: Throwable) {
+            if (!isEndpointUnsupported(error)) throw error
+        }
     }
 
     /**
@@ -432,14 +534,14 @@ class OfflineSyncWorker(
         val account = inputData.getString(ACCOUNT_KEY) ?: return Result.failure()
         val app = applicationContext as? HomeNotesApplication ?: return Result.failure()
         val coordinator = app.appContainer.syncCoordinator
-        coordinator.setRunning(SyncStatus.Syncing)
+        coordinator.showSyncing()
         return when (app.appContainer.syncEngine.sync(account)) {
             SyncRunResult.SUCCESS, SyncRunResult.SESSION_CHANGED -> {
                 coordinator.refreshStatus(account)
                 Result.success()
             }
             SyncRunResult.RETRY -> {
-                coordinator.setRunning(SyncStatus.Offline(app.appContainer.database.offlineDao().pendingCount(account)))
+                coordinator.reportOffline(account)
                 Result.retry()
             }
             SyncRunResult.BLOCKED -> {

@@ -26,11 +26,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TextButton
-import androidx.compose.material.LinearProgressIndicator
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
@@ -142,7 +147,8 @@ fun MyApp(
     characterViewModel: CharacterViewModel = viewModel(factory = viewModelFactory),
     focusEventsViewModel: FocusEventsViewModel = viewModel(factory = viewModelFactory),
     inventoryViewModel: InventoryViewModel = viewModel(factory = viewModelFactory),
-    onboardingViewModel: OnboardingViewModel = viewModel(factory = viewModelFactory)
+    onboardingViewModel: OnboardingViewModel = viewModel(factory = viewModelFactory),
+    achievementsViewModel: AchievementsViewModel = viewModel(factory = viewModelFactory)
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
@@ -182,6 +188,7 @@ fun MyApp(
                 isWaitingForNotificationNotes = pendingNotificationNoteId != null
                 onboardingViewModel.setUser(authState.email)
                 characterViewModel.setUser(authState.email)
+                achievementsViewModel.setUser(authState.email)
                 notesViewModel.loadNotes()
                 navController.navigate("home") {
                     popUpTo("bootstrap") { inclusive = false }
@@ -193,6 +200,7 @@ fun MyApp(
                 isWaitingForNotificationNotes = false
                 onboardingViewModel.setUser(null)
                 characterViewModel.setUser(null)
+                achievementsViewModel.setUser(null)
                 notesViewModel.clearAll()
                 homeInfoViewModel.clearAll()
                 navController.navigate("auth") {
@@ -332,7 +340,9 @@ fun MyApp(
                     onRename = { newName -> characterViewModel.updateName(newName) },
                     availableCoins = availableCoins,
                     onUpgradeStat = { statKey -> characterViewModel.upgradeStat(statKey, earnedCoins) },
-                    onOpenInventory = { navController.navigate("inventory") }
+                    onOpenInventory = { navController.navigate("inventory") },
+                    achievementPoints = achievementsViewModel.totalPoints,
+                    onOpenAchievements = { navController.navigate("achievements") }
                 )
             }
 
@@ -344,6 +354,14 @@ fun MyApp(
                     onRetry = { inventoryViewModel.loadInventory() },
                     onEquip = { itemId -> inventoryViewModel.equip(itemId) },
                     onUnequip = { slot -> inventoryViewModel.unequip(slot) }
+                )
+            }
+
+            composable("achievements") {
+                AchievementsScreen(
+                    items = achievementsViewModel.screenItems,
+                    totalPoints = achievementsViewModel.totalPoints,
+                    onBack = { navController.popBackStack() }
                 )
             }
 
@@ -465,8 +483,10 @@ fun MyApp(
                         notesViewModel.addNote(createdNote)
                         navController.popBackStack()
                     },
+                    onBack = { navController.popBackStack() },
                     showFormHint = !onboardingViewModel.uiState.noteFormHintSeen,
-                    onFormHintSeen = onboardingViewModel::markNoteFormHintSeen
+                    onFormHintSeen = onboardingViewModel::markNoteFormHintSeen,
+                    onVoiceInputUsed = achievementsViewModel::reportVoiceInputUsed
                 )
             }
 
@@ -490,7 +510,9 @@ fun MyApp(
                             notesViewModel.deleteNote(noteId)
                         }
                         navController.popBackStack()
-                    }
+                    },
+                    onBack = { navController.popBackStack() },
+                    onVoiceInputUsed = achievementsViewModel::reportVoiceInputUsed
                 )
             }
             }
@@ -499,17 +521,37 @@ fun MyApp(
                 onRetry = onRetrySync,
                 modifier = Modifier.align(Alignment.TopCenter),
             )
+            // WoW-плашка достижения поверх всех роутов; показываем только в сессии,
+            // чтобы очередь анлоков не всплывала над экраном входа после выхода.
+            if (authState is AuthState.Authenticated) {
+                AchievementUnlockOverlay(
+                    toast = achievementsViewModel.pendingToast,
+                    onDismissed = achievementsViewModel::onToastDismissed,
+                    onTapped = { toast ->
+                        achievementsViewModel.onToastTapped(toast)
+                        navController.navigate("achievements") { launchSingleTop = true }
+                    },
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
         }
     }
 }
 
+/**
+ * Компактная плашка статуса синхронизации: небольшая «пилюля» сверху по центру
+ * с кнопкой закрытия. Появляется только для залежавшихся операций (см.
+ * [WorkManagerSyncCoordinator.refreshStatus]); закрытая плашка не показывается
+ * снова, пока статус не изменится.
+ */
 @Composable
 private fun SyncStatusBanner(
     status: SyncStatus,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (status == SyncStatus.Idle) return
+    var dismissedStatus by remember { mutableStateOf<SyncStatus?>(null) }
+    if (status == SyncStatus.Idle || status == dismissedStatus) return
     val text = when (status) {
         SyncStatus.Idle -> return
         SyncStatus.Syncing -> stringResource(R.string.sync_status_syncing)
@@ -518,19 +560,27 @@ private fun SyncStatusBanner(
         is SyncStatus.Blocked -> stringResource(R.string.sync_status_blocked)
     }
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.padding(top = 4.dp),
         color = MaterialTheme.colors.surface,
-        elevation = 6.dp,
+        elevation = 4.dp,
+        shape = RoundedCornerShape(8.dp),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+            modifier = Modifier.padding(start = 10.dp, end = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (status == SyncStatus.Syncing) {
-                LinearProgressIndicator(modifier = Modifier.weight(1f))
-            } else {
-                Text(text = text, modifier = Modifier.weight(1f), style = MaterialTheme.typography.caption)
-                TextButton(onClick = onRetry) { Text(stringResource(R.string.sync_retry)) }
+            Text(text = text, style = MaterialTheme.typography.caption)
+            if (status != SyncStatus.Syncing) {
+                TextButton(onClick = onRetry) {
+                    Text(stringResource(R.string.sync_retry), style = MaterialTheme.typography.caption)
+                }
+            }
+            IconButton(onClick = { dismissedStatus = status }, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.action_close),
+                    modifier = Modifier.size(16.dp),
+                )
             }
         }
     }

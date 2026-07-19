@@ -413,6 +413,17 @@ internal fun NoteDetails(note: Note) {
                     style = MaterialTheme.typography.caption
                 )
             }
+            note.durationMinutes?.let { minutes ->
+                Text(
+                    text = stringResource(
+                        R.string.note_duration_value,
+                        minutes / 1_440,
+                        (minutes % 1_440) / 60
+                    ),
+                    fontFamily = CozyAuth.PixelFont,
+                    style = MaterialTheme.typography.caption
+                )
+            }
         }
     }
 }

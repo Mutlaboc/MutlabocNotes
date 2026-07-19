@@ -166,6 +166,36 @@ internal fun RecurringScheduleEditor(
                 )
             )
         }
+        DurationEditor(
+            durationDays = durationDays,
+            durationHours = durationHours,
+            onDurationDaysChange = onDurationDaysChange,
+            onDurationHoursChange = onDurationHoursChange
+        )
+        RepeatRuleDropdown(repeatRule, onRepeatRuleChange)
+    }
+}
+
+/**
+ * Редактор предполагаемой продолжительности (дни + часы) с заголовком,
+ * общий для обычных и повторяющихся задач. Минимум — 1 час.
+ */
+@Composable
+internal fun DurationEditor(
+    durationDays: Int,
+    durationHours: Int,
+    onDurationDaysChange: (Int) -> Unit,
+    onDurationHoursChange: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.duration_estimate_title),
+            fontFamily = CozyAuth.PixelFont,
+            color = CozyAuth.InkSoft,
+            fontSize = 13.sp,
+            modifier = Modifier.padding(top = 8.dp, start = 4.dp)
+        )
         Row(verticalAlignment = Alignment.CenterVertically) {
             DurationStepper(
                 label = stringResource(R.string.duration_days),
@@ -186,7 +216,6 @@ internal fun RecurringScheduleEditor(
                 modifier = Modifier.weight(1f)
             )
         }
-        RepeatRuleDropdown(repeatRule, onRepeatRuleChange)
     }
 }
 

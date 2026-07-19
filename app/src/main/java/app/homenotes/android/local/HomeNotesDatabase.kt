@@ -230,6 +230,35 @@ data class LocalSyncStateEntity(
     @ColumnInfo(name = "last_synced_at") val lastSyncedAt: Long? = null,
 )
 
+/**
+ * Счётчики метрик достижений (создано заметок, минут фокуса и т.п.). Помимо базовых
+ * ключей содержит производные с точечными суффиксами (`X.best_day`, `activity.streak`).
+ */
+@Entity(tableName = "achievement_metrics", primaryKeys = ["account_key", "metric_key"])
+data class LocalAchievementMetricEntity(
+    @ColumnInfo(name = "account_key") val accountKey: String,
+    @ColumnInfo(name = "metric_key") val metricKey: String,
+    val value: Long,
+)
+
+/**
+ * Взятые ступени достижений. `points` — снапшот на момент анлока, чтобы ребаланс каталога
+ * не менял уже заработанные очки; `notified = false` двигает очередь тостов.
+ */
+@Entity(
+    tableName = "achievement_unlocks",
+    primaryKeys = ["account_key", "achievement_id", "tier"],
+    indices = [Index(value = ["account_key", "notified"])],
+)
+data class LocalAchievementUnlockEntity(
+    @ColumnInfo(name = "account_key") val accountKey: String,
+    @ColumnInfo(name = "achievement_id") val achievementId: String,
+    val tier: String,
+    val points: Int,
+    @ColumnInfo(name = "unlocked_at") val unlockedAt: Long,
+    val notified: Boolean = false,
+)
+
 @Dao
 abstract class OfflineDao {
     @Transaction
@@ -416,11 +445,63 @@ abstract class OfflineDao {
     @Query("SELECT COUNT(*) FROM outbox WHERE account_key = :accountKey")
     abstract suspend fun pendingCount(accountKey: String): Int
 
+    @Query("SELECT MIN(created_at) FROM outbox WHERE account_key = :accountKey")
+    abstract suspend fun oldestPendingCreatedAt(accountKey: String): Long?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     abstract suspend fun putSyncState(state: LocalSyncStateEntity)
 
     @Query("SELECT * FROM sync_state WHERE account_key = :accountKey")
     abstract fun observeSyncState(accountKey: String): Flow<LocalSyncStateEntity?>
+
+    @Query("SELECT * FROM achievement_metrics WHERE account_key = :accountKey")
+    abstract suspend fun achievementMetrics(accountKey: String): List<LocalAchievementMetricEntity>
+
+    @Query("SELECT * FROM achievement_metrics WHERE account_key = :accountKey")
+    abstract fun observeAchievementMetrics(accountKey: String): Flow<List<LocalAchievementMetricEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun putAchievementMetric(metric: LocalAchievementMetricEntity)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    abstract suspend fun insertAchievementUnlocks(unlocks: List<LocalAchievementUnlockEntity>): List<Long>
+
+    @Query("SELECT * FROM achievement_unlocks WHERE account_key = :accountKey")
+    abstract fun observeAchievementUnlocks(accountKey: String): Flow<List<LocalAchievementUnlockEntity>>
+
+    @Query("SELECT * FROM achievement_unlocks WHERE account_key = :accountKey")
+    abstract suspend fun achievementUnlocks(accountKey: String): List<LocalAchievementUnlockEntity>
+
+    @Query(
+        "SELECT * FROM achievement_unlocks WHERE account_key = :accountKey AND notified = 0 " +
+            "ORDER BY unlocked_at, achievement_id, tier"
+    )
+    abstract fun observeUnnotifiedUnlocks(accountKey: String): Flow<List<LocalAchievementUnlockEntity>>
+
+    @Query("SELECT COALESCE(SUM(points), 0) FROM achievement_unlocks WHERE account_key = :accountKey")
+    abstract fun observeAchievementPoints(accountKey: String): Flow<Int>
+
+    @Query(
+        "UPDATE achievement_unlocks SET notified = 1 " +
+            "WHERE account_key = :accountKey AND achievement_id = :achievementId AND tier = :tier"
+    )
+    abstract suspend fun markUnlockNotified(accountKey: String, achievementId: String, tier: String)
+
+    /**
+     * Атомарный шаг трекера достижений: обновить набор метрик и записать новые анлоки.
+     * IGNORE на анлоках даёт идемпотентность при гонках и повторных пересечениях порога.
+     * Возвращает анлоки, вставленные именно этим вызовом (для outbox-операций).
+     */
+    @Transaction
+    open suspend fun applyAchievementProgress(
+        metrics: List<LocalAchievementMetricEntity>,
+        unlocks: List<LocalAchievementUnlockEntity>,
+    ): List<LocalAchievementUnlockEntity> {
+        metrics.forEach { putAchievementMetric(it) }
+        if (unlocks.isEmpty()) return emptyList()
+        val rowIds = insertAchievementUnlocks(unlocks)
+        return unlocks.filterIndexed { index, _ -> rowIds[index] != -1L }
+    }
 }
 
 @Database(
@@ -431,8 +512,9 @@ abstract class OfflineDao {
         LocalInventoryItemEntity::class,
         LocalFocusEventEntity::class,
         LocalWalletEntity::class, OutboxEntity::class, LocalSyncStateEntity::class,
+        LocalAchievementMetricEntity::class, LocalAchievementUnlockEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class HomeNotesDatabase : RoomDatabase() {
@@ -480,10 +562,37 @@ abstract class HomeNotesDatabase : RoomDatabase() {
             }
         }
 
+        // v3 -> v4: метрики и анлоки достижений.
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `achievement_metrics` (" +
+                        "`account_key` TEXT NOT NULL, " +
+                        "`metric_key` TEXT NOT NULL, " +
+                        "`value` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`account_key`, `metric_key`))"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `achievement_unlocks` (" +
+                        "`account_key` TEXT NOT NULL, " +
+                        "`achievement_id` TEXT NOT NULL, " +
+                        "`tier` TEXT NOT NULL, " +
+                        "`points` INTEGER NOT NULL, " +
+                        "`unlocked_at` INTEGER NOT NULL, " +
+                        "`notified` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`account_key`, `achievement_id`, `tier`))"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_achievement_unlocks_account_key_notified` " +
+                        "ON `achievement_unlocks` (`account_key`, `notified`)"
+                )
+            }
+        }
+
         fun create(context: Context): HomeNotesDatabase = Room.databaseBuilder(
             context.applicationContext,
             HomeNotesDatabase::class.java,
             DATABASE_NAME,
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
     }
 }

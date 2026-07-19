@@ -3,6 +3,7 @@ package app.homenotes.android
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import app.homenotes.android.network.AchievementsApi
 import app.homenotes.android.network.AuthApi
 import app.homenotes.android.network.CharacterApi
 import app.homenotes.android.network.EventsApi
@@ -68,29 +69,41 @@ class AppContainer(
     private val characterApi: CharacterApi by lazy { authenticatedRetrofit.create(CharacterApi::class.java) }
     private val inventoryApi: InventoryApi by lazy { authenticatedRetrofit.create(InventoryApi::class.java) }
     private val eventsApi: EventsApi by lazy { authenticatedRetrofit.create(EventsApi::class.java) }
+    private val achievementsApi: AchievementsApi by lazy { authenticatedRetrofit.create(AchievementsApi::class.java) }
 
     val syncEngine: OfflineSyncEngine by lazy {
-        OfflineSyncEngine(offlineDao, notesApi, cardsApi, characterApi, inventoryApi, eventsApi, sessionManager)
+        OfflineSyncEngine(
+            offlineDao, notesApi, cardsApi, characterApi, inventoryApi, eventsApi, sessionManager,
+            achievementsApi,
+        )
+    }
+
+    val achievementsTracker: AchievementsTracker by lazy {
+        AchievementsTracker(offlineDao, sessionManager, applicationScope, syncCoordinator)
+    }
+
+    val achievementsRepository: AchievementsRepository by lazy {
+        AchievementsRepository(offlineDao, sessionManager)
     }
 
     val notesRepository: NotesDataSource by lazy {
-        OfflineNotesRepository(offlineDao, sessionManager, syncCoordinator)
+        OfflineNotesRepository(offlineDao, sessionManager, syncCoordinator, achievementsTracker)
     }
 
     val homeInfoRepository: HomeInfoDataSource by lazy {
-        OfflineHomeInfoRepository(offlineDao, sessionManager, syncCoordinator)
+        OfflineHomeInfoRepository(offlineDao, sessionManager, syncCoordinator, achievementsTracker)
     }
 
     val characterRepository: CharacterDataSource by lazy {
-        OfflineCharacterRepository(offlineDao, sessionManager, syncCoordinator)
+        OfflineCharacterRepository(offlineDao, sessionManager, syncCoordinator, achievementsTracker)
     }
 
     val inventoryRepository: InventoryDataSource by lazy {
-        OfflineInventoryRepository(offlineDao, sessionManager, syncCoordinator)
+        OfflineInventoryRepository(offlineDao, sessionManager, syncCoordinator, achievementsTracker)
     }
 
     val focusEventsRepository: FocusEventsRepository by lazy {
-        FocusEventsRepository(offlineDao, sessionManager, syncCoordinator)
+        FocusEventsRepository(offlineDao, sessionManager, syncCoordinator, achievements = achievementsTracker)
     }
 
     val deadlineNotificationScheduler: DeadlineScheduler by lazy {
@@ -106,7 +119,7 @@ class AppContainer(
     }
 
     val coinWalletRepository: CoinWalletRepository by lazy {
-        RoomCoinWalletRepository(offlineDao, DataStoreCoinWalletRepository(application))
+        RoomCoinWalletRepository(offlineDao, DataStoreCoinWalletRepository(application), achievementsTracker)
     }
 
     // Фабрика создаёт root ViewModel с зависимостями из контейнера.
@@ -122,7 +135,9 @@ class AppContainer(
             settingsRepository = settingsRepository,
             onboardingRepository = onboardingRepository,
             coinWalletRepository = coinWalletRepository,
-            focusEventsRepository = focusEventsRepository
+            focusEventsRepository = focusEventsRepository,
+            achievementsRepository = achievementsRepository,
+            achievementsTracker = achievementsTracker
         )
     }
 }
@@ -139,7 +154,9 @@ class HomeNotesViewModelFactory(
     private val settingsRepository: SettingsRepository,
     private val onboardingRepository: OnboardingRepository = InMemoryOnboardingRepository(),
     private val coinWalletRepository: CoinWalletRepository = InMemoryCoinWalletRepository(),
-    private val focusEventsRepository: FocusEventsRepository? = null
+    private val focusEventsRepository: FocusEventsRepository? = null,
+    private val achievementsRepository: AchievementsRepository? = null,
+    private val achievementsTracker: AchievementsTracker? = null
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -179,6 +196,14 @@ class HomeNotesViewModelFactory(
                 repository = requireNotNull(focusEventsRepository) {
                     "FocusEventsRepository is required for FocusEventsViewModel"
                 }
+            ) as T
+
+            modelClass.isAssignableFrom(AchievementsViewModel::class.java) -> AchievementsViewModel(
+                application = application,
+                repository = requireNotNull(achievementsRepository) {
+                    "AchievementsRepository is required for AchievementsViewModel"
+                },
+                tracker = achievementsTracker
             ) as T
 
             modelClass.isAssignableFrom(SettingsViewModel::class.java) -> SettingsViewModel(

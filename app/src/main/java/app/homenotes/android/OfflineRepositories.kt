@@ -48,6 +48,8 @@ internal object OutboxKind {
     const val INVENTORY_EQUIP = "INVENTORY_EQUIP"
     const val INVENTORY_UNEQUIP = "INVENTORY_UNEQUIP"
     const val EVENT_CLAIM = "EVENT_CLAIM"
+    const val ACHIEVEMENT_UNLOCK = "ACHIEVEMENT_UNLOCK"
+    const val ACHIEVEMENT_METRICS = "ACHIEVEMENT_METRICS"
 }
 
 /** Ключ outbox/hasPending для операций инвентаря — отдельный от листа персонажа. */
@@ -72,6 +74,7 @@ class OfflineNotesRepository(
     private val dao: OfflineDao,
     private val session: AuthSessionStore,
     private val scheduler: SyncScheduler,
+    private val achievements: AchievementsTracker? = null,
 ) : NotesDataSource {
 
     override fun observeNotes(): Flow<List<Note>> {
@@ -93,6 +96,16 @@ class OfflineNotesRepository(
         )
         enqueue(account, OutboxKind.NOTE_CREATE, localId, null, localId)
         scheduler.request(account)
+        // Сюда попадают только созданные пользователем заметки: авто-спавн следующего
+        // повторяющегося вхождения идёт через dao.putNote в updateCompletion, pull синка —
+        // напрямую через DAO, так что двойного счёта достижений нет.
+        achievements?.report(AchievementMetrics.NOTES_CREATED)
+        when (note.category) {
+            NoteCategory.SHOPPING -> achievements?.report(AchievementMetrics.NOTES_CREATED_SHOPPING)
+            NoteCategory.TASKS -> achievements?.report(AchievementMetrics.NOTES_CREATED_TASKS)
+            NoteCategory.RECURRING_TASKS -> achievements?.report(AchievementMetrics.NOTES_CREATED_RECURRING)
+        }
+        if (note.deadlineMillis != null) achievements?.report(AchievementMetrics.DEADLINES_SET)
         localId
     }
 
@@ -114,6 +127,17 @@ class OfflineNotesRepository(
         )
         enqueue(account, OutboxKind.NOTE_UPDATE, note.id, old.note.remoteId)
         scheduler.request(account)
+        achievements?.report(AchievementMetrics.NOTES_EDITED)
+        if (old.note.deadlineMillis == null && note.deadlineMillis != null) {
+            achievements?.report(AchievementMetrics.DEADLINES_SET)
+        }
+        // Пункты чек-листа, перешедшие в состояние «отмечен» (по позиции).
+        val previouslyChecked = old.checklist.filter { it.isChecked }.mapTo(hashSetOf()) { it.position }
+        val newlyChecked = note.checklist.withIndex()
+            .count { (index, item) -> item.isChecked && index !in previouslyChecked }
+        if (newlyChecked > 0) {
+            achievements?.report(AchievementMetrics.CHECKLIST_ITEMS_CHECKED, newlyChecked.toLong())
+        }
     }
 
     override suspend fun updateCompletion(noteId: String, isCompleted: Boolean): Result<CompletionUpdate> = runCatching {
@@ -152,6 +176,21 @@ class OfflineNotesRepository(
             payload = ApiJson.encodeToString(CompletionPayload(isCompleted)),
         )
         scheduler.request(account)
+        // Достижения — только за переход «не выполнено -> выполнено»; снятие галочки
+        // счётчики не уменьшает (метрики монотонные).
+        if (isCompleted && !current.note.isCompleted) {
+            achievements?.report(AchievementMetrics.NOTES_COMPLETED)
+            if (completed.coinCount > 0) {
+                achievements?.report(AchievementMetrics.COINS_EARNED, completed.coinCount.toLong())
+            }
+            val now = System.currentTimeMillis()
+            if (completed.deadlineMillis != null && now <= completed.deadlineMillis) {
+                achievements?.report(AchievementMetrics.COMPLETED_BEFORE_DEADLINE)
+            }
+            if (Calendar.getInstance().get(Calendar.HOUR_OF_DAY) < 9) {
+                achievements?.report(AchievementMetrics.COMPLETED_EARLY_MORNING)
+            }
+        }
         CompletionUpdate(toDomain(LocalNoteWithChecklist(completed, current.checklist)), next)
     }
 
@@ -165,6 +204,7 @@ class OfflineNotesRepository(
         }
         dao.deleteNote(account, noteId)
         scheduler.request(account)
+        achievements?.report(AchievementMetrics.NOTES_DELETED)
     }
 
     private suspend fun enqueue(
@@ -194,6 +234,7 @@ class OfflineHomeInfoRepository(
     private val dao: OfflineDao,
     private val session: AuthSessionStore,
     private val scheduler: SyncScheduler,
+    private val achievements: AchievementsTracker? = null,
 ) : HomeInfoDataSource {
     override fun observeCards(): Flow<List<HomeInfoCard>> {
         val account = requireAccount()
@@ -216,6 +257,7 @@ class OfflineHomeInfoRepository(
         )
         enqueue(account, OutboxKind.CARD_CREATE, id, null, id)
         scheduler.request(account)
+        achievements?.report(AchievementMetrics.HOME_CARDS_CREATED)
         canonical
     }
 
@@ -230,6 +272,7 @@ class OfflineHomeInfoRepository(
         )
         enqueue(account, OutboxKind.CARD_UPDATE, card.id, old.card.remoteId)
         scheduler.request(account)
+        achievements?.report(AchievementMetrics.HOME_CARDS_EDITED)
         updated
     }
 
@@ -257,6 +300,7 @@ class OfflineCharacterRepository(
     private val dao: OfflineDao,
     private val session: AuthSessionStore,
     private val scheduler: SyncScheduler,
+    private val achievements: AchievementsTracker? = null,
 ) : CharacterDataSource {
     override suspend fun getCharacter(): Result<CharacterSheet> = runCatching {
         val account = requireAccount()
@@ -290,6 +334,10 @@ class OfflineCharacterRepository(
             createdAt = System.currentTimeMillis(),
         ))
         scheduler.request(account)
+        if (characterXp > 0) {
+            achievements?.report(AchievementMetrics.CHARACTER_XP_EARNED, characterXp.toLong())
+        }
+        achievements?.reportMax(AchievementMetrics.CHARACTER_LEVEL, updated.level.toLong())
         updated
     }
 
@@ -303,6 +351,7 @@ class OfflineCharacterRepository(
             createdAt = System.currentTimeMillis(),
         ))
         scheduler.request(account)
+        achievements?.report(AchievementMetrics.STAT_UPGRADES)
         sheet
     }
 
@@ -316,6 +365,7 @@ class OfflineCharacterRepository(
             createdAt = System.currentTimeMillis(),
         ))
         scheduler.request(account)
+        achievements?.report(AchievementMetrics.CHARACTER_RENAMES)
         sheet
     }
 
@@ -339,6 +389,7 @@ class OfflineInventoryRepository(
     private val dao: OfflineDao,
     private val session: AuthSessionStore,
     private val scheduler: SyncScheduler,
+    private val achievements: AchievementsTracker? = null,
 ) : InventoryDataSource {
 
     override suspend fun getInventory(): Result<Inventory> = runCatching {
@@ -353,6 +404,7 @@ class OfflineInventoryRepository(
         val updated = current.applyEquip(itemId)
         putProjection(account, updated)
         enqueue(account, OutboxKind.INVENTORY_EQUIP, ApiJson.encodeToString(EquipPayload(itemId)))
+        achievements?.report(AchievementMetrics.ITEMS_EQUIPPED)
         updated
     }
 

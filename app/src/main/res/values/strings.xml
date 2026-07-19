@@ -105,15 +105,19 @@
     <string name="repeat_rule_weekly">Еженедельно</string>
     <string name="repeat_rule_monthly">Ежемесячно</string>
     <string name="first_task_start_value">Первая задача: %1$s</string>
+    <string name="duration_estimate_title">Предполагаемая продолжительность</string>
     <string name="duration_days">Дней</string>
     <string name="duration_hours">Часов</string>
     <string name="note_start_value">Начало: %1$s</string>
-    <string name="note_duration_value">Срок: %1$d дн. %2$d ч.</string>
+    <string name="note_duration_value">Продолжительность: %1$d дн. %2$d ч.</string>
     <string name="upcoming_tasks_title">Предстоящие задачи</string>
     <string name="upcoming_tasks_empty">Предстоящих задач пока нет</string>
     <string name="coin_count_label">Количество монет</string>
     <string name="note_delete_title">Удалить заметку?</string>
     <string name="note_delete_message">Это действие нельзя отменить.</string>
+    <string name="note_discard_title">Выйти без сохранения?</string>
+    <string name="note_discard_message">Введённые данные не будут сохранены.</string>
+    <string name="action_exit">Выйти</string>
 
     <string name="home_info_title">Информация о доме</string>
     <string name="home_info_header_description">Хозяин пишет заметку за столом в избе</string>
@@ -214,4 +218,82 @@
     <string name="inventory_rarity_rare">Редкий</string>
     <string name="inventory_rarity_epic">Эпический</string>
     <string name="inventory_rarity_legendary">Легендарный</string>
+
+    <string name="achievements_title">Достижения</string>
+    <string name="achievements_open">Достижения</string>
+    <string name="achievement_unlocked">Достижение получено!</string>
+    <string name="achievement_points_plus">+%1$d очков</string>
+    <string name="achievement_points_total">Очки достижений</string>
+    <string name="achievement_progress_format">%1$d / %2$d</string>
+    <string name="achievement_completed">Выполнено!</string>
+    <string name="achievement_tier_bronze">Бронза</string>
+    <string name="achievement_tier_silver">Серебро</string>
+    <string name="achievement_tier_gold">Золото</string>
+    <string name="achievement_tier_platinum">Платина</string>
+
+    <string name="achievement_notes_created_title">Летописец</string>
+    <string name="achievement_notes_created_desc">Создайте заметок: %1$d</string>
+    <string name="achievement_notes_completed_title">Исполнитель</string>
+    <string name="achievement_notes_completed_desc">Выполните заметок: %1$d</string>
+    <string name="achievement_notes_shopping_title">Покупатель</string>
+    <string name="achievement_notes_shopping_desc">Создайте списков покупок: %1$d</string>
+    <string name="achievement_notes_tasks_title">Деловой</string>
+    <string name="achievement_notes_tasks_desc">Создайте задач: %1$d</string>
+    <string name="achievement_notes_recurring_title">По кругу</string>
+    <string name="achievement_notes_recurring_desc">Создайте повторяющихся задач: %1$d</string>
+    <string name="achievement_notes_edited_title">Редактор</string>
+    <string name="achievement_notes_edited_desc">Отредактируйте заметок: %1$d</string>
+    <string name="achievement_notes_deleted_title">Чистильщик</string>
+    <string name="achievement_notes_deleted_desc">Удалите заметок: %1$d</string>
+    <string name="achievement_deadlines_set_title">Всё по плану</string>
+    <string name="achievement_deadlines_set_desc">Установите дедлайнов: %1$d</string>
+    <string name="achievement_before_deadline_title">Точно в срок</string>
+    <string name="achievement_before_deadline_desc">Выполните заметок до дедлайна: %1$d</string>
+    <string name="achievement_checklist_checked_title">Галочка за галочкой</string>
+    <string name="achievement_checklist_checked_desc">Отметьте пунктов чек-листа: %1$d</string>
+    <string name="achievement_productive_day_title">Продуктивный день</string>
+    <string name="achievement_productive_day_desc">Выполните заметок за один день: %1$d</string>
+    <string name="achievement_voice_inputs_title">Голос дома</string>
+    <string name="achievement_voice_inputs_desc">Продиктуйте заметок голосом: %1$d</string>
+
+    <string name="achievement_focus_minutes_title">Погружение</string>
+    <string name="achievement_focus_minutes_desc">Проведите в фокусе минут: %1$d</string>
+    <string name="achievement_focus_marathon_title">Марафонец</string>
+    <string name="achievement_focus_marathon_desc">Фокусируйтесь %1$d минут за одну сессию</string>
+    <string name="achievement_focus_sessions_title">Раз за разом</string>
+    <string name="achievement_focus_sessions_desc">Проведите фокус-сессий: %1$d</string>
+    <string name="achievement_focus_events_title">Искатель событий</string>
+    <string name="achievement_focus_events_desc">Получите событий фокуса: %1$d</string>
+
+    <string name="achievement_character_level_title">Восхождение</string>
+    <string name="achievement_character_level_desc">Достигните %1$d уровня</string>
+    <string name="achievement_character_xp_title">Опытный</string>
+    <string name="achievement_character_xp_desc">Накопите опыта: %1$d</string>
+    <string name="achievement_skills_learned_title">Многогранный</string>
+    <string name="achievement_skills_learned_desc">Выучите навыков: %1$d</string>
+    <string name="achievement_stat_upgrades_title">Тренировка</string>
+    <string name="achievement_stat_upgrades_desc">Повысьте характеристики раз: %1$d</string>
+    <string name="achievement_character_renames_title">Новая личность</string>
+    <string name="achievement_character_renames_desc">Переименуйте персонажа раз: %1$d</string>
+
+    <string name="achievement_items_received_title">Коллекционер</string>
+    <string name="achievement_items_received_desc">Получите предметов: %1$d</string>
+    <string name="achievement_items_equipped_title">Одетый со вкусом</string>
+    <string name="achievement_items_equipped_desc">Экипируйте предметов: %1$d</string>
+    <string name="achievement_coins_earned_title">Копилка</string>
+    <string name="achievement_coins_earned_desc">Заработайте монет: %1$d</string>
+    <string name="achievement_coins_spent_title">Транжира</string>
+    <string name="achievement_coins_spent_desc">Потратьте монет: %1$d</string>
+
+    <string name="achievement_home_cards_created_title">Домовладелец</string>
+    <string name="achievement_home_cards_created_desc">Создайте карточек дома: %1$d</string>
+    <string name="achievement_home_cards_edited_title">Хозяйственный</string>
+    <string name="achievement_home_cards_edited_desc">Отредактируйте карточек дома: %1$d</string>
+
+    <string name="achievement_active_days_title">Постоянство</string>
+    <string name="achievement_active_days_desc">Будьте активны дней: %1$d</string>
+    <string name="achievement_streak_title">Серия</string>
+    <string name="achievement_streak_desc">Будьте активны %1$d дней подряд</string>
+    <string name="achievement_early_bird_title">Ранняя пташка</string>
+    <string name="achievement_early_bird_desc">Выполните заметок до 9 утра: %1$d</string>
 </resources>

@@ -11,6 +11,16 @@ import kotlin.random.Random
 import kotlinx.serialization.encodeToString
 
 /**
+ * Подставляет в текст события имя персонажа из листа персонажа вместо
+ * базового «Мутлабок»/"Mutlaboc". Пустое имя оставляет текст как есть.
+ */
+fun personalizeEventText(text: String, characterName: String?): String {
+    val name = characterName?.trim().orEmpty()
+    if (name.isEmpty()) return text
+    return text.replace("Мутлабок", name).replace("Mutlaboc", name)
+}
+
+/**
  * Репозиторий полосы событий фокус-таймера (offline-first).
  *
  * Клиент сам роллит взвешенно-случайное событие из Room-кэша каталога (или из
@@ -23,7 +33,13 @@ class FocusEventsRepository(
     private val session: AuthSessionStore,
     private val scheduler: SyncScheduler,
     private val random: Random = Random.Default,
+    private val achievements: AchievementsTracker? = null,
 ) {
+
+    /** Начало фокус-сессии: сбрасывает метрику «минут за сессию» у достижений. */
+    fun onSessionStart() {
+        achievements?.startFocusSession()
+    }
 
     /**
      * Роллит одно событие и применяет его локально. [sessionSkillKey] — навык текущей
@@ -32,6 +48,10 @@ class FocusEventsRepository(
      */
     suspend fun rollEvent(sessionSkillKey: String?, english: Boolean): FocusFeedEntry? {
         val account = normalizeAccountKey(session.getEmail()) ?: return null
+
+        // Ролл идёт раз в минуту работы таймера — сама минута фокуса засчитывается
+        // всегда, даже если событие не выпало.
+        achievements?.reportFocusMinute()
 
         val cached = dao.focusEvents()
         val catalog = if (cached.isEmpty()) builtInFocusEvents else cached.map { it.toDomain() }
@@ -52,6 +72,7 @@ class FocusEventsRepository(
             }
         }
         val event = pickWeightedFocusEvent(candidates, random) ?: return null
+        achievements?.report(AchievementMetrics.FOCUS_EVENTS_RECEIVED)
 
         var skillName: String? = null
         when (event.type) {
@@ -85,7 +106,7 @@ class FocusEventsRepository(
         return FocusFeedEntry(
             id = System.currentTimeMillis(),
             type = event.type,
-            text = event.text(english),
+            text = personalizeEventText(event.text(english), dao.character(account)?.name),
             characterXp = event.characterXp,
             skillXp = event.skillXp,
             skillName = skillName,
@@ -105,6 +126,10 @@ class FocusEventsRepository(
         dao.putCharacterSkills(updated.skills.mapIndexed { i, skill ->
             LocalCharacterSkillEntity(account, skill.key, i, skill.name, skill.level, skill.progress.toDouble())
         })
+        if (characterXp > 0) {
+            achievements?.report(AchievementMetrics.CHARACTER_XP_EARNED, characterXp.toLong())
+        }
+        achievements?.reportMax(AchievementMetrics.CHARACTER_LEVEL, updated.level.toLong())
     }
 
     private suspend fun grantNewSkill(
@@ -125,6 +150,7 @@ class FocusEventsRepository(
                 progress = 0.0,
             )
         ))
+        achievements?.report(AchievementMetrics.SKILLS_LEARNED)
     }
 
     private suspend fun grantItem(account: String, item: FocusEventItem, english: Boolean) {
@@ -151,5 +177,6 @@ class FocusEventsRepository(
                 equippedSlot = null,
             )
         ))
+        achievements?.report(AchievementMetrics.ITEMS_RECEIVED)
     }
 }

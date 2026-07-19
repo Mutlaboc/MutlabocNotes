@@ -29,6 +29,7 @@ class FocusEventsViewModel(
     /** Начало новой сессии таймера — полоса очищается. */
     fun startSession() {
         feed = emptyList()
+        repository.onSessionStart()
     }
 
     /** Минутный тик работающего таймера. [sessionSkillKey] — навык сессии. */
