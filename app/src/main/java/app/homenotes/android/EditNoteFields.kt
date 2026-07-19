@@ -39,13 +39,15 @@ internal fun NoteTitleField(
 @Composable
 internal fun NoteContentField(
     content: String,
-    onContentChange: (String) -> Unit
+    onContentChange: (String) -> Unit,
+    trailingIcon: @Composable (() -> Unit)? = null
 ) {
     CozyTextField(
         value = content,
         onValueChange = onContentChange,
         label = stringResource(R.string.note_content_label),
         singleLine = false,
+        trailingIcon = trailingIcon,
         modifier = Modifier
             .fillMaxWidth()
             .fillMaxHeight(0.4f)

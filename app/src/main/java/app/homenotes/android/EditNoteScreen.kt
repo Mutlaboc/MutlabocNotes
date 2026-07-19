@@ -250,7 +250,14 @@ fun EditNoteScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         NoteContentField(
                             content = content,
-                            onContentChange = { content = it }
+                            onContentChange = { content = it },
+                            trailingIcon = {
+                                VoiceInputButton(
+                                    onTextConfirmed = { dictated ->
+                                        content = if (content.isBlank()) dictated else "$content\n$dictated"
+                                    }
+                                )
+                            }
                         )
                     }
 
@@ -272,7 +279,14 @@ fun EditNoteScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         NoteContentField(
                             content = content,
-                            onContentChange = { content = it }
+                            onContentChange = { content = it },
+                            trailingIcon = {
+                                VoiceInputButton(
+                                    onTextConfirmed = { dictated ->
+                                        content = if (content.isBlank()) dictated else "$content\n$dictated"
+                                    }
+                                )
+                            }
                         )
                     }
                 }

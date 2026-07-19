@@ -8,6 +8,14 @@
         tools:targetApi="tiramisu" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
+    <!-- Package-visibility declaration so ACTION_RECOGNIZE_SPEECH resolves to the
+         device's speech recognizer on Android 11+ (voice dictation on note creation). -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
+    </queries>
+
     <application
         android:name=".HomeNotesApplication"
         android:allowBackup="true"

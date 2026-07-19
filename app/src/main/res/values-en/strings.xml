@@ -87,6 +87,13 @@
     <string name="note_title_label">Title</string>
     <string name="note_title_required">Enter a title</string>
     <string name="note_content_label">Content</string>
+    <string name="note_voice_input_description">Dictate text</string>
+    <string name="note_voice_prompt">Dictate your note</string>
+    <string name="note_voice_dialog_title">Check the text</string>
+    <string name="note_voice_dialog_hint">Recognized text</string>
+    <string name="note_voice_apply">Insert</string>
+    <string name="note_voice_unavailable_title">Voice input unavailable</string>
+    <string name="note_voice_unavailable_message">No speech recognition service was found on this device.</string>
     <string name="note_category_shopping">Purchase</string>
     <string name="note_category_tasks">Tasks</string>
     <string name="note_category_recurring_tasks">Recurring tasks</string>

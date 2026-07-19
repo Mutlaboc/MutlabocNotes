@@ -86,6 +86,13 @@
     <string name="note_title_label">Заголовок</string>
     <string name="note_title_required">Введите заголовок</string>
     <string name="note_content_label">Содержимое</string>
+    <string name="note_voice_input_description">Надиктовать текст</string>
+    <string name="note_voice_prompt">Продиктуйте заметку</string>
+    <string name="note_voice_dialog_title">Проверь текст</string>
+    <string name="note_voice_dialog_hint">Распознанный текст</string>
+    <string name="note_voice_apply">Вставить</string>
+    <string name="note_voice_unavailable_title">Голосовой ввод недоступен</string>
+    <string name="note_voice_unavailable_message">На устройстве не найден сервис распознавания речи.</string>
     <string name="note_category_shopping">Покупка</string>
     <string name="note_category_tasks">Задачи</string>
     <string name="note_category_recurring_tasks">Повторяющиеся задачи</string>
