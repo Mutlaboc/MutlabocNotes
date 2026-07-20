@@ -70,9 +70,13 @@ class NotesViewModel(
             withContext(Dispatchers.Main) {
                 result.onSuccess { id ->
                     val noteWithId = rewardedNote.copy(id = id)
-                    val notes = currentNotes() + noteWithId
                     lastCreatedNoteId = noteWithId.id
-                    applyNotes(notes)
+                    // Room may emit the inserted row before insert() resumes here. Avoid
+                    // adding the same stable id twice: LazyColumn requires unique keys.
+                    val notes = currentNotes()
+                    if (notes.none { it.id == id }) {
+                        applyNotes(notes + noteWithId)
+                    }
                     reschedule { notificationScheduler.schedule(noteWithId) }
                 }.onFailure { error ->
                     showMessage(error)

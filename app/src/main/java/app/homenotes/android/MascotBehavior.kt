@@ -16,7 +16,7 @@ internal enum class MascotAnim { WALK, IDLE, NOTES, CHOP, HAMMER }
 
 /** Per-frame hold times; non-uniform timings make the tool swings read naturally. */
 internal val MASCOT_FRAME_TIMINGS_MS: Map<MascotAnim, LongArray> = mapOf(
-    MascotAnim.WALK to LongArray(8) { 110L },
+    MascotAnim.WALK to LongArray(8) { 130L },
     MascotAnim.IDLE to longArrayOf(500, 200, 600, 600, 200, 500),
     MascotAnim.NOTES to longArrayOf(450, 250, 250, 250, 450, 400),
     MascotAnim.CHOP to longArrayOf(400, 220, 220, 110, 150, 260),
@@ -45,7 +45,10 @@ internal object MascotScript {
     const val MASCOT_W = MASCOT_H * (320f / 485f)
 
     private const val SCENE_W = 2120f
-    private const val WALK_SPEED = 2324f / 9_000f  // scene units per ms, the old cross pace
+    // Matched to the art so the planted foot doesn't slide: the 8-frame cycle covers two
+    // ~168-unit steps (heel-to-heel at the contact poses), i.e. ~337 scene units per
+    // 8 x 130 ms cycle.
+    private const val WALK_SPEED = 337f / 1_040f
 
     private const val OFF_LEFT = -MASCOT_W / 2f
     private const val OFF_RIGHT = SCENE_W + MASCOT_W / 2f

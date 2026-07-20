@@ -135,6 +135,21 @@ class NotesViewModelTest {
     }
 
     @Test
+    fun addNote_roomEmissionBeforeInsertResultDoesNotDuplicateCreatedNote() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val created = note(id = "created-id", title = "Created", coinCount = 2)
+            loadContent(created)
+            repository.insertResult = Result.success(created.id)
+
+            viewModel.addNote(created.copy(id = "", coinCount = 0))
+            advanceUntilIdle()
+
+            val state = viewModel.uiState as NotesUiState.Content
+            assertEquals(listOf(created), state.notes)
+            assertEquals(listOf(created), scheduler.scheduleCalls.takeLast(1))
+        }
+
+    @Test
     fun addNote_inexactFallbackShowsExactAlarmPermissionMessage() = runTest(mainDispatcherRule.dispatcher) {
         val created = note(title = "Created")
         repository.insertResult = Result.success("created-id")
