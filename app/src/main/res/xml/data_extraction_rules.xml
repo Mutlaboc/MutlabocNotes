@@ -8,6 +8,7 @@
     <cloud-backup>
         <include domain="file" path="datastore/user_preferences.preferences_pb" />
         <include domain="sharedpref" path="." />
+        <include domain="database" path="." />
         <exclude domain="sharedpref" path="secure_session.xml" />
         <exclude domain="sharedpref" path="deadline_notification_alarms.xml" />
         <exclude domain="database" path="homenotes.db" />
@@ -17,6 +18,7 @@
     <device-transfer>
         <include domain="file" path="datastore/user_preferences.preferences_pb" />
         <include domain="sharedpref" path="." />
+        <include domain="database" path="." />
         <exclude domain="sharedpref" path="secure_session.xml" />
         <exclude domain="sharedpref" path="deadline_notification_alarms.xml" />
         <exclude domain="database" path="homenotes.db" />
