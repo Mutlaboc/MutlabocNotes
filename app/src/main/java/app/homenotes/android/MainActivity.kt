@@ -281,6 +281,7 @@ fun MyApp(
 
             composable("home") {
                 LaunchedEffect(Unit) { characterViewModel.loadCharacter() }
+                val earnedCoins = (notesViewModel.uiState as? NotesUiState.Content)?.totalCoins ?: 0
                 HomeScreen(
                     uiState = notesViewModel.uiState,
                     uiMessage = notesViewModel.uiMessage,
@@ -325,7 +326,9 @@ fun MyApp(
                     },
                     onboarding = onboardingViewModel.uiState,
                     onWelcomeSeen = onboardingViewModel::markWelcomeSeen,
-                    onHintSeen = onboardingViewModel::markHintSeen
+                    onHintSeen = onboardingViewModel::markHintSeen,
+                    earnedCoins = earnedCoins
+
                 )
             }
 

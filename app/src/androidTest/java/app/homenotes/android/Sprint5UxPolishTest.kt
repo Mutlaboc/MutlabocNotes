@@ -46,7 +46,7 @@ class Sprint5UxPolishTest {
                     onHomeInfoClick = {},
                     onCompletionChange = { _, _ -> },
                     onSwitchUser = {},
-                    onOpenSettings = {}
+                    onOpenSettings = {},
                 )
             }
         }
