@@ -68,7 +68,13 @@ private const val CANOPY_W = 971f;  private const val CANOPY_H = 878f
 // chop / think / write) is MascotScript, a pure function of the elapsed clock.
 private const val FOOT_PAD = 8f          // sprite has a few empty px below the feet
 private const val ANIMATION_START_DELAY_MS = 5_000L  // hold a static scene before animating
-private const val HOUSE_FRAME_MS = 700L  // per-frame hold for the house idle sprite loop
+
+// The three supplied progression images keep their native canvas sizes. Their visual
+// ground lines are aligned independently because the transparent padding differs.
+private const val START_STAGE_X = 292f; private const val START_STAGE_Y = 260f
+private const val START_STAGE_W = 1536f; private const val START_STAGE_H = 1024f
+private const val MIDDLE_STAGE_X = 224f; private const val MIDDLE_STAGE_Y = 224f
+private const val MIDDLE_STAGE_W = 1672f; private const val MIDDLE_STAGE_H = 941f
 
 internal enum class HomeSceneStage {
     CONSTRUCTION_PLOT,
@@ -127,21 +133,6 @@ internal fun HomeYardScene(
         )
     )
 
-    // Pre-rendered idle frames of the house: only the lantern and chimney smoke animate;
-    // the windows are frozen to a steady glow to cut load on the notes screen. Only
-    // decoded when the house is actually shown.
-    val houseFrames = if (sceneStage == HomeSceneStage.ESTABLISHED_HOME && showHouse) {
-        // 12-frame loop: lantern flicker + chimney smoke only; windows are static.
-        rememberPixelBmps(
-            R.drawable.house_anim_01, R.drawable.house_anim_02, R.drawable.house_anim_03,
-            R.drawable.house_anim_04, R.drawable.house_anim_05, R.drawable.house_anim_06,
-            R.drawable.house_anim_07, R.drawable.house_anim_08, R.drawable.house_anim_09,
-            R.drawable.house_anim_10, R.drawable.house_anim_11, R.drawable.house_anim_12
-        )
-    } else {
-        emptyList()
-    }
-
     // Subtle, continuous canopy sway (kept as State, read in the draw lambda).
     val sway = rememberInfiniteTransition(label = "tree_sway")
     val swayAngle = sway.animateFloat(
@@ -177,8 +168,8 @@ internal fun HomeYardScene(
                     contentDescription = null,
                     filterQuality = FilterQuality.None,
                     modifier = Modifier
-                        .offset(x(SITE_X), y(SITE_Y))
-                        .size(d(SITE_W), d(SITE_H))
+                        .offset(x(START_STAGE_X), y(START_STAGE_Y))
+                        .size(d(START_STAGE_W), d(START_STAGE_H))
                 )
             }
             HomeSceneStage.MIDDLE_CONSTRUCTION -> {
@@ -187,15 +178,12 @@ internal fun HomeYardScene(
                     contentDescription = null,
                     filterQuality = FilterQuality.None,
                     modifier = Modifier
-                        .offset(x(SITE_X), y(SITE_Y))
-                        .size(d(SITE_W), d(SITE_H))
+                        .offset(x(MIDDLE_STAGE_X), y(MIDDLE_STAGE_Y))
+                        .size(d(MIDDLE_STAGE_W), d(MIDDLE_STAGE_H))
                 )
             }
 
             HomeSceneStage.ESTABLISHED_HOME -> {
-                // The established-home stage is kept intact for later level progression.
-                // Its static art appears immediately; the slow idle loop starts after the
-                // usual scene delay.
                 if (showHouse) {
                     val houseModifier = Modifier.offset(x(0f), y(0f)).size(d(HOUSE), d(HOUSE))
                     Image(
@@ -204,9 +192,6 @@ internal fun HomeYardScene(
                         filterQuality = FilterQuality.None,
                         modifier = houseModifier
                     )
-                    if (animate) {
-                        HouseSprite(elapsed = elapsed, frames = houseFrames, modifier = houseModifier)
-                    }
                 }
 
                 Image(
@@ -236,28 +221,6 @@ internal fun HomeYardScene(
             MascotImage(elapsed = elapsed, frames = mascotFrames, s = s, ox = ox)
         }
     }
-}
-
-/**
- * House idle sprite. Cycles through the pre-rendered frames at a slow cadence. Only a
- * change of the integer frame (~1.4fps) recomposes this node; the bitmaps are decoded
- * once up front, so there is no per-frame compositing or decoding.
- */
-@Composable
-private fun HouseSprite(
-    elapsed: State<Long>,
-    frames: List<ImageBitmap>,
-    modifier: Modifier
-) {
-    val frameIndex by remember(frames) {
-        derivedStateOf { ((elapsed.value / HOUSE_FRAME_MS) % frames.size).toInt() }
-    }
-    Image(
-        bitmap = frames[frameIndex],
-        contentDescription = null,
-        filterQuality = FilterQuality.None,
-        modifier = modifier
-    )
 }
 
 /**

@@ -182,28 +182,28 @@ fun HomeScreen(
                     animationRestartKey = homeAnimationRestartKey,
                     onCoinAnchorPositioned = { coinTarget = it },
                     onOpenCharacter = onOpenCharacter,
-                    stage = 0
+                    stage = HomeSceneStage.CONSTRUCTION_PLOT
                 )
                 in 100..200 -> HomeHeader(
                     totalCoins = totalCoins,
                     animationRestartKey = homeAnimationRestartKey,
                     onCoinAnchorPositioned = { coinTarget = it },
                     onOpenCharacter = onOpenCharacter,
-                    stage = 1
+                    stage = HomeSceneStage.START_CONSTRUCTION
                     )
-                in 200..300 -> HomeHeader(
+                in 201..300 -> HomeHeader(
                     totalCoins = totalCoins,
                     animationRestartKey = homeAnimationRestartKey,
                     onCoinAnchorPositioned = { coinTarget = it },
                     onOpenCharacter = onOpenCharacter,
-                    stage = 2
+                    stage = HomeSceneStage.MIDDLE_CONSTRUCTION
                 )
-                 in 300..Int.MAX_VALUE -> HomeHeader(
+                 in 301..Int.MAX_VALUE -> HomeHeader(
                     totalCoins = totalCoins,
                     animationRestartKey = homeAnimationRestartKey,
                     onCoinAnchorPositioned = { coinTarget = it },
                     onOpenCharacter = onOpenCharacter,
-                    stage = 3
+                    stage = HomeSceneStage.ESTABLISHED_HOME
                 )
             }
 

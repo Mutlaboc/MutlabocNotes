@@ -47,7 +47,7 @@ internal fun HomeHeader(
     animationRestartKey: Any,
     onCoinAnchorPositioned: (Offset) -> Unit = {},
     onOpenCharacter: () -> Unit = {},
-    stage: Int
+    stage: HomeSceneStage
 ) {
     val backgroundDescription = stringResource(R.string.home_background_description)
     Box(
@@ -58,42 +58,20 @@ internal fun HomeHeader(
             .semantics { contentDescription = backgroundDescription },
         contentAlignment = Alignment.BottomCenter
     ) {
-        when(stage) {
-            0 -> {
-                Image(
-                painter = painterResource(id = R.drawable.notes_background_v2),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-            HomeYardScene(
-                animationRestartKey = animationRestartKey,
-                sceneStage = HomeSceneStage.CONSTRUCTION_PLOT,
-                modifier = Modifier
-                    .height(232.dp)
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-            )
-            }
-            1 -> {
-                Image(
-                    painter = painterResource(id = R.drawable.notes_background_v2),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-                HomeYardScene(
-                    animationRestartKey = animationRestartKey,
-                    sceneStage = HomeSceneStage.CONSTRUCTION_PLOT,
-                    modifier = Modifier
-                        .height(232.dp)
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                )
-            }
-
-
-        }
+        Image(
+            painter = painterResource(id = R.drawable.notes_background_v2),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        HomeYardScene(
+            animationRestartKey = animationRestartKey,
+            sceneStage = stage,
+            modifier = Modifier
+                .height(232.dp)
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+        )
 
         Row(
             modifier = Modifier
