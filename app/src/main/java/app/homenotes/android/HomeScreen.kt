@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.AlertDialog
-import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Scaffold
 import androidx.compose.material.SnackbarResult
 import androidx.compose.material.Text
@@ -80,7 +79,8 @@ fun HomeScreen(
     onFocusMinuteTick: (skillKey: String?) -> Unit = {},
     onboarding: OnboardingState = OnboardingState.Completed,
     onWelcomeSeen: () -> Unit = {},
-    onHintSeen: (OnboardingHintStep) -> Unit = {}
+    onHintSeen: (OnboardingHintStep) -> Unit = {},
+    earnedCoins: Int
 ) {
     val context = LocalContext.current
     var showExitDialog by remember { mutableStateOf(false) }
@@ -176,12 +176,37 @@ fun HomeScreen(
                 .background(CozyAuth.Cream)
                 .pixelScreenFrame()
         ) {
-            HomeHeader(
-                totalCoins = totalCoins,
-                animationRestartKey = homeAnimationRestartKey,
-                onCoinAnchorPositioned = { coinTarget = it },
-                onOpenCharacter = onOpenCharacter
-            )
+            when (earnedCoins){
+                in 0..99 -> HomeHeader(
+                    totalCoins = totalCoins,
+                    animationRestartKey = homeAnimationRestartKey,
+                    onCoinAnchorPositioned = { coinTarget = it },
+                    onOpenCharacter = onOpenCharacter,
+                    stage = 0
+                )
+                in 100..200 -> HomeHeader(
+                    totalCoins = totalCoins,
+                    animationRestartKey = homeAnimationRestartKey,
+                    onCoinAnchorPositioned = { coinTarget = it },
+                    onOpenCharacter = onOpenCharacter,
+                    stage = 1
+                    )
+                in 200..300 -> HomeHeader(
+                    totalCoins = totalCoins,
+                    animationRestartKey = homeAnimationRestartKey,
+                    onCoinAnchorPositioned = { coinTarget = it },
+                    onOpenCharacter = onOpenCharacter,
+                    stage = 2
+                )
+                 in 300..Int.MAX_VALUE -> HomeHeader(
+                    totalCoins = totalCoins,
+                    animationRestartKey = homeAnimationRestartKey,
+                    onCoinAnchorPositioned = { coinTarget = it },
+                    onOpenCharacter = onOpenCharacter,
+                    stage = 3
+                )
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -463,6 +488,7 @@ fun HomeScreenPreview() {
         onHomeInfoClick = {},
         onCompletionChange = { _, _ -> },
         onSwitchUser = {},
-        onOpenSettings = {}
+        onOpenSettings = {},
+        earnedCoins = 1
     )
 }

@@ -72,6 +72,8 @@ private const val HOUSE_FRAME_MS = 700L  // per-frame hold for the house idle sp
 
 internal enum class HomeSceneStage {
     CONSTRUCTION_PLOT,
+    START_CONSTRUCTION,
+    MIDDLE_CONSTRUCTION,
     ESTABLISHED_HOME
 }
 
@@ -169,6 +171,26 @@ internal fun HomeYardScene(
                         .size(d(SITE_W), d(SITE_H))
                 )
             }
+            HomeSceneStage.START_CONSTRUCTION -> {
+                Image(
+                    bitmap = pixelBmp(R.drawable.site_stage_1),
+                    contentDescription = null,
+                    filterQuality = FilterQuality.None,
+                    modifier = Modifier
+                        .offset(x(SITE_X), y(SITE_Y))
+                        .size(d(SITE_W), d(SITE_H))
+                )
+            }
+            HomeSceneStage.MIDDLE_CONSTRUCTION -> {
+                Image(
+                    bitmap = pixelBmp(R.drawable.site_stage_2),
+                    contentDescription = null,
+                    filterQuality = FilterQuality.None,
+                    modifier = Modifier
+                        .offset(x(SITE_X), y(SITE_Y))
+                        .size(d(SITE_W), d(SITE_H))
+                )
+            }
 
             HomeSceneStage.ESTABLISHED_HOME -> {
                 // The established-home stage is kept intact for later level progression.
@@ -206,6 +228,7 @@ internal fun HomeYardScene(
                         }
                 )
             }
+
         }
 
         // Mascot strolling along the grass — only once the animation has started.

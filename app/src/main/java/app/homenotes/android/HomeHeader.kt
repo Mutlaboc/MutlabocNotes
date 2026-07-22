@@ -6,7 +6,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,7 +23,6 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -48,7 +46,8 @@ internal fun HomeHeader(
     totalCoins: Int,
     animationRestartKey: Any,
     onCoinAnchorPositioned: (Offset) -> Unit = {},
-    onOpenCharacter: () -> Unit = {}
+    onOpenCharacter: () -> Unit = {},
+    stage: Int
 ) {
     val backgroundDescription = stringResource(R.string.home_background_description)
     Box(
@@ -59,20 +58,43 @@ internal fun HomeHeader(
             .semantics { contentDescription = backgroundDescription },
         contentAlignment = Alignment.BottomCenter
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.notes_background_v2),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-        HomeYardScene(
-            animationRestartKey = animationRestartKey,
-            sceneStage = HomeSceneStage.CONSTRUCTION_PLOT,
-            modifier = Modifier
-                .height(232.dp)
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-        )
+        when(stage) {
+            0 -> {
+                Image(
+                painter = painterResource(id = R.drawable.notes_background_v2),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            HomeYardScene(
+                animationRestartKey = animationRestartKey,
+                sceneStage = HomeSceneStage.CONSTRUCTION_PLOT,
+                modifier = Modifier
+                    .height(232.dp)
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+            )
+            }
+            1 -> {
+                Image(
+                    painter = painterResource(id = R.drawable.notes_background_v2),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+                HomeYardScene(
+                    animationRestartKey = animationRestartKey,
+                    sceneStage = HomeSceneStage.CONSTRUCTION_PLOT,
+                    modifier = Modifier
+                        .height(232.dp)
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                )
+            }
+
+
+        }
+
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
