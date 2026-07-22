@@ -53,12 +53,9 @@ private const val GROUND_Y = 1165f
 // House occupies its native 1254 square at the scene origin.
 private const val HOUSE = 1254f
 
-// Starting-stage plot. The sign and surveyed soil are one static foreground layer;
-// the young tree is separate so the existing subtle tree sway can remain.
-private const val PLOT_X = 70f; private const val PLOT_Y = 599f
-private const val PLOT_W = 1978f; private const val PLOT_H = 560f
-private const val SAPLING_X = 1540f; private const val SAPLING_Y = 645f
-private const val SAPLING_W = 414f; private const val SAPLING_H = 520f
+// Starting-stage plot. The supplied v2 artwork is one static foreground layer.
+private const val SITE_X = -25f; private const val SITE_Y = 500f
+private const val SITE_W = 2170f; private const val SITE_H = 725f
 
 // Tree v2 layers (scene offsets + sizes). The trunk's base sits on the ground line;
 // the canopy overlaps the upper trunk and sways from its lower edge.
@@ -164,24 +161,12 @@ internal fun HomeYardScene(
         when (sceneStage) {
             HomeSceneStage.CONSTRUCTION_PLOT -> {
                 Image(
-                    bitmap = pixelBmp(R.drawable.construction_plot),
+                    bitmap = pixelBmp(R.drawable.site_v2),
                     contentDescription = null,
                     filterQuality = FilterQuality.None,
                     modifier = Modifier
-                        .offset(x(PLOT_X), y(PLOT_Y))
-                        .size(d(PLOT_W), d(PLOT_H))
-                )
-                Image(
-                    bitmap = pixelBmp(R.drawable.construction_sapling),
-                    contentDescription = null,
-                    filterQuality = FilterQuality.None,
-                    modifier = Modifier
-                        .offset(x(SAPLING_X), y(SAPLING_Y))
-                        .size(d(SAPLING_W), d(SAPLING_H))
-                        .graphicsLayer {
-                            rotationZ = if (animate) swayAngle.value else 0f
-                            transformOrigin = TransformOrigin(0.5f, 1f)
-                        }
+                        .offset(x(SITE_X), y(SITE_Y))
+                        .size(d(SITE_W), d(SITE_H))
                 )
             }
 

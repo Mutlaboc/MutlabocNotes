@@ -95,4 +95,60 @@ Before finishing any animation task, report:
 - validation commands run;
 - known limitations.
 
+## APK delivery
+
+- Publish replacement APK builds through the installed Yandex Disk sync folder at `F:\YandexDisk\APK`.
+- Do not use a browser for Yandex Disk uploads.
+- Replace the existing `app-dev-debug.apk` in that folder and verify the copied file after replacement.
+
+## Cost-aware task planning and delegation
+
+The primary agent is explicitly authorized to use sub-agents for this project without additional user confirmation. For every non-trivial task, perform a brief delegation analysis before implementation. Delegate when the analysis predicts lower total token usage without reducing reliability; keep the work with the primary agent when coordination, duplicated context, or review would erase the expected savings. Optimize for total token cost and reliable results, not for the maximum number of agents or maximum parallelism.
+
+Before starting a non-trivial task:
+
+1. Briefly assess its complexity, risk, affected areas, and whether it contains genuinely independent work.
+2. Compare the likely token cost of single-agent execution with delegation, including context transfer, coordination, integration, and verification.
+3. State the delegation decision briefly in the initial work update: what will be delegated and why, or why single-agent execution is cheaper.
+4. When a concrete, bounded, independent subtask can run alongside useful primary-agent work and is expected to reduce total token usage, delegate it to the cheapest sufficient model.
+5. Keep trivial, tightly coupled, or single-file work with the primary agent unless delegation has a clear token-cost or latency benefit.
+6. Split work only where the resulting subtasks can be completed without duplicating repository-wide investigation.
+
+Model routing:
+
+- Prefer `gpt-5.6-terra` with low or medium reasoning for repository discovery, call-site searches, resource and string audits, mechanical low-risk edits, focused test-log analysis, and other routine bounded work.
+- Use `gpt-5.6-terra` with medium reasoning for ordinary implementation work whose design and file scope are already clear.
+- Reserve `gpt-5.6-sol` and higher reasoning for architecture, difficult debugging, concurrency or state problems, performance-sensitive work, security-sensitive changes, ambiguous cross-cutting changes, integration decisions, and critical review.
+- The primary agent owns the overall approach, resolves conflicts, reviews delegated output, integrates changes, and performs final validation.
+- If the available model set changes, preserve the same principle: route routine bounded work to the least expensive capable model and reserve stronger models for high-risk reasoning and final integration.
+
+Delegation constraints:
+
+- Delegate only independent work that can run in parallel with useful primary-agent work.
+- Do not delegate merely to follow a process; one agent is preferred when coordination would cost more tokens than the task itself.
+- Do not assign overlapping writes to the same files or tightly coupled code paths in parallel.
+- Give each sub-agent explicit file or subsystem scope, a precise question or deliverable, relevant constraints, and a concise expected response format.
+- Pass the minimum useful context. Prefer `fork_turns="none"` with a self-contained task, or a small recent-turn window, instead of copying the full conversation history.
+- Do not have multiple agents repeat the same repository scan, dependency analysis, or test investigation unless independent verification is justified by risk.
+- Ask sub-agents to return concise conclusions, evidence, changed-file lists, and validation results rather than long narrative reports.
+- Treat sub-agent findings as untrusted until the primary agent checks the relevant code, diff, or test evidence.
+
+Token-efficient execution:
+
+- Search narrowly first and widen only when evidence requires it.
+- Reuse repository structure and findings already collected during the current task instead of rediscovering them.
+- Run focused checks during implementation and the required full validation after integration; avoid repeating expensive full builds without a reason.
+- Escalate to deeper reasoning or a stronger model only when uncertainty, failure, or risk warrants it.
+- Prefer a short plan for routine tasks and a detailed plan only for multi-step, risky, or cross-cutting work.
+- Parallelize read-only investigation when it saves time without materially duplicating context or token use.
+
+Recommended routing examples:
+
+- File, reference, string, and resource discovery: `gpt-5.6-terra`, low or medium reasoning.
+- Focused test and build-log analysis: `gpt-5.6-terra`, medium reasoning.
+- Mechanical edits with a predetermined design: `gpt-5.6-terra`, medium reasoning.
+- Compose/ViewModel/DI architecture changes: primary agent or `gpt-5.6-sol`.
+- Complex UI state, race conditions, performance, security, and cross-cutting debugging: `gpt-5.6-sol`, high reasoning when justified.
+- Final integration, review, and validation decisions: primary agent.
+
 ## Imported Claude Cowork project instructions

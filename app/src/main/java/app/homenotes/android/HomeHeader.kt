@@ -60,7 +60,7 @@ internal fun HomeHeader(
         contentAlignment = Alignment.BottomCenter
     ) {
         Image(
-            painter = painterResource(id = R.drawable.home_meadow_background),
+            painter = painterResource(id = R.drawable.notes_background_v2),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
