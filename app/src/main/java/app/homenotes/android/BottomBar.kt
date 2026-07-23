@@ -89,7 +89,6 @@ fun BottomBar(
             actions.forEach { action ->
                 val isSelected = action == selectedAction
                 val isHighlighted = action == highlightedAction
-                val isAdd = action == BottomBarAction.AddNote
                 val interactionSource = remember { MutableInteractionSource() }
                 Box(
                     modifier = Modifier
@@ -99,7 +98,7 @@ fun BottomBar(
                             interactionSource = interactionSource,
                             // Для акцентной кнопки риппл на всю треть панели некрасив —
                             // вместо него кнопка сама реагирует на нажатие (see AccentAddButton).
-                            indication = if (isAdd) null else LocalIndication.current
+                            indication = LocalIndication.current
                         ) {
                             when (action) {
                                 BottomBarAction.CompletedNotes -> onCompletedNotesClick()
@@ -110,29 +109,14 @@ fun BottomBar(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    if (isAdd) {
+
                         AccentAddButton(
                             isHighlighted = isHighlighted,
                             interactionSource = interactionSource,
-                            onPositioned = { rect -> onIconBounds(action, rect) }
+                            onPositioned = { rect -> onIconBounds(action, rect) },
+                            text =
                         )
-                    } else {
-                        Box(
-                            modifier = Modifier.onGloballyPositioned { coordinates ->
-                                onIconBounds(action, coordinates.boundsInRoot())
-                            },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (isHighlighted) {
-                                HighlightPulse()
-                            }
-                            BottomBarIcon(
-                                action = action,
-                                isSelected = isSelected,
-                                isHighlighted = isHighlighted
-                            )
-                        }
-                    }
+
                 }
             }
         }
