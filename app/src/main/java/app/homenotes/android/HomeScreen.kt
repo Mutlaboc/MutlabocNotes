@@ -48,7 +48,8 @@ enum class BottomBarAction {
     CompletedNotes,
     AddNote,
     HomeInfo,
-    UpcomingTasks
+    UpcomingTasks,
+    Notes
 }
 
 @Composable
@@ -160,6 +161,7 @@ fun HomeScreen(
                 onCompletedNotesClick = onCompletedNotesClick,
                 onAddClick = onAddNoteClick,
                 onHomeInfoClick = onHomeInfoClick,
+                onNavigateHome = {},
                 highlightedAction = highlightedAction,
                 onIconBounds = { action, rect -> iconBounds[action] = rect }
             )

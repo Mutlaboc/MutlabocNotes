@@ -47,6 +47,7 @@ class Sprint5UxPolishTest {
                     onCompletionChange = { _, _ -> },
                     onSwitchUser = {},
                     onOpenSettings = {},
+                    earnedCoins = 0,
                 )
             }
         }
@@ -317,9 +318,9 @@ class Sprint5UxPolishTest {
     @Test
     fun bottomBar_containsOnlyCompletedAddAndHomeInfoActions() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val add = context.getString(R.string.action_add)
-        val homeInfo = context.getString(R.string.home_info_title)
-        val completedTasks = context.getString(R.string.completed_notes_title)
+        val add = context.getString(R.string.bottom_bar_create)
+        val homeInfo = context.getString(R.string.bottom_bar_home_info)
+        val completedTasks = context.getString(R.string.bottom_bar_completed)
         val settings = context.getString(R.string.action_settings)
         var completedClicks = 0
 
@@ -329,7 +330,8 @@ class Sprint5UxPolishTest {
                     selectedAction = null,
                     onCompletedNotesClick = { completedClicks += 1 },
                     onAddClick = {},
-                    onHomeInfoClick = {}
+                    onHomeInfoClick = {},
+                    onNavigateHome = {}
                 )
             }
         }
@@ -342,6 +344,67 @@ class Sprint5UxPolishTest {
         composeRule.onNodeWithContentDescription(completedTasks).performClick()
         composeRule.runOnIdle {
             assertEquals(1, completedClicks)
+        }
+    }
+
+    @Test
+    fun bottomBar_onCompletedScreen_containsNotesAddAndUpcomingActions() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val notes = context.getString(R.string.bottom_bar_notes)
+        val completed = context.getString(R.string.bottom_bar_completed)
+        val upcoming = context.getString(R.string.bottom_bar_upcoming)
+        var notesClicks = 0
+        var upcomingClicks = 0
+
+        composeRule.setContent {
+            MaterialTheme {
+                BottomBar(
+                    selectedAction = BottomBarAction.CompletedNotes,
+                    onCompletedNotesClick = {},
+                    onAddClick = {},
+                    onHomeInfoClick = {},
+                    onNavigateHome = { notesClicks += 1 },
+                    onUpcomingClick = { upcomingClicks += 1 }
+                )
+            }
+        }
+
+        composeRule.onAllNodesWithContentDescription(completed).assertCountEquals(0)
+        composeRule.onNodeWithContentDescription(notes).performClick()
+        composeRule.onNodeWithContentDescription(upcoming).performClick()
+        composeRule.runOnIdle {
+            assertEquals(1, notesClicks)
+            assertEquals(1, upcomingClicks)
+        }
+    }
+
+    @Test
+    fun bottomBar_onUpcomingScreen_containsCompletedAddAndNotesActions() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val notes = context.getString(R.string.bottom_bar_notes)
+        val completed = context.getString(R.string.bottom_bar_completed)
+        val upcoming = context.getString(R.string.bottom_bar_upcoming)
+        var completedClicks = 0
+        var notesClicks = 0
+
+        composeRule.setContent {
+            MaterialTheme {
+                BottomBar(
+                    selectedAction = BottomBarAction.UpcomingTasks,
+                    onCompletedNotesClick = { completedClicks += 1 },
+                    onAddClick = {},
+                    onHomeInfoClick = {},
+                    onNavigateHome = { notesClicks += 1 }
+                )
+            }
+        }
+
+        composeRule.onAllNodesWithContentDescription(upcoming).assertCountEquals(0)
+        composeRule.onNodeWithContentDescription(completed).performClick()
+        composeRule.onNodeWithContentDescription(notes).performClick()
+        composeRule.runOnIdle {
+            assertEquals(1, completedClicks)
+            assertEquals(1, notesClicks)
         }
     }
 }

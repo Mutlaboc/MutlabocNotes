@@ -5,6 +5,10 @@
     <string name="action_back">Back</string>
     <string name="action_add">Add</string>
     <string name="bottom_bar_create">Create</string>
+    <string name="bottom_bar_completed">Completed</string>
+    <string name="bottom_bar_home_info">Home info</string>
+    <string name="bottom_bar_notes">Notes</string>
+    <string name="bottom_bar_upcoming">Upcoming</string>
     <string name="action_delete">Delete</string>
     <string name="action_save">Save</string>
     <string name="action_cancel">Cancel</string>

@@ -37,7 +37,7 @@ fun UpcomingTasksScreen(
                 onCompletedNotesClick = onCompletedNotesClick,
                 onAddClick = onAddNoteClick,
                 onHomeInfoClick = {},
-                onUpcomingClick = onNavigateHome
+                onNavigateHome = onNavigateHome
             )
         }
     ) { paddingValues ->

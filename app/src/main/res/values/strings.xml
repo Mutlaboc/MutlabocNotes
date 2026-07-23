@@ -5,6 +5,10 @@
     <string name="action_back">Назад</string>
     <string name="action_add">Добавить</string>
     <string name="bottom_bar_create">Создать</string>
+    <string name="bottom_bar_completed">Завершённые</string>
+    <string name="bottom_bar_home_info">О доме</string>
+    <string name="bottom_bar_notes">Заметки</string>
+    <string name="bottom_bar_upcoming">Будущие</string>
     <string name="action_delete">Удалить</string>
     <string name="action_save">Сохранить</string>
     <string name="action_cancel">Отмена</string>

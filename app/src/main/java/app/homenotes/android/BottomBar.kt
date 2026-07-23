@@ -34,8 +34,8 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AddTask
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.QuestionMark
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.runtime.Composable
@@ -45,14 +45,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+
+private data class BottomBarItem(
+    val action: BottomBarAction,
+    val text: String,
+    val icon: ImageVector,
+    val onClick: () -> Unit
+)
 
 @Composable
 fun BottomBar(
@@ -60,16 +68,50 @@ fun BottomBar(
     onCompletedNotesClick: () -> Unit,
     onAddClick: () -> Unit,
     onHomeInfoClick: () -> Unit,
+    onNavigateHome: () -> Unit,
     highlightedAction: BottomBarAction? = null,
     onIconBounds: (BottomBarAction, Rect) -> Unit = { _, _ -> },
-    onUpcomingClick: (() -> Unit)? = null
+    onUpcomingClick: (() -> Unit)? = null,
 ) {
-    val actions = listOf(
-        BottomBarAction.CompletedNotes,
-        BottomBarAction.AddNote,
-        if (onUpcomingClick == null) BottomBarAction.HomeInfo else BottomBarAction.UpcomingTasks
-
+    val completedItem = BottomBarItem(
+        action = BottomBarAction.CompletedNotes,
+        text = stringResource(R.string.bottom_bar_completed),
+        icon = Icons.Default.DoneAll,
+        onClick = onCompletedNotesClick
     )
+    val addItem = BottomBarItem(
+        action = BottomBarAction.AddNote,
+        text = stringResource(R.string.bottom_bar_create),
+        icon = Icons.Default.Add,
+        onClick = onAddClick
+    )
+    val homeInfoItem = BottomBarItem(
+        action = BottomBarAction.HomeInfo,
+        text = stringResource(R.string.bottom_bar_home_info),
+        icon = Icons.Default.QuestionMark,
+        onClick = onHomeInfoClick
+    )
+    val notesItem = BottomBarItem(
+        action = BottomBarAction.Notes,
+        text = stringResource(R.string.bottom_bar_notes),
+        icon = Icons.Default.Home,
+        onClick = onNavigateHome
+    )
+    val items = when (selectedAction) {
+        BottomBarAction.CompletedNotes -> listOf(
+            notesItem,
+            addItem,
+            BottomBarItem(
+                action = BottomBarAction.UpcomingTasks,
+                text = stringResource(R.string.bottom_bar_upcoming),
+                icon = Icons.Default.Schedule,
+                onClick = { onUpcomingClick?.invoke() }
+            )
+        )
+        BottomBarAction.UpcomingTasks -> listOf(completedItem, addItem, notesItem)
+        else -> listOf(completedItem, addItem, homeInfoItem)
+    }
+
     Column {
         Box(
             modifier = Modifier
@@ -86,10 +128,9 @@ fun BottomBar(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            actions.forEach { action ->
-                val isSelected = action == selectedAction
-                val isHighlighted = action == highlightedAction
-                val interactionSource = remember { MutableInteractionSource() }
+            items.forEach { item ->
+                val isHighlighted = item.action == highlightedAction
+                val interactionSource = remember(item.action) { MutableInteractionSource() }
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -97,26 +138,18 @@ fun BottomBar(
                         .clickable(
                             interactionSource = interactionSource,
                             // Для акцентной кнопки риппл на всю треть панели некрасив —
-                            // вместо него кнопка сама реагирует на нажатие (see AccentAddButton).
+                            // вместо него кнопка сама реагирует на нажатие (see BottomBarButton).
                             indication = LocalIndication.current
-                        ) {
-                            when (action) {
-                                BottomBarAction.CompletedNotes -> onCompletedNotesClick()
-                                BottomBarAction.AddNote -> onAddClick()
-                                BottomBarAction.HomeInfo -> onHomeInfoClick()
-                                BottomBarAction.UpcomingTasks -> onUpcomingClick?.invoke()
-                            }
-                        },
+                        ) { item.onClick() },
                     contentAlignment = Alignment.Center
                 ) {
-
-                        AccentAddButton(
-                            isHighlighted = isHighlighted,
-                            interactionSource = interactionSource,
-                            onPositioned = { rect -> onIconBounds(action, rect) },
-                            text =
-                        )
-
+                    BottomBarButton(
+                        isHighlighted = isHighlighted,
+                        interactionSource = interactionSource,
+                        onPositioned = { rect -> onIconBounds(item.action, rect) },
+                        text = item.text,
+                        icon = item.icon
+                    )
                 }
             }
         }
@@ -124,15 +157,17 @@ fun BottomBar(
 }
 
 /**
- * Акцентная кнопка создания заметки: приподнятая на 8 dp пиксельная панель
- * 60 x 48 dp (MutedYellow, плюс — Terracotta) с подписью «Создать». Позади —
+ * Кнопка нижней панели: приподнятая на 8 dp пиксельная панель
+ * 60 x 48 dp (MutedYellow, иконка — Terracotta) с подписью. Позади —
  * два прямоугольных слоя "света" шириной 72 и 84 dp, как ступенчатое свечение.
  */
 @Composable
-private fun AccentAddButton(
+private fun BottomBarButton(
     isHighlighted: Boolean,
     interactionSource: InteractionSource,
-    onPositioned: (Rect) -> Unit
+    onPositioned: (Rect) -> Unit,
+    text: String,
+    icon: ImageVector
 ) {
     // Тактильный отклик вместо риппла: пока палец на кнопке, панель слегка
     // «вдавливается» (уменьшается и опускается), отпускание пружинит обратно.
@@ -148,7 +183,7 @@ private fun AccentAddButton(
         } else {
             snap()
         },
-        label = "add_press"
+        label = "bottom_bar_press"
     )
     Column(
         // unbounded: колонка выше 56-dp панели (свечение + подпись) и приподнята
@@ -200,18 +235,20 @@ private fun AccentAddButton(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = stringResource(R.string.action_add),
+                        imageVector = icon,
+                        contentDescription = text,
                         tint = CozyAuth.Terracotta
                     )
                 }
             }
         }
         Text(
-            text = stringResource(R.string.bottom_bar_create),
+            text = text,
             fontFamily = CozyAuth.PixelFont,
             style = MaterialTheme.typography.caption,
             color = CozyAuth.InkSoft,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 2.dp)
         )
     }
@@ -250,42 +287,4 @@ private fun HighlightPulse(size: Dp = 40.dp) {
             .clip(CircleShape)
             .background(CozyAuth.MutedYellow)
     )
-}
-
-@Composable
-private fun BottomBarIcon(
-    action: BottomBarAction,
-    isSelected: Boolean,
-    isHighlighted: Boolean = false
-) {
-    val tint: Color = if (isSelected || isHighlighted) CozyAuth.Terracotta else CozyAuth.InkSoft
-    when (action) {
-        BottomBarAction.CompletedNotes -> Icon(
-            imageVector = if (isSelected) Icons.Default.AddTask else Icons.Default.DoneAll,
-            contentDescription = if (isSelected) {
-                stringResource(R.string.notes_title)
-            } else {
-                stringResource(R.string.completed_notes_title)
-            },
-            tint = tint
-        )
-
-        BottomBarAction.AddNote -> Icon(
-            imageVector = Icons.Default.Add,
-            contentDescription = stringResource(R.string.action_add),
-            tint = tint
-        )
-
-        BottomBarAction.HomeInfo -> Icon(
-            imageVector = Icons.Default.QuestionMark,
-            contentDescription = stringResource(R.string.home_info_title),
-            tint = tint
-        )
-
-        BottomBarAction.UpcomingTasks -> Icon(
-            imageVector = Icons.Default.Schedule,
-            contentDescription = stringResource(R.string.upcoming_tasks_title),
-            tint = tint
-        )
-    }
 }

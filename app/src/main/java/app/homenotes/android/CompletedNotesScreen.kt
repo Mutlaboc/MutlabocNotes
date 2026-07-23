@@ -66,7 +66,8 @@ fun CompletedNotesScreen(
                 onCompletedNotesClick = onNavigateHome,
                 onAddClick = onaddNoteClick,
                 onHomeInfoClick = {},
-                onUpcomingClick = onUpcomingClick
+                onNavigateHome = onNavigateHome,
+                onUpcomingClick = onUpcomingClick,
             )
         }
     ) { paddingValues ->
