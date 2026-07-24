@@ -2,6 +2,7 @@ package app.homenotes.android
 
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -64,6 +65,9 @@ private const val SPLIT_SLIDE_DP = 64f
 
 /** Интервал ролла случайного события во время работы таймера. */
 private const val FOCUS_EVENT_INTERVAL_MS = 60_000L
+
+/** Как часто меняется фон/биом сцены фокуса. */
+private const val FOCUS_SCENE_ROTATION_MS = 5 * 60_000L
 
 /**
  * Full-screen "focus" overlay shown while a note's timer runs. The screen splits at the
@@ -142,7 +146,22 @@ fun ExpandedNoteOverlay(
     BackHandler(enabled = !closing) { closeWith(onReturnHome) }
 
     Column(modifier = modifier.fillMaxSize()) {
-        // TOP — animated yard scene (no house).
+        val focusAnimationsEnabled = rememberAnimationsEnabled()
+        val focusSceneElapsed = rememberElapsedMillis(focusAnimationsEnabled)
+        val focusBiomeFrames = rememberFocusBiomeMascotFrames()
+        // Scene 0 is the existing meadow (unchanged); 1..N are the rotating biomes. Random
+        // start so two overlapping focus sessions don't all open on the same scene.
+        var sceneIndex by remember { mutableStateOf(if (focusAnimationsEnabled) (0..FOCUS_BIOME_SCENES.size).random() else 0) }
+        LaunchedEffect(focusAnimationsEnabled) {
+            if (focusAnimationsEnabled) {
+                while (true) {
+                    delay(FOCUS_SCENE_ROTATION_MS)
+                    sceneIndex = (sceneIndex + 1) % (FOCUS_BIOME_SCENES.size + 1)
+                }
+            }
+        }
+
+        // TOP — animated yard scene (no house), rotating through the meadow + biomes.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -154,18 +173,32 @@ fun ExpandedNoteOverlay(
                 }
                 .background(CozyAuth.Cream)
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.home_meadow_background),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-            HomeYardScene(
-                animationRestartKey = Unit,
-                showHouse = false,
-                startDelayMs = 0L,
-                modifier = Modifier.fillMaxSize()
-            )
+            Crossfade(targetState = sceneIndex, animationSpec = tween(700), label = "focus_scene") { index ->
+                if (index == 0) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Image(
+                            painter = painterResource(id = R.drawable.home_meadow_background),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        HomeYardScene(
+                            animationRestartKey = Unit,
+                            showHouse = false,
+                            startDelayMs = 0L,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                } else {
+                    FocusBiomeScene(
+                        scene = FOCUS_BIOME_SCENES[index - 1],
+                        elapsed = focusSceneElapsed,
+                        animationsEnabled = focusAnimationsEnabled,
+                        frames = focusBiomeFrames,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
         }
 
         // BOTTOM — event feed + timer window, parts downward from the centre seam.

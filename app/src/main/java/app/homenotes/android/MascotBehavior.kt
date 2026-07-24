@@ -12,7 +12,7 @@ package app.homenotes.android
  * testable and the clock the single source of truth.
  */
 
-internal enum class MascotAnim { WALK, IDLE, NOTES, CHOP, HAMMER }
+internal enum class MascotAnim { WALK, IDLE, NOTES, CHOP, HAMMER, GATHER, REST, DIG }
 
 /** Per-frame hold times; non-uniform timings make the tool swings read naturally. */
 internal val MASCOT_FRAME_TIMINGS_MS: Map<MascotAnim, LongArray> = mapOf(
@@ -20,7 +20,10 @@ internal val MASCOT_FRAME_TIMINGS_MS: Map<MascotAnim, LongArray> = mapOf(
     MascotAnim.IDLE to longArrayOf(500, 200, 600, 600, 200, 500),
     MascotAnim.NOTES to longArrayOf(450, 250, 250, 250, 450, 400),
     MascotAnim.CHOP to longArrayOf(400, 220, 220, 110, 150, 260),
-    MascotAnim.HAMMER to longArrayOf(400, 220, 220, 110, 150, 260)
+    MascotAnim.HAMMER to longArrayOf(400, 220, 220, 110, 150, 260),
+    MascotAnim.GATHER to longArrayOf(350, 300, 300, 200, 300, 350),
+    MascotAnim.REST to longArrayOf(500, 300, 700, 700, 300, 500),
+    MascotAnim.DIG to longArrayOf(350, 220, 220, 180, 200, 300)
 )
 
 internal data class MascotSegment(
