@@ -79,37 +79,37 @@ internal val FOCUS_BIOME_SCENES: List<FocusScene> = listOf(
     )
 )
 
-private const val OFF_LEFT_FRAC = -0.10f
-private const val OFF_RIGHT_FRAC = 1.10f
+internal const val FOCUS_OFF_LEFT_FRAC = -0.10f
+internal const val FOCUS_OFF_RIGHT_FRAC = 1.10f
 
 /** Time to walk across the full scene width once; stop durations follow from anim timings. */
-private const val WALK_MS_PER_FULL_WIDTH = 3_000L
+internal const val FOCUS_WALK_MS_PER_FULL_WIDTH = 3_000L
 
-private data class FocusSegment(
+internal data class FocusSegment(
     val anim: MascotAnim,
     val durationMs: Long,
     val fromFrac: Float,
     val toFrac: Float
 )
 
-private fun buildLoop(points: List<FocusActivityPoint>): List<FocusSegment> {
+internal fun buildFocusLoop(points: List<FocusActivityPoint>): List<FocusSegment> {
     val segments = mutableListOf<FocusSegment>()
-    var cursor = OFF_LEFT_FRAC
+    var cursor = FOCUS_OFF_LEFT_FRAC
     for (point in points) {
-        val walkMs = (kotlin.math.abs(point.xFrac - cursor) * WALK_MS_PER_FULL_WIDTH).toLong()
+        val walkMs = (kotlin.math.abs(point.xFrac - cursor) * FOCUS_WALK_MS_PER_FULL_WIDTH).toLong()
         segments += FocusSegment(MascotAnim.WALK, walkMs, cursor, point.xFrac)
         val workMs = MASCOT_FRAME_TIMINGS_MS.getValue(point.anim).sum() * point.loops
         segments += FocusSegment(point.anim, workMs, point.xFrac, point.xFrac)
         cursor = point.xFrac
     }
-    val exitMs = (kotlin.math.abs(OFF_RIGHT_FRAC - cursor) * WALK_MS_PER_FULL_WIDTH).toLong()
-    segments += FocusSegment(MascotAnim.WALK, exitMs, cursor, OFF_RIGHT_FRAC)
+    val exitMs = (kotlin.math.abs(FOCUS_OFF_RIGHT_FRAC - cursor) * FOCUS_WALK_MS_PER_FULL_WIDTH).toLong()
+    segments += FocusSegment(MascotAnim.WALK, exitMs, cursor, FOCUS_OFF_RIGHT_FRAC)
     return segments
 }
 
-private data class FocusFrame(val anim: MascotAnim, val frameIndex: Int, val xFrac: Float)
+internal data class FocusFrame(val anim: MascotAnim, val frameIndex: Int, val xFrac: Float)
 
-private fun frameAt(segments: List<FocusSegment>, totalMs: Long, elapsedMs: Long): FocusFrame {
+internal fun focusFrameAt(segments: List<FocusSegment>, totalMs: Long, elapsedMs: Long): FocusFrame {
     var t = ((elapsedMs % totalMs) + totalMs) % totalMs
     var segment = segments.last()
     for (s in segments) {
@@ -160,7 +160,7 @@ internal fun FocusBiomeScene(
     frames: Map<MascotAnim, List<ImageBitmap>>,
     modifier: Modifier = Modifier
 ) {
-    val loop = remember(scene) { buildLoop(scene.points) }
+    val loop = remember(scene) { buildFocusLoop(scene.points) }
     val totalMs = remember(loop) { loop.sumOf { it.durationMs } }
 
     Image(
@@ -186,7 +186,7 @@ internal fun FocusBiomeScene(
                 if (!animationsEnabled) {
                     scene.points.first().anim to 0
                 } else {
-                    val f = frameAt(loop, totalMs, elapsed.value)
+                    val f = focusFrameAt(loop, totalMs, elapsed.value)
                     f.anim to f.frameIndex
                 }
             }
@@ -202,7 +202,7 @@ internal fun FocusBiomeScene(
             modifier = Modifier
                 .size(mascotWidthDp, mascotHeightDp)
                 .graphicsLayer {
-                    val xFrac = if (animationsEnabled) frameAt(loop, totalMs, elapsed.value).xFrac else staticXFrac
+                    val xFrac = if (animationsEnabled) focusFrameAt(loop, totalMs, elapsed.value).xFrac else staticXFrac
                     translationX = xFrac * widthPx - mascotWidthPx / 2f
                     translationY = scene.groundFrac * heightPx - mascotHeightPx
                 }
