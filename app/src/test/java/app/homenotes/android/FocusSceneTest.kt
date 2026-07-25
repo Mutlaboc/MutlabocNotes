@@ -19,9 +19,10 @@ class FocusSceneTest {
 
     @Test
     fun `loop is continuous within a pass - no teleports at segment boundaries`() {
-        // Every boundary is continuous except the very last, where the loop wraps from the
-        // right exit back to the left entry — both off-screen, so a jump there is expected
-        // (same accepted pattern as FocusActivityStrip's single-stop loop).
+        // Boundaries inside a pass must be continuous. The mascot may only jump where one
+        // pass ends and the next begins — that happens beyond both edges of the scene, so
+        // it is never visible (same accepted pattern as FocusActivityStrip's single-stop
+        // loop, now repeated once per pass).
         for (scene in FOCUS_BIOME_SCENES) {
             val loop = buildFocusLoop(scene.points)
             val totalMs = loop.sumOf { it.durationMs }
@@ -30,10 +31,37 @@ class FocusSceneTest {
                 boundary += segment.durationMs
                 val before = focusFrameAt(loop, totalMs, boundary - 1)
                 val after = focusFrameAt(loop, totalMs, boundary)
+                val offScreenWrap = before.xFrac !in 0f..1f && after.xFrac !in 0f..1f
                 assertTrue(
                     "jump of ${abs(after.xFrac - before.xFrac)} at boundary $boundary",
-                    abs(after.xFrac - before.xFrac) < 0.05f
+                    offScreenWrap || abs(after.xFrac - before.xFrac) < 0.05f
                 )
+            }
+        }
+    }
+
+    @Test
+    fun `the mascot only stops once every FOCUS_PASSES_PER_ACTIVITY passes`() {
+        for (scene in FOCUS_BIOME_SCENES) {
+            val loop = buildFocusLoop(scene.points)
+            // A pass is a walk that ends beyond the right edge; every segment chain in the
+            // loop finishes there, so counting those counts the crossings.
+            val passes = loop.count { it.toFrac == FOCUS_OFF_RIGHT_FRAC }
+            val activities = loop.count { it.anim != MascotAnim.WALK }
+            assertEquals(scene.points.size, activities)
+            assertEquals(activities * FOCUS_PASSES_PER_ACTIVITY, passes)
+        }
+    }
+
+    @Test
+    fun `every pass starts beyond the left edge`() {
+        for (scene in FOCUS_BIOME_SCENES) {
+            val loop = buildFocusLoop(scene.points)
+            for ((index, segment) in loop.withIndex()) {
+                val startsPass = index == 0 || loop[index - 1].toFrac == FOCUS_OFF_RIGHT_FRAC
+                if (startsPass) {
+                    assertEquals(FOCUS_OFF_LEFT_FRAC, segment.fromFrac, 0f)
+                }
             }
         }
     }

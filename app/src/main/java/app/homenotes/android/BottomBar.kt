@@ -1,5 +1,7 @@
 package app.homenotes.android
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
@@ -9,11 +11,10 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,11 +40,13 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.QuestionMark
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -137,18 +140,19 @@ fun BottomBar(
                         .fillMaxHeight()
                         .clickable(
                             interactionSource = interactionSource,
-                            // Для акцентной кнопки риппл на всю треть панели некрасив —
-                            // вместо него кнопка сама реагирует на нажатие (see BottomBarButton).
-                            indication = LocalIndication.current
+                            // Риппл красил бы всю треть полосы — вместо него на нажатие
+                            // отвечает сама кнопка (вдавливание + брызги), а зона
+                            // попадания остаётся во всю ячейку.
+                            indication = null
                         ) { item.onClick() },
                     contentAlignment = Alignment.Center
                 ) {
-                    BottomBarButton(
-                        isHighlighted = isHighlighted,
-                        interactionSource = interactionSource,
-                        onPositioned = { rect -> onIconBounds(item.action, rect) },
+                    PixelBarButton(
                         text = item.text,
-                        icon = item.icon
+                        icon = item.icon,
+                        interactionSource = interactionSource,
+                        highlighted = isHighlighted,
+                        onIconBounds = { rect -> onIconBounds(item.action, rect) }
                     )
                 }
             }
@@ -156,18 +160,39 @@ fun BottomBar(
     }
 }
 
+/** Длительность всплеска брызг под кнопкой. */
+private const val SPLASH_MS = 420
+
+/** Палитра брызг: акценты приложения — жёлтый, терракота, зелень и кремовая крошка. */
+private val SplashColors = listOf(
+    CozyAuth.MutedYellow,
+    CozyAuth.Terracotta,
+    CozyAuth.SoftGreen,
+    CozyAuth.CardCream
+)
+
 /**
  * Кнопка нижней панели: приподнятая на 8 dp пиксельная панель
  * 60 x 48 dp (MutedYellow, иконка — Terracotta) с подписью. Позади —
  * два прямоугольных слоя "света" шириной 72 и 84 dp, как ступенчатое свечение.
+ *
+ * Тот же элемент используется как кнопка «Создать» на экране «О доме», чтобы
+ * действие выглядело одинаково во всём приложении.
+ *
+ * [onClick] можно не передавать: тогда кликом владеет родитель (в нижней панели это
+ * ячейка во всю треть полосы), а кнопке достаточно её [interactionSource], чтобы
+ * отыграть нажатие.
  */
 @Composable
-private fun BottomBarButton(
-    isHighlighted: Boolean,
-    interactionSource: InteractionSource,
-    onPositioned: (Rect) -> Unit,
+fun PixelBarButton(
     text: String,
-    icon: ImageVector
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    highlighted: Boolean = false,
+    contentDescription: String = text,
+    onIconBounds: (Rect) -> Unit = {}
 ) {
     // Тактильный отклик вместо риппла: пока палец на кнопке, панель слегка
     // «вдавливается» (уменьшается и опускается), отпускание пружинит обратно.
@@ -185,15 +210,54 @@ private fun BottomBarButton(
         },
         label = "bottom_bar_press"
     )
+    // Брызги на отпускании: две «волны» пиксельных квадратиков разного размера.
+    val splash = remember { Animatable(0f) }
+    LaunchedEffect(interactionSource, animationsEnabled) {
+        if (!animationsEnabled) return@LaunchedEffect
+        interactionSource.interactions.collect { interaction ->
+            if (interaction is PressInteraction.Release) {
+                splash.snapTo(0f)
+                splash.animateTo(1f, tween(SPLASH_MS, easing = LinearOutSlowInEasing))
+            }
+        }
+    }
     Column(
         // unbounded: колонка выше 56-dp панели (свечение + подпись) и приподнята
         // на 8 dp — ей разрешено выходить за границы строки без обрезки контента.
-        modifier = Modifier
+        modifier = modifier
             .wrapContentHeight(unbounded = true)
             .offset(y = (-8).dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(contentAlignment = Alignment.Center) {
+        Box(
+            contentAlignment = Alignment.Center,
+            // Брызги рисуются последними и разлетаются за пределы узла — Compose не
+            // обрезает рисование, поэтому квадратики летят поверх кнопки и панели,
+            // не меняя при этом размеры кнопки.
+            modifier = Modifier.drawWithContent {
+                drawContent()
+                val p = splash.value
+                drawPixelSparks(
+                    progress = p,
+                    colors = SplashColors,
+                    count = 8,
+                    reachStart = 0.36f,
+                    reachGrowth = 0.78f,
+                    sparkFactor = 0.11f,
+                    gravity = 0.14f
+                )
+                drawPixelSparks(
+                    progress = p,
+                    colors = SplashColors,
+                    count = 6,
+                    reachStart = 0.24f,
+                    reachGrowth = 0.50f,
+                    sparkFactor = 0.075f,
+                    gravity = 0.22f,
+                    angleOffset = 0.4f
+                )
+            }
+        ) {
             // Слои света: шире кнопки, от прозрачного к более плотному.
             Box(
                 modifier = Modifier
@@ -211,7 +275,7 @@ private fun BottomBarButton(
                         RoundedCornerShape(7.dp)
                     )
             )
-            if (isHighlighted) {
+            if (highlighted) {
                 HighlightPulse(size = 76.dp)
             }
             PixelPanel(
@@ -220,7 +284,7 @@ private fun BottomBarButton(
                 cornerRadius = 6,
                 modifier = Modifier
                     .size(width = 60.dp, height = 48.dp)
-                    .onGloballyPositioned { onPositioned(it.boundsInRoot()) }
+                    .onGloballyPositioned { onIconBounds(it.boundsInRoot()) }
                     // press читается только в graphicsLayer — анимация нажатия
                     // не рекомпозирует панель.
                     .graphicsLayer {
@@ -229,6 +293,17 @@ private fun BottomBarButton(
                         scaleY = s
                         translationY = 2.dp.toPx() * press
                     }
+                    .then(
+                        if (onClick != null) {
+                            Modifier.clickable(
+                                interactionSource = interactionSource,
+                                indication = null,
+                                onClick = onClick
+                            )
+                        } else {
+                            Modifier
+                        }
+                    )
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -236,7 +311,7 @@ private fun BottomBarButton(
                 ) {
                     Icon(
                         imageVector = icon,
-                        contentDescription = text,
+                        contentDescription = contentDescription,
                         tint = CozyAuth.Terracotta
                     )
                 }

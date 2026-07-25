@@ -46,16 +46,23 @@ import androidx.compose.ui.unit.dp
  *
  * The hand layer rocks a few degrees around the wrist so the pencil "writes"; the
  * pivot is computed from the live Crop scale so it lands on the wrist on any width.
+ *
+ * desk_hand holds the WHOLE figure — hand, pencil shaft and pencil tip. Splitting it
+ * anywhere through the pencil (as an earlier cut did) makes only half of it rock, so
+ * the pencil visibly bends at the seam; see scripts/fix_desk_layers.py, which re-cuts
+ * the layers and inpaints the silhouette out of the base.
  */
 
 // Native size of every layer canvas (the cabin artwork, top trimmed so the head sits
-// near the top of the frame).
-private const val CANVAS_W = 1254f
-private const val CANVAS_H = 1104f
-// Wrist position inside that canvas — the pivot the writing hand rocks around.
-private const val WRIST_X = 491f
-private const val WRIST_Y = 480f
-private const val WRITE_ANGLE = 4f
+// near the top of the frame). These must stay the real pixel size of the WebP files —
+// the pivot below is expressed in the same coordinates.
+private const val CANVAS_W = 836f
+private const val CANVAS_H = 736f
+// Wrist position inside that canvas — the pivot the writing hand rocks around. It sits
+// where the hand meets the sleeve, so the sleeve (which stays in the base) never gaps.
+private const val WRIST_X = 350f
+private const val WRIST_Y = 360f
+private const val WRITE_ANGLE = 3f
 
 private val DeskWood = Color(0xFF4A250C)
 
