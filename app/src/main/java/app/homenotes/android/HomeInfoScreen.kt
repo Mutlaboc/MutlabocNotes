@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.FloatingActionButton
-import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Scaffold
@@ -78,16 +76,15 @@ fun HomeInfoScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            // Тот же элемент, что «Создать» в нижней панели заметок — одинаковое
+            // действие должно выглядеть одинаково на всех экранах.
+            PixelBarButton(
+                text = stringResource(R.string.bottom_bar_create),
+                icon = Icons.Default.Add,
                 onClick = onAddClick,
-                backgroundColor = CozyAuth.Terracotta,
-                contentColor = CozyAuth.Sky
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(R.string.home_info_add_card)
-                )
-            }
+                contentDescription = stringResource(R.string.home_info_add_card),
+                modifier = Modifier.padding(end = 4.dp, bottom = 4.dp)
+            )
         }
     ) { padding ->
         Column(

@@ -3,19 +3,30 @@ package app.homenotes.android
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Checkbox
 import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
 import androidx.compose.material.LocalContentColor
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
@@ -31,6 +42,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
@@ -49,7 +61,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
-import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlinx.coroutines.delay
@@ -68,6 +79,12 @@ private const val SPARK_COUNT = 6
 private val GoldSparkLight = Color(0xFFFFE082)
 private val GoldSpark = Color(0xFFFFC94D)
 private val GoldSparkDeep = Color(0xFFD99A2B)
+
+/** Ширина рельсы запуска слева от карточки. */
+private val START_RAIL_WIDTH = 72.dp
+
+/** Во сколько раз увеличен чекбокс выполнения относительно материального. */
+private const val COMPLETION_CHECKBOX_SCALE = 1.6f
 
 @Composable
 fun NoteItem(
@@ -187,113 +204,113 @@ fun NoteItem(
             modifier = Modifier.fillMaxWidth()
         ) {
             CompositionLocalProvider(LocalContentColor provides categoryColors.content) {
-                Column(
+                // Кнопка запуска — рельса во всю высоту карточки слева, отметка
+                // выполнения — крупный чекбокс справа, текст и монеты между ними.
+                // IntrinsicSize.Min даёт ряду высоту содержимого, чтобы рельса и
+                // чекбокс могли растянуться на неё целиком.
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onClick() }
-                        .padding(16.dp)
+                        .height(IntrinsicSize.Min),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        if (showCompletion) Checkbox(
-                            checked = note.isCompleted,
-                            colors = cozyCheckboxColors(),
-                            onCheckedChange = { checked ->
-                                if (checked && onBurstComplete != null) {
-                                    if (!bursting) {
-                                        bursting = true
-                                        val inset = with(density) { 14.dp.toPx() }
-                                        val coinSource = if (coinRowBounds != Rect.Zero) {
-                                            Offset(
-                                                coinRowBounds.right - inset,
-                                                (coinRowBounds.top + coinRowBounds.bottom) / 2f
-                                            )
-                                        } else {
-                                            cardBounds.center
-                                        }
-                                        onBurstComplete(
-                                            cardBounds.center,
-                                            coinSource,
-                                            note.coinCount,
-                                            categoryColors.container
-                                        )
-                                    }
-                                } else {
-                                    onCompletionChange(checked)
-                                }
-                            }
+                    if (onStartTimer != null) {
+                        StartTimerRail(
+                            timerMillis = timerMillis,
+                            onClick = { onStartTimer(cardBounds) },
+                            modifier = Modifier.fillMaxHeight()
                         )
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(start = 8.dp)
-                        ) {
-                            Text(
-                                text = note.title,
-                                fontFamily = CozyAuth.PixelFont,
-                                style = MaterialTheme.typography.subtitle1
-                            )
-                            NoteDetails(note)
-                        }
                     }
-                    Row(
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .weight(1f)
+                            .clickable { onClick() }
+                            .padding(16.dp)
                     ) {
-                        if (onStartTimer != null) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(
-                                    onClick = { onStartTimer(cardBounds) },
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.PlayArrow,
-                                        contentDescription = stringResource(R.string.start_timer_description),
-                                        tint = LocalContentColor.current
+                        Text(
+                            text = note.title,
+                            fontFamily = CozyAuth.PixelFont,
+                            style = MaterialTheme.typography.subtitle1
+                        )
+                        NoteDetails(note)
+                        if (coinCount > 0) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .align(Alignment.End)
+                                    .padding(top = 8.dp)
+                                    .onGloballyPositioned { coinRowBounds = it.boundsInRoot() }
+                            ) {
+                                repeat(coinCount) { i ->
+                                    // Entrance phase 3: each coin pops in with a slight
+                                    // overshoot and a small golden spark burst behind it.
+                                    val pop = coinPops.getOrNull(i)
+                                    Image(
+                                        painter = painterResource(id = R.drawable.gold_coin),
+                                        contentDescription = stringResource(R.string.coin_description),
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .drawBehind { pop?.let { drawCoinSparks(it.value) } }
+                                            .graphicsLayer {
+                                                val p = pop?.value ?: 1f
+                                                val s = if (p < 0.55f) {
+                                                    1.25f * (p / 0.55f)
+                                                } else {
+                                                    1.25f - 0.25f * ((p - 0.55f) / 0.45f)
+                                                }
+                                                scaleX = s
+                                                scaleY = s
+                                                alpha = (p / 0.3f).coerceIn(0f, 1f)
+                                            }
                                     )
                                 }
-                                Text(
-                                    text = formatTimer(timerMillis),
-                                    fontFamily = CozyAuth.PixelFont,
-                                    style = MaterialTheme.typography.body2,
-                                    modifier = Modifier.padding(start = 6.dp)
-                                )
                             }
-                        } else {
-                            Spacer(modifier = Modifier.size(1.dp))
                         }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.onGloballyPositioned { coinRowBounds = it.boundsInRoot() }
+                    }
+                    if (showCompletion) {
+                        Box(
+                            modifier = Modifier
+                                .padding(end = 10.dp)
+                                .size(52.dp)
+                                // Риппл чекбокса тоже масштабируется — держим его
+                                // в пределах ячейки, чтобы он не заливал карточку.
+                                .clip(CircleShape),
+                            contentAlignment = Alignment.Center
                         ) {
-                            repeat(coinCount) { i ->
-                                // Entrance phase 3: each coin pops in with a slight
-                                // overshoot and a small golden spark burst behind it.
-                                val pop = coinPops.getOrNull(i)
-                                Image(
-                                    painter = painterResource(id = R.drawable.gold_coin),
-                                    contentDescription = stringResource(R.string.coin_description),
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .drawBehind { pop?.let { drawCoinSparks(it.value) } }
-                                        .graphicsLayer {
-                                            val p = pop?.value ?: 1f
-                                            val s = if (p < 0.55f) {
-                                                1.25f * (p / 0.55f)
+                            Checkbox(
+                                checked = note.isCompleted,
+                                colors = cozyCheckboxColors(),
+                                // Material-чекбокс фиксированного размера — увеличиваем
+                                // масштабом, палитра и поведение остаются прежними.
+                                modifier = Modifier.graphicsLayer {
+                                    scaleX = COMPLETION_CHECKBOX_SCALE
+                                    scaleY = COMPLETION_CHECKBOX_SCALE
+                                },
+                                onCheckedChange = { checked ->
+                                    if (checked && onBurstComplete != null) {
+                                        if (!bursting) {
+                                            bursting = true
+                                            val inset = with(density) { 14.dp.toPx() }
+                                            val coinSource = if (coinRowBounds != Rect.Zero) {
+                                                Offset(
+                                                    coinRowBounds.right - inset,
+                                                    (coinRowBounds.top + coinRowBounds.bottom) / 2f
+                                                )
                                             } else {
-                                                1.25f - 0.25f * ((p - 0.55f) / 0.45f)
+                                                cardBounds.center
                                             }
-                                            scaleX = s
-                                            scaleY = s
-                                            alpha = (p / 0.3f).coerceIn(0f, 1f)
+                                            onBurstComplete(
+                                                cardBounds.center,
+                                                coinSource,
+                                                note.coinCount,
+                                                categoryColors.container
+                                            )
                                         }
-                                )
-                            }
+                                    } else {
+                                        onCompletionChange(checked)
+                                    }
+                                }
+                            )
                         }
                     }
                 }
@@ -303,33 +320,88 @@ fun NoteItem(
 }
 
 /**
+ * Рельса запуска: широкая кнопка во всю высоту карточки с крупной стрелкой и
+ * накопленным временем под ней. Отклик на нажатие — «вдавливание» без риппла, как
+ * у остальных пиксельных кнопок ([PixelClickable]).
+ */
+@Composable
+private fun StartTimerRail(
+    timerMillis: Long,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val animationsEnabled = rememberAnimationsEnabled()
+    val press by animateFloatAsState(
+        targetValue = if (pressed) 1f else 0f,
+        animationSpec = if (animationsEnabled) {
+            spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMedium
+            )
+        } else {
+            snap()
+        },
+        label = "start_rail_press"
+    )
+    Column(
+        modifier = modifier
+            .width(START_RAIL_WIDTH)
+            .background(CozyAuth.MutedYellow)
+            // Шов между рельсой и телом карточки — той же линией, что и рамка панели.
+            .drawBehind {
+                val seam = 3.dp.toPx()
+                drawRect(
+                    color = CozyAuth.BrownOutline,
+                    topLeft = Offset(size.width - seam, 0f),
+                    size = Size(seam, size.height)
+                )
+            }
+            .clickable(
+                interactionSource = interaction,
+                indication = null,
+                onClick = onClick
+            )
+            .padding(horizontal = 6.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Filled.PlayArrow,
+            contentDescription = stringResource(R.string.start_timer_description),
+            tint = CozyAuth.Terracotta,
+            modifier = Modifier
+                .size(38.dp)
+                .graphicsLayer {
+                    val s = 1f - 0.10f * press
+                    scaleX = s
+                    scaleY = s
+                    translationY = 2.dp.toPx() * press
+                }
+        )
+        Text(
+            text = formatTimer(timerMillis),
+            fontFamily = CozyAuth.PixelFont,
+            style = MaterialTheme.typography.caption,
+            color = CozyAuth.Ink,
+            maxLines = 1,
+            modifier = Modifier.padding(top = 2.dp)
+        )
+    }
+}
+
+/**
  * A small "golden burst": [SPARK_COUNT] pixel squares radiating out from the coin's
  * centre, decelerating and fading as [progress] runs 0..1. Drawn behind the coin and
  * outside its pop-scale layer, so the sparks fly at full size from the first frame.
  */
 private fun DrawScope.drawCoinSparks(progress: Float) {
-    if (progress <= 0f || progress >= 1f) return
-    val ease = 1f - (1f - progress) * (1f - progress)
-    val alpha = (1f - progress).coerceIn(0f, 1f)
-    val reach = size.minDimension * (0.45f + 0.75f * ease)
-    val spark = size.minDimension * 0.14f
-    repeat(SPARK_COUNT) { i ->
-        val angle = (i.toFloat() / SPARK_COUNT) * 2f * PI.toFloat() - PI.toFloat() / 2f
-        val color = when (i % 3) {
-            0 -> GoldSparkLight
-            1 -> GoldSpark
-            else -> GoldSparkDeep
-        }
-        drawRect(
-            color = color,
-            topLeft = Offset(
-                center.x + cos(angle) * reach - spark / 2f,
-                center.y + sin(angle) * reach - spark / 2f
-            ),
-            size = Size(spark, spark),
-            alpha = alpha
-        )
-    }
+    drawPixelSparks(
+        progress = progress,
+        colors = listOf(GoldSparkLight, GoldSpark, GoldSparkDeep),
+        count = SPARK_COUNT
+    )
 }
 
 @Composable

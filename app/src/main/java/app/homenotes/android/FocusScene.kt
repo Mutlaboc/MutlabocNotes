@@ -85,6 +85,13 @@ internal const val FOCUS_OFF_RIGHT_FRAC = 1.10f
 /** Time to walk across the full scene width once; stop durations follow from anim timings. */
 internal const val FOCUS_WALK_MS_PER_FULL_WIDTH = 3_000L
 
+/**
+ * Сколько проходов сцены приходится на одну рабочую остановку: маскот сначала просто
+ * пересекает кадр, и только на следующем проходе останавливается поработать. Раньше
+ * все точки отыгрывались за один проход подряд, и он стоял три четверти цикла.
+ */
+internal const val FOCUS_PASSES_PER_ACTIVITY = 2
+
 internal data class FocusSegment(
     val anim: MascotAnim,
     val durationMs: Long,
@@ -92,18 +99,35 @@ internal data class FocusSegment(
     val toFrac: Float
 )
 
+private fun walkMs(fromFrac: Float, toFrac: Float): Long =
+    (kotlin.math.abs(toFrac - fromFrac) * FOCUS_WALK_MS_PER_FULL_WIDTH).toLong()
+
+/**
+ * Цикл сцены — последовательность проходов слева направо. Каждый начинается за левым
+ * краем и заканчивается за правым, поэтому «прыжок» между проходами всегда за кадром
+ * (тот же приём, что и на склейке цикла). Остановка есть только в каждом
+ * [FOCUS_PASSES_PER_ACTIVITY]-м проходе.
+ */
 internal fun buildFocusLoop(points: List<FocusActivityPoint>): List<FocusSegment> {
     val segments = mutableListOf<FocusSegment>()
-    var cursor = FOCUS_OFF_LEFT_FRAC
+    val crossingMs = walkMs(FOCUS_OFF_LEFT_FRAC, FOCUS_OFF_RIGHT_FRAC)
     for (point in points) {
-        val walkMs = (kotlin.math.abs(point.xFrac - cursor) * FOCUS_WALK_MS_PER_FULL_WIDTH).toLong()
-        segments += FocusSegment(MascotAnim.WALK, walkMs, cursor, point.xFrac)
+        // Холостые проходы: просто прогулка через весь кадр.
+        repeat(FOCUS_PASSES_PER_ACTIVITY - 1) {
+            segments += FocusSegment(
+                MascotAnim.WALK, crossingMs, FOCUS_OFF_LEFT_FRAC, FOCUS_OFF_RIGHT_FRAC
+            )
+        }
+        // Рабочий проход: вход слева, остановка в точке, выход направо.
         val workMs = MASCOT_FRAME_TIMINGS_MS.getValue(point.anim).sum() * point.loops
+        segments += FocusSegment(
+            MascotAnim.WALK, walkMs(FOCUS_OFF_LEFT_FRAC, point.xFrac), FOCUS_OFF_LEFT_FRAC, point.xFrac
+        )
         segments += FocusSegment(point.anim, workMs, point.xFrac, point.xFrac)
-        cursor = point.xFrac
+        segments += FocusSegment(
+            MascotAnim.WALK, walkMs(point.xFrac, FOCUS_OFF_RIGHT_FRAC), point.xFrac, FOCUS_OFF_RIGHT_FRAC
+        )
     }
-    val exitMs = (kotlin.math.abs(FOCUS_OFF_RIGHT_FRAC - cursor) * FOCUS_WALK_MS_PER_FULL_WIDTH).toLong()
-    segments += FocusSegment(MascotAnim.WALK, exitMs, cursor, FOCUS_OFF_RIGHT_FRAC)
     return segments
 }
 

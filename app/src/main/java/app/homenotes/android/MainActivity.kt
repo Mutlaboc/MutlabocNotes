@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -399,7 +400,7 @@ fun MyApp(
                         notesViewModel.setNoteCompletion(noteId, isCompleted)
                     },
                     onNavigateHome = {
-                        navController.popBackStack()
+                        navController.navigateHome()
                     },
                     onUpcomingClick = {
                         navController.navigate("upcoming") { launchSingleTop = true }
@@ -419,7 +420,7 @@ fun MyApp(
                         navController.navigate("completed") { launchSingleTop = true }
                     },
                     onNavigateHome = {
-                        navController.popBackStack()
+                        navController.navigateHome()
                     }
                 )
             }
@@ -538,6 +539,19 @@ fun MyApp(
                 )
             }
         }
+    }
+}
+
+/**
+ * Возврат на экран заметок кнопкой «Домой» нижней панели. Именно переход, а не
+ * [NavHostController.popBackStack]: экраны «Завершённые» и «Будущие» ходят друг к
+ * другу через `navigate`, поэтому шаг назад высаживал не домой, а на соседний
+ * список. `popUpTo("home")` схлопывает всё, что накопилось поверх заметок.
+ */
+private fun NavHostController.navigateHome() {
+    navigate("home") {
+        popUpTo("home") { inclusive = false }
+        launchSingleTop = true
     }
 }
 

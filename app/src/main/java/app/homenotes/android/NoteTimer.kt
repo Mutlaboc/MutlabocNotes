@@ -70,6 +70,13 @@ private const val FOCUS_EVENT_INTERVAL_MS = 60_000L
 private const val FOCUS_SCENE_ROTATION_MS = 5 * 60_000L
 
 /**
+ * Доля экрана под сценой (нижней части достаётся `2 - FOCUS_SCENE_WEIGHT`).
+ * 0.85 вместо ровной половины — картинка поднята примерно на 15 %, чтобы под ней
+ * помещались и лента событий, и модуль выполнения.
+ */
+private const val FOCUS_SCENE_WEIGHT = 0.85f
+
+/**
  * Full-screen "focus" overlay shown while a note's timer runs. The screen splits at the
  * centre: the top half is the yard animation (meadow + tree + strolling mascot, no house),
  * the bottom half is the focus-event feed (a random event rolls in once per minute of
@@ -162,10 +169,14 @@ fun ExpandedNoteOverlay(
         }
 
         // TOP — animated yard scene (no house), rotating through the meadow + biomes.
+        // Сцена занимает чуть меньше половины экрана (0.85 против 1.15 снизу): так
+        // картинка поднимается вверх, а лента событий и модуль таймера помещаются
+        // целиком. Фоны биомов широкие (2048x768), при Crop высоту задаёт контейнер —
+        // вертикально они по-прежнему видны полностью, groundFrac не съезжает.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
+                .weight(FOCUS_SCENE_WEIGHT)
                 .clipToBounds()
                 .graphicsLayer {
                     translationY = SPLIT_SLIDE_DP.dp.toPx() * (1f - progress.value)
@@ -205,7 +216,7 @@ fun ExpandedNoteOverlay(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
+                .weight(2f - FOCUS_SCENE_WEIGHT)
                 .graphicsLayer {
                     translationY = -SPLIT_SLIDE_DP.dp.toPx() * (1f - progress.value)
                     alpha = progress.value
