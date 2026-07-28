@@ -1,0 +1,154 @@
+# AGENTS.md - HomeNotes
+
+## Project context
+
+HomeNotes is an Android client written in Kotlin with Jetpack Compose, Navigation Compose, Material Components, Retrofit/OkHttp, DataStore, Room, and AndroidX Security Crypto. The visual style is pixel art; decorative animations are raster sprite frame sequences played by Compose (no Lottie/Rive runtime).
+
+The Android app is the mobile UI/client. The backend is a separate Ktor service and must not be modified from this repository unless the task explicitly asks for contract changes.
+
+## Architecture rules
+
+- Keep dependency creation outside UI.
+- `HomeNotesApplication` owns `AppContainer`.
+- `MainActivity` receives `ViewModelProvider.Factory` from `AppContainer`.
+- Compose screens must receive state and callbacks; they must not create repositories, API clients, schedulers, session managers, or storage directly.
+- Repositories remain thin mapping layers between ViewModel and API/domain models.
+- Do not put navigation logic into repositories or low-level UI components.
+- Keep root navigation routes stable unless the task explicitly asks to refactor navigation.
+- Do not change backend contracts unless the task explicitly asks for it.
+
+## UI entry points
+
+Treat these Compose entry points as stable unless the task explicitly asks to refactor them:
+
+- `HomeScreen`
+- `CompletedNotesScreen`
+- `EditNoteScreen`
+- `HomeInfoScreen`
+- `EditHomeInfoCardScreen`
+- `NoteItem`
+- `BottomBar`
+- `HomeHeader`
+- `AuthScreen`
+- `SettingsScreen`
+
+## Text and resources
+
+- User-facing strings must go through `strings.xml` and `values-en/strings.xml`.
+- Inline text is allowed only for preview sample data, test tags, route names, exception messages, and dynamic user content.
+- Animation frames and pixel-art assets must live in `app/src/main/res/drawable-nodpi/` as lossless WebP (`name_NN.webp` for frame sequences). Never place them in density-qualified `drawable*` folders: `BitmapFactory.decodeResource` rescales them per density (memory blowup + blurred pixel art).
+- Other drawable assets must live in the appropriate `res/drawable*` folder.
+- Do not add large generated assets without explaining why they are necessary.
+
+## Animation rules
+
+Use animation only when it improves clarity, feedback, continuity, or perceived quality.
+
+Prefer this order:
+
+1. Jetpack Compose animation for UI state changes and micro-interactions.
+2. Sprite frame sequences (lossless WebP in `drawable-nodpi`, played via the frame-clock pattern in `HomeYardScene.kt`) for decorative, illustrative, character, loading, empty, success, error, and ambient animations.
+3. Lottie/Rive only when such an asset is explicitly provided and requested; adding a runtime dependency must be justified.
+4. GIF is never a production format (acceptable only as an AI-generation intermediate).
+
+For frame sequences:
+
+- Follow the `mutlaboc-motion` skill (`.agents/skills/mutlaboc-motion/`); prepare assets with its `scripts/prepare_frames.py`.
+- Decode frames once (`rememberPixelBmps`), cycle via frame clock + `derivedStateOf`; read time-driven values only in `offset {}` / `graphicsLayer {}` lambdas.
+- Draw pixel art with `FilterQuality.None`.
+- Budget: decoded RAM = width × height × 4 × frames; keep one animation ≤ ~15 MB, one scene ≤ ~40 MB.
+- Respect reduced motion (`rememberAnimationsEnabled()`); the first frame must work as a static fallback.
+- Check loop seams and dark/light theme readability.
+- Check accessibility: decorative animations should not add noisy semantics.
+- Avoid uncontrolled infinite motion in content-heavy screens.
+
+## Existing HomeHeader animation
+
+`HomeHeader` is the preferred integration point for header animation.
+
+When modifying the header animation:
+
+- Keep the header height stable unless requested.
+- Do not break the total coins overlay.
+- Keep the animation decorative.
+- Do not make the animation compete with note list content.
+- Prefer subtle ambient or state-based motion over busy motion.
+- If replacing an asset, prefer preserving the existing resource name when safe.
+- If changing resource names, update all references carefully.
+
+## Testing and validation
+
+Minimum Android check:
+
+```powershell
+.\gradlew.bat :app:testDevDebugUnitTest
+```
+
+When UI behavior changes, also run relevant Compose UI tests if available.
+
+Before finishing any animation task, report:
+
+- files changed;
+- animation purpose;
+- whether it is Compose animation, a sprite frame sequence, or another format;
+- duration/FPS/loop behavior if applicable;
+- validation commands run;
+- known limitations.
+
+## APK delivery
+
+- Publish replacement APK builds through the installed Yandex Disk sync folder at `F:\YandexDisk\APK`.
+- Do not use a browser for Yandex Disk uploads.
+- Replace the existing `app-dev-debug.apk` in that folder and verify the copied file after replacement.
+
+## Cost-aware task planning and delegation
+
+The primary agent is explicitly authorized to use sub-agents for this project without additional user confirmation. For every non-trivial task, perform a brief delegation analysis before implementation. Delegate when the analysis predicts lower total token usage without reducing reliability; keep the work with the primary agent when coordination, duplicated context, or review would erase the expected savings. Optimize for total token cost and reliable results, not for the maximum number of agents or maximum parallelism.
+
+Before starting a non-trivial task:
+
+1. Briefly assess its complexity, risk, affected areas, and whether it contains genuinely independent work.
+2. Compare the likely token cost of single-agent execution with delegation, including context transfer, coordination, integration, and verification.
+3. State the delegation decision briefly in the initial work update: what will be delegated and why, or why single-agent execution is cheaper.
+4. When a concrete, bounded, independent subtask can run alongside useful primary-agent work and is expected to reduce total token usage, delegate it to the cheapest sufficient model.
+5. Keep trivial, tightly coupled, or single-file work with the primary agent unless delegation has a clear token-cost or latency benefit.
+6. Split work only where the resulting subtasks can be completed without duplicating repository-wide investigation.
+
+Model routing:
+
+- Prefer `gpt-5.6-terra` with low or medium reasoning for repository discovery, call-site searches, resource and string audits, mechanical low-risk edits, focused test-log analysis, and other routine bounded work.
+- Use `gpt-5.6-terra` with medium reasoning for ordinary implementation work whose design and file scope are already clear.
+- Reserve `gpt-5.6-sol` and higher reasoning for architecture, difficult debugging, concurrency or state problems, performance-sensitive work, security-sensitive changes, ambiguous cross-cutting changes, integration decisions, and critical review.
+- The primary agent owns the overall approach, resolves conflicts, reviews delegated output, integrates changes, and performs final validation.
+- If the available model set changes, preserve the same principle: route routine bounded work to the least expensive capable model and reserve stronger models for high-risk reasoning and final integration.
+
+Delegation constraints:
+
+- Delegate only independent work that can run in parallel with useful primary-agent work.
+- Do not delegate merely to follow a process; one agent is preferred when coordination would cost more tokens than the task itself.
+- Do not assign overlapping writes to the same files or tightly coupled code paths in parallel.
+- Give each sub-agent explicit file or subsystem scope, a precise question or deliverable, relevant constraints, and a concise expected response format.
+- Pass the minimum useful context. Prefer `fork_turns="none"` with a self-contained task, or a small recent-turn window, instead of copying the full conversation history.
+- Do not have multiple agents repeat the same repository scan, dependency analysis, or test investigation unless independent verification is justified by risk.
+- Ask sub-agents to return concise conclusions, evidence, changed-file lists, and validation results rather than long narrative reports.
+- Treat sub-agent findings as untrusted until the primary agent checks the relevant code, diff, or test evidence.
+
+Token-efficient execution:
+
+- Search narrowly first and widen only when evidence requires it.
+- Reuse repository structure and findings already collected during the current task instead of rediscovering them.
+- Run focused checks during implementation and the required full validation after integration; avoid repeating expensive full builds without a reason.
+- Escalate to deeper reasoning or a stronger model only when uncertainty, failure, or risk warrants it.
+- Prefer a short plan for routine tasks and a detailed plan only for multi-step, risky, or cross-cutting work.
+- Parallelize read-only investigation when it saves time without materially duplicating context or token use.
+
+Recommended routing examples:
+
+- File, reference, string, and resource discovery: `gpt-5.6-terra`, low or medium reasoning.
+- Focused test and build-log analysis: `gpt-5.6-terra`, medium reasoning.
+- Mechanical edits with a predetermined design: `gpt-5.6-terra`, medium reasoning.
+- Compose/ViewModel/DI architecture changes: primary agent or `gpt-5.6-sol`.
+- Complex UI state, race conditions, performance, security, and cross-cutting debugging: `gpt-5.6-sol`, high reasoning when justified.
+- Final integration, review, and validation decisions: primary agent.
+
+## Imported Claude Cowork project instructions

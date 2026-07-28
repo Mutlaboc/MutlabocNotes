@@ -1,6 +1,6 @@
-# Mutlaboc Notes
+# HomeNotes
 
-Mutlaboc Notes - Android-приложение для управления персональными заметками,
+HomeNotes - Android-приложение для управления персональными заметками,
 задачами, чек-листами и домашней информацией. Проект разработан как
 клиент-серверная система: мобильный клиент отвечает за пользовательский
 интерфейс и локальные функции, а backend хранит данные, управляет
@@ -34,7 +34,7 @@ Mutlaboc Notes - Android-приложение для управления пер
 
 Система состоит из двух репозиториев:
 
-- `MutlabocNotes` - Android-клиент на Kotlin и Jetpack Compose.
+- `HomeNotes` - Android-клиент на Kotlin и Jetpack Compose.
 - `notes-backend` - Ktor backend с PostgreSQL, JWT-аутентификацией и миграциями
   Flyway.
 
@@ -64,7 +64,7 @@ Gradle toolchain. Dev flavor по умолчанию смотрит на лок�
 `http://10.0.2.2:8080/`, что удобно для Android Emulator.
 
 ```powershell
-cd D:\Projects\MutlabocNotes
+cd D:\Projects\HomeNotes
 .\gradlew.bat :app:assembleDevDebug
 .\gradlew.bat :app:testDevDebugUnitTest
 ```

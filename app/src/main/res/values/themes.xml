@@ -1,9 +1,9 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Базовая тема приложения. -->
-    <style name="Base.Theme.MutlabocsNotes" parent="Theme.Material3.Light.NoActionBar">
+    <style name="Base.Theme.HomeNotes" parent="Theme.Material3.Light.NoActionBar">
         <!-- Настройка светлой темы. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
     </style>
 
-    <style name="Theme.MutlabocsNotes" parent="Base.Theme.MutlabocsNotes" />
+    <style name="Theme.HomeNotes" parent="Base.Theme.HomeNotes" />
 </resources>

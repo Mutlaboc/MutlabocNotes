@@ -1,10 +1,10 @@
-# Архитектура Mutlaboc Notes
+# Архитектура HomeNotes
 
 Этот документ фиксирует устройство Android-приложения после финальной очистки. Он нужен, чтобы через несколько месяцев можно было быстро понять, где создаются зависимости, как устроен сетевой слой и какие части системы связаны с backend.
 
 ## Android-приложение
 
-`MutlabocNotesApplication` создаёт один `AppContainer` на процесс приложения. `MainActivity` получает из контейнера `ViewModelProvider.Factory` и не создаёт репозитории, session store или scheduler напрямую.
+`HomeNotesApplication` создаёт один `AppContainer` на процесс приложения. `MainActivity` получает из контейнера `ViewModelProvider.Factory` и не создаёт репозитории, session store или scheduler напрямую.
 
 `AppContainer` отвечает за:
 
@@ -13,7 +13,7 @@
 - `NotesRepository` и `HomeInfoRepository`, которые используют authenticated Retrofit и backend API.
 - `DeadlineNotificationScheduler`, который планирует локальные уведомления по дедлайнам задач.
 - `DataStoreSettingsRepository`, который хранит настройки темы и языка.
-- `MutlabocNotesViewModelFactory`, который создаёт root ViewModel с готовыми зависимостями.
+- `HomeNotesViewModelFactory`, который создаёт root ViewModel с готовыми зависимостями.
 
 Репозитории остаются тонким слоем между ViewModel и API: они мапят backend DTO в доменные модели, нормализуют ошибки через `ApiErrorMapper` и не знают о Compose-навигации.
 

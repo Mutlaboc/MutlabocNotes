@@ -1,6 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <style name="Theme.MutlabocsNotes" parent="Base.Theme.MutlabocsNotes">
+    <style name="Theme.HomeNotes" parent="Base.Theme.HomeNotes">
         <!-- Прозрачные системные панели для edge-to-edge. -->
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:statusBarColor">@android:color/transparent</item>

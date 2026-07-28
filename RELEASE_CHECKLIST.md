@@ -1,110 +1,101 @@
-# Sprint 10 Android release checklist
+# Release Checklist — HomeNotes / Mutlaboc Notes (RuStore)
 
-Use this document for the first production release candidate. Every open item needs an
-owner, evidence, and either a pass result or a linked blocker before go/no-go.
+Чек-лист для подготовки и публикации релиза в RuStore. Заполняется на каждый
+production-релиз. Источник истины по версии — `app/build.gradle.kts`.
 
-## RC entry criteria
+## Текущий релиз
 
-| Gate | Owner | Evidence | Status |
-| --- | --- | --- | --- |
-| Android branch is rebased or merged onto the intended release branch | TBD | Commit SHA / PR | TBD |
-| `.\gradlew.bat :app:assembleDevDebug` passes without OAuth secrets | TBD | Local log or CI run link | TBD |
-| `.\gradlew.bat :app:testDevDebugUnitTest` passes without OAuth secrets | TBD | Local log or CI run link | TBD |
-| `.\gradlew.bat :app:lintDevDebug` passes without OAuth secrets | TBD | Local log or CI run link | TBD |
-| `.\gradlew.bat :app:assembleProdRelease` passes without local signing values | TBD | Local log | TBD |
-| Signed `prodRelease` APK/AAB is built with release signing inputs | TBD | GitHub Actions run or local artifact path | TBD |
-| `.\gradlew.bat :app:connectedDevDebugAndroidTest` passes on at least one target device | TBD | Run notes | TBD |
-| Backend tests pass in `notes-backend` | TBD | `.\gradlew.bat test` log or CI run link | TBD |
-| Backend staging deploy runbook is reviewed | TBD | `notes-backend/RELEASE_RUNBOOK.md` revision | TBD |
-| Test accounts and Google/Yandex auth configuration are ready for manual social-auth QA | TBD | Account references, no secrets | TBD |
-
-## Android QA matrix
-
-| Android version | API level | Device or emulator | Build | Tester | Result | Blocker links |
-| --- | --- | --- | --- | --- | --- | --- |
-| Android 12 | 31/32 | TBD | TBD | TBD | TBD | TBD |
-| Android 13 | 33 | TBD | TBD | TBD | TBD | TBD |
-| Android 14 | 34 | TBD | TBD | TBD | TBD | TBD |
-
-Required scenario coverage for each row:
-
-- Auth: register/login, invalid credentials, Google/Yandex auth with real client IDs, `/auth/me` restore.
-- Notes: create, edit, delete, list refresh, empty state, validation errors, completion toggle.
-- Home cards: create, edit, delete, list refresh, invalid or missing data handling.
-- Notifications: one-time deadline notification, repeating deadline notification, tap opens the note, exact-alarm granted/denied fallback, re-entry from Settings.
-- Settings: dark theme, light theme, language switch, persistence after app restart.
-- Logout: user returns to auth, protected screens are inaccessible, and refresh token cannot restore the session.
-- Failure paths: offline mode, backend unavailable, expired or unauthorized session, retry after recovery.
-
-## Backend and release compatibility
-
-Run against staging before production rollout. Record Android build, backend artifact,
-database backup reference, rollback owner, and result for each row.
-
-| Compatibility check | Android build | Backend artifact | Required smoke | Result | Blockers |
-| --- | --- | --- | --- | --- | --- |
-| Previous Android build + new backend | TBD | TBD | Auth, `/auth/me`, notes, completion, home-cards, logout | TBD | TBD |
-| New Android build + current backend | TBD | TBD | Auth, `/auth/me`, notes, completion, home-cards, logout | TBD | TBD |
-| New Android build + new backend | TBD | TBD | Full Android RC matrix | TBD | TBD |
-
-Minimum backend endpoint coverage:
-
-- `GET /health`
-- `GET /health/db`
-- `POST /auth/register`
-- `POST /auth/login`
-- `GET /auth/me`
-- `POST /auth/refresh`
-- `POST /auth/logout`
-- `GET/POST/PUT/DELETE /notes`
-- `PATCH /notes/{id}/completion`
-- `GET/POST/PUT/DELETE /home-cards`
-
-## Release policy
-
-- `versionCode` increases monotonically for every production artifact.
-- `versionName` follows semantic versioning and starts at `1.0.0`.
-- Update `CHANGELOG.md` before creating a signed artifact.
-- Tag accepted production artifacts as `android-v{versionName}` after go/no-go approval.
-- R8/minify remains disabled for this release; treat enabling it as a separate release-hardening task.
-- Release signing uses external inputs only: `ANDROID_KEYSTORE_FILE`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`. GitHub Actions decodes `ANDROID_KEYSTORE_BASE64` into the keystore file.
-- The `release` build type must not fall back to debug signing. If release signing inputs are missing, local release artifacts remain unsigned.
-- `dev` flavor compile smoke may use placeholder OAuth client IDs; real Google/Yandex sign-in must be verified manually with environment-specific values.
-
-## Crash and logging strategy
-
-No crash telemetry SDK is included in this release. For production crash intake, record:
-
-- App version name, version code, Git SHA, build artifact, device model, Android API, language, and theme.
-- Reproduction steps, screenshots or screen recording, expected result, and actual result.
-- `adb logcat` excerpt around the failure with tokens, passwords, emails, and other PII removed.
-- Backend timestamp, environment, and request context when the issue involves network behavior.
-
-## Go/no-go gates
-
-Release may proceed only when:
-
-- Android 12, 13, and 14 rows are complete or explicitly waived by the release owner.
-- Clean build, unit tests, lint, connected smoke, backend tests, and manual regression evidence are recorded.
-- No P0/P1 blockers remain open.
-- Backend migration status is verified on staging.
-- Rollback owner, artifact reference, database backup reference, and previous known-good backend artifact are recorded.
-- Signed prod APK/AAB is archived and traceable to commit SHA, version code, and version name.
-
-## Rollout record
-
-| Field | Value |
+| Поле | Значение |
 | --- | --- |
-| Release owner | TBD |
-| Android commit SHA | TBD |
-| Android versionCode / versionName | TBD |
-| Android signed APK/AAB artifact | TBD |
-| Backend artifact/container | TBD |
-| Backend environment URL | TBD |
-| Database backup reference | TBD |
-| Previous known-good backend artifact | TBD |
-| Rollback owner | TBD |
-| Go/no-go decision | TBD |
-| Git tag | `android-vTBD` |
-| Production rollout time | TBD |
-| Post-rollout validation result | TBD |
+| versionName | 1.0.1 |
+| versionCode | 2 |
+| applicationId | app.homenotes.android |
+| Flavor для публикации | `prod` (`assembleProdRelease` / `bundleProdRelease`) |
+| Git SHA | _заполнить перед сборкой_ |
+| Дата сборки | _заполнить_ |
+| Go / No-go | _заполнить_ |
+
+## 1. Код и ветка
+
+- [ ] Все нужные изменения влиты в `develop`, рабочая ветка чистая (`git status` пуст).
+- [ ] Line-ending churn устранён: после добавления `.gitattributes` выполнено
+      `git add --renormalize . && git commit` (либо `git checkout -- .` если изменения только CRLF).
+- [ ] Создан релизный тег `android-v1.0.1` от выверенного коммита.
+
+## 2. Конфигурация сборки
+
+- [ ] `targetSdk` / `compileSdk` = 34, `minSdk` = 24.
+- [ ] `versionCode` увеличен относительно прошлого загруженного артефакта (монотонно).
+- [ ] `prod` flavor: `usesCleartextTraffic` = false, бэкенд по HTTPS (`https://homenoteapp.ru/`).
+- [ ] `PROD_BACKEND_URL`, `PROD_GOOGLE_WEB_CLIENT_ID`, `PROD_YANDEX_CLIENT_ID` заданы
+      в `local.properties` / env / CI secrets (не закоммичены).
+
+## 3. Подпись
+
+- [ ] Keystore существует и доступен по пути `ANDROID_KEYSTORE_FILE`
+      (сейчас `D:\Projects\secure\homenotes-release.jks`).
+- [ ] **Сделана резервная копия keystore и паролей** в надёжном месте (потеря = невозможность обновлений).
+- [ ] `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` заданы вне репозитория.
+- [ ] Собранный артефакт подписан release-ключом (проверить `apksigner verify` / `bundletool`).
+
+## 4. Сборка артефакта
+
+- [ ] `./gradlew clean :app:bundleProdRelease` (AAB) — основной формат для RuStore.
+- [ ] При необходимости `:app:assembleProdRelease` (APK).
+- [ ] (Опционально, hardening) Включить R8: `isMinifyEnabled = true`, пересобрать,
+      прогнать smoke-тест с правилами из `app/proguard-rules.pro`.
+
+## 5. Smoke-тест на реальном устройстве (prod-сборка)
+
+- [ ] Регистрация и вход по email/паролю.
+- [ ] Вход через Яндекс.
+- [ ] Вход через Google (учесть: не работает на устройствах без Google Mobile Services —
+      убедиться, что email/Яндекс полностью покрывают сценарий входа).
+- [ ] Заметки: создание, редактирование, удаление, синхронизация.
+- [ ] Чек-листы и отметка выполнения.
+- [ ] Домашние карточки CRUD.
+- [ ] Дедлайны и локальные уведомления (включая точные напоминания).
+- [ ] Тема и язык.
+- [ ] Проверка на устройстве без GMS (если доступно).
+
+## 6. Юридические документы (требование RuStore)
+
+- [ ] Политика конфиденциальности опубликована публично и доступна по URL.
+- [ ] Пользовательское соглашение опубликовано.
+- [ ] Инструкция удаления аккаунта опубликована.
+- [ ] Ссылки на документы добавлены на лендинг `homenoteapp.ru` (футер).
+- [ ] URL политики конфиденциальности указан в карточке приложения RuStore.
+- [ ] URL инструкции удаления аккаунта указан в карточке RuStore.
+- [ ] Поля в `legal/SUPPORT_CONTACT.ru.md` (раздел 8) заполнены реальными URL.
+
+Рекомендуемые URL после публикации:
+
+- Политика: `https://homenoteapp.ru/legal/privacy.html`
+- Соглашение: `https://homenoteapp.ru/legal/terms.html`
+- Удаление аккаунта: `https://homenoteapp.ru/legal/account-deletion.html`
+- Собираемые данные: `https://homenoteapp.ru/legal/data-collected.html`
+- Поддержка: `https://homenoteapp.ru/legal/support.html`
+
+## 7. Карточка приложения RuStore
+
+- [ ] Название, краткое и полное описание.
+- [ ] Иконка 512×512.
+- [ ] Скриншоты (телефон; при поддержке — планшет).
+- [ ] Категория и возрастной рейтинг.
+- [ ] Email поддержки: `homenotessupp@yandex.ru`.
+- [ ] Декларация разрешений: обоснование `SCHEDULE_EXACT_ALARM` (точные напоминания о дедлайнах),
+      `POST_NOTIFICATIONS`, `INTERNET`.
+- [ ] Декларация собираемых данных по `legal/DATA_COLLECTED.ru.md` (раздел 10 — краткая формулировка).
+
+## 8. Бэкенд
+
+- [ ] Prod-бэкенд `https://homenoteapp.ru/` доступен и совместим с релизной сборкой.
+- [ ] Локализация ПД в РФ подтверждена (хостинг `firstvds.ru`).
+
+## 9. После публикации
+
+- [ ] Релиз-заметки внесены в `CHANGELOG.md`.
+- [ ] Тег запушен: `git push origin android-v1.0.1`.
+- [ ] Зафиксированы: Git SHA, артефакт, решение go/no-go (в таблице выше).
+- [ ] Crash intake: без telemetry SDK — отслеживать обращения на `homenotessupp@yandex.ru`
+      и отчёты RuStore Console.
